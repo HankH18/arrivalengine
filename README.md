@@ -23,19 +23,53 @@ uv run uvicorn arrival.web.app:app --reload
 
 ## Tests
 
-The suite is offline by construction: `tests/conftest.py` installs an httpx transport that
-raises `RuntimeError("network disabled in tests")` on any request.
+The suite is offline by construction. `tests/conftest.py` raises
+`RuntimeError("network disabled in tests")` at three layers, installed in `pytest_configure`
+so it predates collection and every fixture scope:
+
+| layer | why it is separate |
+|---|---|
+| `httpx` transports | T-1's connectors and `http/client.py` |
+| `httpx2` transports | `anthropic` and `starlette.testclient` run on httpx2, a **different distribution** — `httpx.HTTPTransport is httpx2.HTTPTransport` is `False`, so patching one does nothing to the other |
+| `socket.socket.connect` (AF_INET/AF_INET6) | the floor under `urllib`, `requests` and any vendored SDK; SPEC C7 says *no test may hit the network*, not "no httpx test" |
+
+A supplied `MockTransport` (either stack) still works — the patch is at the transport, which
+is the network boundary. `AF_UNIX` is left alone. Opt out with `@pytest.mark.network`.
 
 ```bash
-uv run pytest -q                 # whole suite
+uv run pytest -q                 # whole suite — the only evidence the REPO is green
 uv run pytest --ticket T-0 -q    # only the tests attributed to ticket T-0
 uv run ruff check src tests
 ```
 
 Every test module carries `pytestmark = pytest.mark.ticket("T-N")`; `--ticket T-N` deselects
-everything else, unmarked tests included. Test helpers live in `tests/doubles.py` and are
-imported as a top-level module (`from doubles import LLMDouble`) because `tests/` is not a
-package.
+everything else, unmarked tests included. A blank `--ticket ""` is a `UsageError`, never
+"run everything", and a misspelled marker is an error (`--strict-markers`) rather than a
+silent deselection.
+
+> **`--ticket T-N` green is not repo green.** A ticket's own gate cannot see a regression it
+> caused in T-0's shared primitives (`util`, `contracts`, `config`) — those tests are
+> deselected. Close every ticket with `pytest --ticket T-N && pytest -q`.
+
+Test helpers live in `tests/doubles.py` and are imported as a top-level module
+(`from doubles import LLMDouble`) because `tests/` is not a package.
+
+### Conformance: `assert_conforms`, not `isinstance`
+
+`Connector` and `LLMClient` are `runtime_checkable`, and `isinstance` against a
+runtime-checkable Protocol checks only that attributes with the right **names** exist — a
+class whose whole implementation is `def structured(self): return "not a BaseModel"` passes.
+`issubclass` is not an option for `Connector` either: its `kind` data member makes
+`issubclass` raise `TypeError`. So the `conforms_to` test each ticket owes is written as:
+
+```python
+from doubles import assert_conforms
+assert_conforms(AnthropicClient(settings), LLMClient)   # TypeError listing every mismatch
+assert_conforms(GithubConnector(...), Connector)
+```
+
+It compares `inspect.signature` (names, kinds, defaults, annotations, return type),
+async-ness, and — for `Connector.kind` — that the value is a real `SourceKind`.
 
 ### If `import arrival` fails outside pytest (macOS)
 

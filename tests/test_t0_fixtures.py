@@ -268,16 +268,90 @@ def test_alpha_has_the_two_excluded_facts_t8_must_never_render(dossiers):
     assert "his wife Delia Moreno-Vance" in blob
 
 
-def test_the_excluded_strings_appear_nowhere_a_digest_could_reach(dossiers):
-    """The needles T-8 greps the rendered HTML for must not leak via a KEPT fact."""
-    needles = ("1442 Quarrystone Lane", "Delia Moreno-Vance", "Quarrystone Lane")
+# Every distinctive token that lives ONLY in alpha's withheld facts. T-8 acceptance 3 says
+# "excluded fixture facts (family/address text) do not appear anywhere in the HTML", and the
+# natural way to write that test is `assert "quarrystone" not in html.lower()` — a single
+# distinctive word, lowercased. So the fixture has to keep these tokens out of every field a
+# digest renders, INCLUDING provenance URLs and titles: R7 renders the source URL in "Why we
+# know this" and R9 makes the citation visible, so a source URL is displayed text.
+WITHHELD_TOKENS = (
+    "quarrystone",       # the street in the excluded home_or_property fact
+    "1442",              # its house number
+    "delia",             # the spouse in the excluded family fact
+    "moreno-vance",
+    "travisledger",      # the host that carries both excluded facts
+)
+
+
+def _renderable_strings(dossier, docs_for_person) -> list[tuple[str, str]]:
+    """(label, text) for everything a digest or its reasoning toggle can put on screen.
+
+    Deliberately WIDER than the digest: hub labels feed R10's "why", provenance urls and
+    titles feed R7/R9's citations. /debug is excluded by design — R15 is the surface that
+    is *supposed* to show withheld material, behind DEBUG_VIEWS.
+    """
+    out = [("person.name", dossier.person.name)]
+    out += [(f"person.details[{i}]", d) for i, d in enumerate(dossier.person.details)]
+    for hub in dossier.hubs:
+        out.append((f"hub {hub.hub_id}", f"{hub.label} {hub.hub_id}"))
+    for fact in dossier.facts:
+        if fact.excluded:
+            continue
+        prov = fact.provenance
+        out.append((f"{fact.fact_id}.text", fact.text))
+        out.append((f"{fact.fact_id}.quote", prov.quote))
+        out.append((f"{fact.fact_id}.url", prov.url))
+        doc = docs_for_person.get(prov.doc_id)
+        if doc is not None:
+            out.append((f"{fact.fact_id}.doc.title", doc.title))
+    return out
+
+
+def test_the_excluded_strings_appear_nowhere_a_digest_could_reach(dossiers, docs):
+    """No withheld token reaches ANY field a digest renders — url and title included.
+
+    The earlier version of this test searched only ``fact.text`` and
+    ``provenance.quote``. That is not the whole rendered surface: alpha's kept, displayable
+    non_obvious fact was cited to ``http://quarrystone-coop.example/newsletter``, which put
+    the deliberately withheld street name into the digest's own visible source list, where a
+    correct T-8 implementation would have rendered it and a correct T-8 test would have
+    caught it — as a fixture bug wearing the costume of a code bug.
+    """
+    phrases = ("1442 Quarrystone Lane", "Delia Moreno-Vance", "Quarrystone Lane")
     for name, dossier in dossiers.items():
-        for fact in dossier.facts:
-            if fact.excluded:
-                continue
-            haystack = f"{fact.text} {fact.provenance.quote}"
-            for needle in needles:
-                assert needle not in haystack, f"{name}/{fact.fact_id} leaks {needle!r}"
+        for label, text in _renderable_strings(dossier, docs[name]):
+            lowered = text.lower()
+            for needle in phrases:
+                assert needle not in text, f"{name}/{label} leaks {needle!r}: {text!r}"
+            for token in WITHHELD_TOKENS:
+                assert token not in lowered, f"{name}/{label} leaks {token!r}: {text!r}"
+
+
+def test_the_withheld_tokens_really_are_distinctive(dossiers):
+    """Guards the guard: each token must actually occur in an EXCLUDED fact.
+
+    Without this, deleting alpha's excluded facts would make the leak test vacuously green.
+    """
+    excluded_blob = " ".join(
+        f"{f.text} {f.provenance.quote} {f.provenance.url}"
+        for d in dossiers.values()
+        for f in d.facts
+        if f.excluded
+    ).lower()
+    for token in WITHHELD_TOKENS:
+        assert token in excluded_blob, f"{token!r} is not in any excluded fact any more"
+
+
+def test_the_non_obvious_fact_is_cited_to_an_unrelated_host(dossiers):
+    """R7's "Not on the first page" slot is displayed WITH its citation (R9).
+
+    So the one kept wayback fact's URL is displayed text, and pinning it here stops the
+    co-op host drifting back onto the withheld street name.
+    """
+    alpha = dossiers["alpha"]
+    fact = next(f for f in alpha.facts if f.category == "non_obvious" and not f.excluded)
+    assert "rillwater-coop.example" in fact.provenance.url
+    assert "quarrystone" not in fact.provenance.url.lower()
 
 
 def test_alpha_has_a_non_obvious_wayback_fact(dossiers):

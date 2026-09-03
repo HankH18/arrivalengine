@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import subprocess
+import sys
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from pydantic import BaseModel
@@ -181,3 +185,111 @@ async def test_connector_double_can_be_made_to_raise():
 
 async def test_connector_double_empty_by_default():
     assert await ConnectorDouble("hn").search(PERSON, 5) == []
+
+
+# --------------------------------------------------------------------------
+# a mis-scripted double must be loud in EVERY response form
+# --------------------------------------------------------------------------
+
+
+class OtherShape(BaseModel):
+    """A second throwaway schema that happens to overlap Shape on nothing."""
+
+    wrong: int
+
+
+async def test_llm_double_rejects_a_model_of_the_wrong_schema():
+    """The Protocol says structured "returns an instance of `schema`" — so enforce it.
+
+    The dict and JSON-string paths were already validated into `schema` and raise; the
+    model-instance path (the primary form, and the one all six downstream tickets use) used
+    to return whatever it was handed. A test that queued its responses out of order, or
+    wrote an over-broad rule like `.when("Verdict", "", ...)`, then fed the code under test
+    a model the real client could never return — and wherever the two models overlap on the
+    fields the code touches, the test goes green on behaviour production cannot produce.
+    """
+    llm = LLMDouble().when("Shape", "", OtherShape(wrong=1))
+    with pytest.raises(LLMError, match="asked for schema 'Shape'|asked for schema Shape"):
+        await llm.structured(system="", user="x", schema=Shape)
+
+
+async def test_llm_double_rejects_a_wrong_schema_model_from_the_queue_too():
+    llm = LLMDouble().queue(OtherShape(wrong=1))
+    with pytest.raises(LLMError):
+        await llm.structured(system="", user="x", schema=Shape)
+
+
+async def test_llm_double_still_accepts_a_subclass_of_the_requested_schema():
+    """`isinstance`, not `type is` — a narrower model is still an instance of `schema`."""
+
+    class NarrowerShape(Shape):
+        extra: int = 0
+
+    llm = LLMDouble().queue(NarrowerShape(value="v", extra=3))
+    out = await llm.structured(system="", user="x", schema=Shape)
+    assert isinstance(out, Shape) and out.value == "v"
+
+
+# --------------------------------------------------------------------------
+# ConnectorDouble: budget arithmetic, latency, and a real SourceKind
+# --------------------------------------------------------------------------
+
+
+async def test_connector_double_treats_a_negative_budget_as_zero():
+    """`docs[:-1]` is len(docs)-1 documents, not none — the dangerous direction.
+
+    T-6 computes a per-connector remaining budget against `max_docs_total`; the moment that
+    arithmetic underflows past zero, a double that slices with a raw negative hands back
+    nearly the FULL corpus and a genuine over-fetch bug reads as a green
+    `test_build_dossier_happy`.
+    """
+    docs = [_doc(i) for i in range(5)]
+    connector = ConnectorDouble("search", docs)
+    assert await connector.search(PERSON, 0) == []
+    assert await connector.search(PERSON, -1) == []
+    assert await connector.search(PERSON, -99) == []
+    assert connector.calls == [(PERSON, 0), (PERSON, -1), (PERSON, -99)]
+
+
+async def test_connector_double_delay_makes_concurrency_observable():
+    """T-6's fan-out must be concurrent; without latency, gather and a for-loop look alike."""
+    connectors = [ConnectorDouble("search", [_doc(0)], delay=0.1) for _ in range(3)]
+    started = time.monotonic()
+    await asyncio.gather(*(c.search(PERSON, 1) for c in connectors))
+    concurrent = time.monotonic() - started
+    assert concurrent < 0.25, "three 0.1s searches gathered should not cost 0.3s"
+
+    started = time.monotonic()
+    for connector in connectors:
+        await connector.search(PERSON, 1)
+    assert time.monotonic() - started > concurrent, "serial must be measurably slower"
+
+
+def test_connector_double_rejects_a_kind_that_is_not_a_source_kind():
+    """A typo'd kind would flow into T-6's BuildReport, which validates nothing."""
+    with pytest.raises(ValueError, match="is not a SourceKind"):
+        ConnectorDouble(kind="githbu")
+
+
+# --------------------------------------------------------------------------
+# the import-time guard
+# --------------------------------------------------------------------------
+
+
+def test_the_import_time_conformance_guard_survives_python_dash_O():
+    """`assert` is stripped by `python -O`; a guard that vanishes in CI is not a guard."""
+    source = (Path(__file__).resolve().parent / "doubles.py").read_text()
+    assert "assert_conforms(LLMDouble(), LLMClient)" in source
+    assert "assert_conforms(ConnectorDouble(kind=\"search\", docs=[]), Connector)" in source
+    assert "\nassert isinstance(" not in source, "a bare assert here is stripped by -O"
+
+    proc = subprocess.run(
+        [sys.executable, "-O", "-c", "import sys; sys.path.insert(0, 'tests'); import doubles"],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+        env={**os.environ, "PYTHONPATH": "src"},
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr

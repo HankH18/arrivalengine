@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 __all__ = [
     "Budget",
@@ -58,7 +58,7 @@ class LLMError(Exception):
 class PersonRef(BaseModel):
     person_id: str  # slug(name) [+ "-" + slug(details[0]) on collision]
     name: str
-    details: list[str] = Field(default_factory=list)  # e.g. ["CEO of Acme", "Austin"]
+    details: list[str] = []  # e.g. ["CEO of Acme", "Austin"]
 
 
 # --- retrieval ------------------------------------------------------------
@@ -116,7 +116,7 @@ class Resolution(BaseModel):
     person_id: str
     status: Literal["resolved", "unresolved"]
     # {"wikidata_qid": "Q..", "github": "..", "company_domain": "..", "sec_cik": ".."}
-    strong_keys: dict[str, str] = Field(default_factory=dict)
+    strong_keys: dict[str, str] = {}
     accepted_doc_ids: list[str]
     rejected: list[Verdict]  # kept for /debug
     confidence: float  # 0..1, overall
@@ -150,7 +150,9 @@ class Provenance(BaseModel):
     doc_id: str
     url: str
     source_kind: SourceKind
-    quote: str  # verbatim; substring of RawDoc.text after whitespace-normalisation
+    # verbatim; MUST be a substring of RawDoc.text after whitespace-normalisation
+    # (DESIGN Decision 5 — this is the hallucination guard T-3 implements)
+    quote: str
     published_at: date | None = None
     retrieved_at: datetime
     confidence: float
@@ -184,7 +186,7 @@ class Hub(BaseModel):
     label: str
     type: HubType
     recency: float = 1.0  # 0..1, 1 = tied to current work, decays with age
-    evidence_fact_ids: list[str] = Field(default_factory=list)
+    evidence_fact_ids: list[str] = []
 
 
 class Dossier(BaseModel):
@@ -227,7 +229,9 @@ class Digest(BaseModel):
     lately: list[Fact]  # len <= 3, displayable only
     non_obvious: Fact | None  # exactly 1 when available (R7)
     say_out_loud: str
-    sources: list[Provenance]  # every provenance referenced above, deduped by doc_id
+    # every provenance referenced above, deduped by doc_id, NUMBERED IN ORDER
+    # (the numbering is what R7 citation rendering and T-7 ordering depend on)
+    sources: list[Provenance]
     exclusion_policy: str  # R13, constant text from taste.py
     created_at: datetime
 
@@ -242,7 +246,8 @@ class Budget(BaseModel):
 
 
 class BuildReport(BaseModel):
-    # {person_id, status, confidence, facts_kept, facts_excluded, hubs, zero_result_sources}
+    # {person_id, status, confidence, facts_kept, facts_excluded, hubs,
+    #  zero_result_sources: [SourceKind]}
     people: list[dict]
     started_at: datetime
     finished_at: datetime
@@ -263,5 +268,6 @@ class LLMClient(Protocol):
         cache_prefix: bool = True,
     ) -> BaseModel: ...
 
-    # temperature 0; returns an instance of `schema`; raises LLMError on invalid JSON
-    # after one retry.
+    # temperature 0; returns an instance of `schema` (an instance of some OTHER model is
+    # a contract violation, not a response); raises LLMError on invalid JSON after one
+    # retry.

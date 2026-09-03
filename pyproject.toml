@@ -44,6 +44,11 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# --strict-markers turns a MISSPELLED marker into an error instead of a warning. Without
+# it, `pytest.mark.tickets("T-3")` (or `ticket_`) is silently deselected by `--ticket T-3`
+# while the run stays green, so the ticket gate reports "N passed / EXIT=0" for a ticket
+# whose tests never ran.
+addopts = "--strict-markers"
 # src-layout, imported directly rather than through the editable install. This is not
 # belt-and-braces: on macOS `uv venv` marks the whole .venv tree with the UF_HIDDEN file
 # flag, and CPython >= 3.12.6's site.addpackage SKIPS hidden .pth files, so a fresh

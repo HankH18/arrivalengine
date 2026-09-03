@@ -17,7 +17,7 @@
     "accepted_doc_ids": [
       "230c13c040660d5b",
       "b1159ac929dac1e6",
-      "4c3da797fae09f7d",
+      "ea736f1194b2350e",
       "90f4360e5d3bbf26",
       "0739f354798a77b4"
     ],
@@ -86,8 +86,8 @@
       "text": "For four years he redrew a food co-op's delivery routes by hand on graph paper every Sunday.",
       "category": "non_obvious",
       "provenance": {
-        "doc_id": "4c3da797fae09f7d",
-        "url": "https://web.archive.org/web/20120418000000/http://quarrystone-coop.example/newsletter",
+        "doc_id": "ea736f1194b2350e",
+        "url": "https://web.archive.org/web/20120418000000/http://rillwater-coop.example/newsletter",
         "source_kind": "wayback",
         "quote": "Teodoro Vance, who rebuilt the co-op's delivery routing by hand on graph paper every Sunday for four years",
         "published_at": "2012-04-18",
