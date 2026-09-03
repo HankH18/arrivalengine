@@ -6,3 +6,9 @@ __pycache__/
 *.py[co]
 .pytest_cache/
 .mypy_cache/
+.venv/
+.cache/
+.env
+*.egg-info/
+.ruff_cache/
+arrival-engine-build-docs.zip
