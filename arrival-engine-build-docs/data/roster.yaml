@@ -1,0 +1,23 @@
+# Arrival Engine roster — the ten stand-ins. Details are resolver disambiguators
+# (employer / role / city); the pipeline verifies them, it does not trust them.
+people:
+  - name: Fred Wilson
+    details: ["co-founder and partner, Union Square Ventures", "New York", "writes the AVC blog (avc.com)"]
+  - name: Brad Feld
+    details: ["co-founder, Foundry Group; co-founder, Techstars", "Boulder, Colorado", "feld.com"]
+  - name: Josh Kopelman
+    details: ["founder and partner, First Round Capital", "Philadelphia"]
+  - name: Sarah Tavel
+    details: ["general partner, Benchmark", "San Francisco", "formerly Greylock and Pinterest"]
+  - name: Hunter Walk
+    details: ["co-founder and partner, Homebrew", "San Francisco", "formerly YouTube product"]
+  - name: Steve Huffman
+    details: ["co-founder and CEO, Reddit", "San Francisco"]
+  - name: Emmett Shear
+    details: ["co-founder and former CEO, Twitch", "San Francisco", "briefly interim CEO of OpenAI (Nov 2023)"]
+  - name: Eric Ries
+    details: ["author of The Lean Startup", "founder, Long-Term Stock Exchange (LTSE)", "San Francisco"]
+  - name: Nabeel Qureshi
+    details: ["writer and researcher", "formerly Palantir; essays at nabeelqu.co", "NOT the author/apologist Nabeel Qureshi who died in 2017"]
+  - name: Melanie Perkins
+    details: ["co-founder and CEO, Canva", "Sydney, Australia"]
