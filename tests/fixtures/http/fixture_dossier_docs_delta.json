@@ -1,0 +1,29 @@
+[
+  {
+    "doc_id": "9e09b8307d22396f",
+    "source_kind": "self_page",
+    "url": "https://tessellate.example/team/hollis-trent",
+    "title": "Hollis Trent — Tessellate",
+    "text": "Hollis Trent is the founder of Tessellate, an Austin studio that builds AI tools for municipal records clerks. Tessellate was seeded by Foundry Seed 2019.",
+    "published_at": "2026-07-03",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "91f38e3e14475754",
+    "source_kind": "search",
+    "url": "https://civicwire.example/2026/05/tessellate-records",
+    "title": "Tessellate's first customer printed her search results",
+    "text": "Tessellate's first customer was a county clerk who had been printing search results in order to read them. Hollis Trent spent three weeks behind the counter before writing any code. Foundry Seed 2019 backed the company in its first year.",
+    "published_at": "2026-05-21",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "2d2b98808d452ecd",
+    "source_kind": "github",
+    "url": "https://api.github.example/users/hollistrent",
+    "title": "hollistrent",
+    "text": "hollistrent - Hollis Trent. Austin. Tessellate. Public repositories: records-normaliser (Python, 233 stars). Recent activity: 63 commits to tessellate/records-normaliser in the last month.",
+    "published_at": "2026-08-05",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  }
+]

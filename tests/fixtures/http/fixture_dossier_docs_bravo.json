@@ -1,0 +1,29 @@
+[
+  {
+    "doc_id": "97ac5e3105f3d5fc",
+    "source_kind": "self_page",
+    "url": "https://harborline.example/about/nadia-ellingsworth",
+    "title": "Nadia Ellingsworth — Harborline Freight",
+    "text": "Nadia Ellingsworth leads machine learning at Harborline Freight in Austin, where her team applies AI to dock scheduling. She previously taught statistics at Rio Verde College.",
+    "published_at": "2026-04-22",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "99179f4f9b4efd19",
+    "source_kind": "hn",
+    "url": "https://hn.algolia.example/items/40123456",
+    "title": "nellingsworth on learned dock scheduling",
+    "text": "nellingsworth commented: We replaced a hand-tuned dock scheduler with a learned policy and the first thing we learned was that our labels were wrong. Happy to talk about how we relabelled eighteen months of dock data before the model was worth anything.",
+    "published_at": "2026-03-15",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "41a77c4901e2b7b6",
+    "source_kind": "openalex",
+    "url": "https://openalex.example/works/W2026001",
+    "title": "Label noise in operational scheduling datasets",
+    "text": "Ellingsworth, N. (2024). Label noise in operational scheduling datasets. Journal of Applied Logistics, 12(4). Abstract: operational logs are relabelled by hand and the relabelling dominates model quality.",
+    "published_at": "2024-11-05",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  }
+]

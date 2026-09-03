@@ -1,0 +1,56 @@
+[
+  {
+    "doc_id": "230c13c040660d5b",
+    "source_kind": "self_page",
+    "url": "https://northgatelabs.example/team/teodoro-vance",
+    "title": "Teodoro Vance — Northgate Labs",
+    "text": "Teodoro Vance is the co-founder and chief technology officer of Northgate Labs, an Austin company building evaluation tooling for AI agents. He writes the Northgate engineering notebook and speaks about retrieval evaluation. Before Northgate he led the inference platform team at Pelagic Systems.",
+    "published_at": "2026-06-14",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "b1159ac929dac1e6",
+    "source_kind": "search",
+    "url": "https://austintechreview.example/2026/07/northgate-labs-eval-harness",
+    "title": "Northgate Labs ships an open eval harness",
+    "text": "Northgate Labs released an open source evaluation harness for AI agents this week. The harness scores agent trajectories rather than final answers. Teodoro Vance said the team spent nine months on the scoring rubric before writing a line of the runner, and that the rubric is the product.",
+    "published_at": "2026-07-02",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "4c3da797fae09f7d",
+    "source_kind": "wayback",
+    "url": "https://web.archive.org/web/20120418000000/http://quarrystone-coop.example/newsletter",
+    "title": "Quarrystone Food Co-op newsletter (archived 2012)",
+    "text": "Volunteer spotlight. Teodoro Vance, who rebuilt the co-op's delivery routing by hand on graph paper every Sunday for four years, is stepping back from the logistics committee at the end of the season. The routes he drew are still the ones we drive.",
+    "published_at": "2012-04-18",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "90f4360e5d3bbf26",
+    "source_kind": "github",
+    "url": "https://api.github.example/users/tvance-ng",
+    "title": "tvance-ng",
+    "text": "tvance-ng - Teodoro Vance. Austin. Northgate Labs. Public repositories: eval-harness (Python, 812 stars), routing-graph (Python, 46 stars). Recent activity: 41 commits to northgate/eval-harness in the last month.",
+    "published_at": "2026-08-01",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "0739f354798a77b4",
+    "source_kind": "search",
+    "url": "https://travisledger.example/2026/05/quarrystone-lane-remodel",
+    "title": "Review board approves Quarrystone Lane remodel",
+    "text": "The remodel at 1442 Quarrystone Lane was approved by the review board in April. The owners, Teodoro Vance and his wife Delia Moreno-Vance, plan a detached studio at the rear of the lot. Neighbours filed no objections.",
+    "published_at": "2026-05-09",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "b7414d44cb9d62dd",
+    "source_kind": "search",
+    "url": "https://coastalmusicnews.example/profiles/teodoro-vance",
+    "title": "Teodoro Vance, luthier",
+    "text": "Teodoro Vance is a luthier in Corpus Christi who has built guitars for touring bands since 1998. He has no connection to the technology industry and does not use email.",
+    "published_at": "2025-11-20",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  }
+]

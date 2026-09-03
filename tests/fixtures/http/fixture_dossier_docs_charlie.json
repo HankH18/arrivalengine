@@ -1,0 +1,29 @@
+[
+  {
+    "doc_id": "11a9e0f5729d3a9c",
+    "source_kind": "self_page",
+    "url": "https://quillmark.example/about",
+    "title": "About Quillmark",
+    "text": "Selin Ardahan founded Quillmark in Austin to make AI code review legible to the people who have to act on it. Quillmark raised its first money from Foundry Seed 2019 and has been profitable since 2024.",
+    "published_at": "2026-07-19",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "973de989c73ee7e2",
+    "source_kind": "search",
+    "url": "https://austintechreview.example/2026/06/quillmark-review-legibility",
+    "title": "Quillmark publishes a review-legibility benchmark",
+    "text": "Quillmark, the Austin company Selin Ardahan started after leaving Rimehold Systems, published its review-legibility benchmark this month. Ardahan says the hardest part was persuading teams to read the diffs at all. Foundry Seed 2019 led the company's first round.",
+    "published_at": "2026-06-11",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  },
+  {
+    "doc_id": "74b92917b32266cd",
+    "source_kind": "podcast",
+    "url": "https://devtoolsradio.example/episodes/117",
+    "title": "Devtools Radio 117: Selin Ardahan",
+    "text": "Ardahan: I read every one of the first four hundred code reviews our tool produced, out loud, to my co-founder. That is the only reason the tone is right. We threw away the first model entirely.",
+    "published_at": "2026-05-28",
+    "fetched_at": "2026-08-30T15:04:11Z"
+  }
+]

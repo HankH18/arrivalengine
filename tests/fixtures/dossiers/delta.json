@@ -1,0 +1,132 @@
+{
+  "person": {
+    "person_id": "delta",
+    "name": "Hollis Trent",
+    "details": [
+      "Founder of Tessellate",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "delta",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "tessellate.example",
+      "github": "hollistrent"
+    },
+    "accepted_doc_ids": [
+      "9e09b8307d22396f",
+      "91f38e3e14475754",
+      "2d2b98808d452ecd"
+    ],
+    "rejected": [],
+    "confidence": 0.91
+  },
+  "facts": [
+    {
+      "fact_id": "delta-work",
+      "text": "He founded Tessellate, an Austin studio building AI tools for municipal records clerks.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9e09b8307d22396f",
+        "url": "https://tessellate.example/team/hollis-trent",
+        "source_kind": "self_page",
+        "quote": "Hollis Trent is the founder of Tessellate, an Austin studio that builds AI tools for municipal records clerks.",
+        "published_at": "2026-07-03",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.93
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "delta-investor",
+      "text": "Tessellate was seeded by Foundry Seed 2019.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "9e09b8307d22396f",
+        "url": "https://tessellate.example/team/hollis-trent",
+        "source_kind": "self_page",
+        "quote": "Tessellate was seeded by Foundry Seed 2019.",
+        "published_at": "2026-07-03",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "delta-hook",
+      "text": "He spent three weeks working behind a county clerk's counter before writing any code.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "91f38e3e14475754",
+        "url": "https://civicwire.example/2026/05/tessellate-records",
+        "source_kind": "search",
+        "quote": "Hollis Trent spent three weeks behind the counter before writing any code.",
+        "published_at": "2026-05-21",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.87
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "delta-recent",
+      "text": "He pushed sixty-three commits to an open source records normaliser last month.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "2d2b98808d452ecd",
+        "url": "https://api.github.example/users/hollistrent",
+        "source_kind": "github",
+        "quote": "Recent activity: 63 commits to tessellate/records-normaliser in the last month.",
+        "published_at": "2026-08-05",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.81
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "delta-work"
+      ]
+    },
+    {
+      "hub_id": "topic:ai",
+      "label": "AI",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "delta-work"
+      ]
+    },
+    {
+      "hub_id": "investor:foundry-seed-2019",
+      "label": "Foundry Seed 2019",
+      "type": "investor",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "delta-investor"
+      ]
+    },
+    {
+      "hub_id": "company:tessellate",
+      "label": "Tessellate",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "delta-work",
+        "delta-recent"
+      ]
+    }
+  ],
+  "built_at": "2026-08-30T15:30:00Z",
+  "schema_version": 1
+}

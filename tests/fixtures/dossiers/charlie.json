@@ -1,0 +1,131 @@
+{
+  "person": {
+    "person_id": "charlie",
+    "name": "Selin Ardahan",
+    "details": [
+      "Founder of Quillmark",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "charlie",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "quillmark.example"
+    },
+    "accepted_doc_ids": [
+      "11a9e0f5729d3a9c",
+      "973de989c73ee7e2",
+      "74b92917b32266cd"
+    ],
+    "rejected": [],
+    "confidence": 0.9
+  },
+  "facts": [
+    {
+      "fact_id": "charlie-work",
+      "text": "She founded Quillmark in Austin to make AI code review legible to the teams that act on it.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "11a9e0f5729d3a9c",
+        "url": "https://quillmark.example/about",
+        "source_kind": "self_page",
+        "quote": "Selin Ardahan founded Quillmark in Austin to make AI code review legible to the people who have to act on it.",
+        "published_at": "2026-07-19",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.92
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "charlie-investor",
+      "text": "Quillmark's first money came from Foundry Seed 2019.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "11a9e0f5729d3a9c",
+        "url": "https://quillmark.example/about",
+        "source_kind": "self_page",
+        "quote": "Quillmark raised its first money from Foundry Seed 2019 and has been profitable since 2024.",
+        "published_at": "2026-07-19",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "charlie-hook",
+      "text": "She read the first four hundred code reviews her tool produced out loud to her co-founder.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "74b92917b32266cd",
+        "url": "https://devtoolsradio.example/episodes/117",
+        "source_kind": "podcast",
+        "quote": "I read every one of the first four hundred code reviews our tool produced, out loud, to my co-founder.",
+        "published_at": "2026-05-28",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.84
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "charlie-recent",
+      "text": "Quillmark published a review-legibility benchmark in June.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "973de989c73ee7e2",
+        "url": "https://austintechreview.example/2026/06/quillmark-review-legibility",
+        "source_kind": "search",
+        "quote": "published its review-legibility benchmark this month",
+        "published_at": "2026-06-11",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "charlie-work"
+      ]
+    },
+    {
+      "hub_id": "topic:ai",
+      "label": "AI",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "charlie-work"
+      ]
+    },
+    {
+      "hub_id": "investor:foundry-seed-2019",
+      "label": "Foundry Seed 2019",
+      "type": "investor",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "charlie-investor"
+      ]
+    },
+    {
+      "hub_id": "company:quillmark",
+      "label": "Quillmark",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "charlie-work",
+        "charlie-recent"
+      ]
+    }
+  ],
+  "built_at": "2026-08-30T15:30:00Z",
+  "schema_version": 1
+}
