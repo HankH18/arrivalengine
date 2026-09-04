@@ -1081,6 +1081,126 @@
       "defect": "`fetch_record` has no response size cap: the entire body is buffered before any caller-side guard runs. The new MAX_FEED_BYTES in the feed connector refuses an oversized feed AFTER download, which bounds parser cost but not memory. A hostile or merely broken endpoint can make the process buffer an unbounded body.",
       "finding_id": "d835dee4e6979b2f55e45b2e9bd8a47cb24d38159df8f393526fc87b61160321",
       "reproduction": "Read http/client.py fetch_record \u2014 no streaming, no length check before read. Reported by the FIX-CONN2 lane; belongs to the src/arrival/http/** owner."
+    },
+    {
+      "id": "T-044",
+      "title": "A real text page in a legacy encoding served WITHOUT a charset header is discarded as binary, and then negatively cached for 900s with its body thrown away. httpx decodes with default_encoding='utf-8' when the header carries no charset (it never reads <meta charset>), so the bytes become U+FFFD and looks_binary rejects the page against MAX_UNDECODABLE_RATIO = 0.10. MEASURED U+FFFD density on natural prose, not cherry-picked accents: Japanese Shift-JIS 64.9%, EUC-JP 65.2%, Chinese GBK/GB18030 76.4%, Czech iso-8859-2 13.70%, Turkish iso-8859-9 11.55% \u2014 ALL DROPPED. Western European latin-1 (French 5.12%, Spanish 5.28%, German 4.31%, Portuguese 3.49%) survives, so the code comment's claim of 'room on both sides' is true only for the languages it was tested against. Worse than 'no document': _remember_non_text discards the body too, so a caller wanting raw bytes loses them. Fix: decide binary-ness from the BYTES, not from a decode known to have used the wrong codec \u2014 either pass default_encoding=<detector callable> to the httpx.AsyncClient at client.py:260, or when the declared type is textual and looks_binary fires, re-decode response.content using a BOM/<meta charset> sniff and re-test before rejecting.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/http/extract.py:262",
+      "defect": "A real text page in a legacy encoding served WITHOUT a charset header is discarded as binary, and then negatively cached for 900s with its body thrown away. httpx decodes with default_encoding='utf-8' when the header carries no charset (it never reads <meta charset>), so the bytes become U+FFFD and looks_binary rejects the page against MAX_UNDECODABLE_RATIO = 0.10. MEASURED U+FFFD density on natural prose, not cherry-picked accents: Japanese Shift-JIS 64.9%, EUC-JP 65.2%, Chinese GBK/GB18030 76.4%, Czech iso-8859-2 13.70%, Turkish iso-8859-9 11.55% \u2014 ALL DROPPED. Western European latin-1 (French 5.12%, Spanish 5.28%, German 4.31%, Portuguese 3.49%) survives, so the code comment's claim of 'room on both sides' is true only for the languages it was tested against. Worse than 'no document': _remember_non_text discards the body too, so a caller wanting raw bytes loses them. Fix: decide binary-ness from the BYTES, not from a decode known to have used the wrong codec \u2014 either pass default_encoding=<detector callable> to the httpx.AsyncClient at client.py:260, or when the declared type is textual and looks_binary fires, re-decode response.content using a BOM/<meta charset> sniff and re-test before rejecting.",
+      "finding_id": "85e1f33f05aa50ce6cc4c56bee56a3ca226ce6c36a6b590b839b5e9c8e87e15d",
+      "reproduction": "Serve a Shift-JIS Japanese page with no charset in the Content-Type. fetch_text -> None, 1 network request, cached content_type application/octet-stream, body kept '', expires_at +900s. Same page WITH charset declared -> a RawDoc whose text head reads correctly. Reproduced end-to-end by the cycle-5 adversarial verifier."
+    },
+    {
+      "id": "T-045",
+      "title": "TEST STRENGTH: `test_a_legacy_encoded_page_is_still_text_even_though_it_is_not_utf8` asserts `doc is not None` for 'a latin-1 page with no declared charset', but its specimen is ASCII-transliterated French with three accented bytes patched in \u2014 3/1168 = 0.257% U+FFFD against a 10% threshold. It certifies a property it never exercises, which is why the defect above shipped green. A real French sample measures 9.813%, one percentage point from the cliff; Czech, Turkish and every CJK legacy encoding cross it. Fix: replace the transliterated body with real accented prose whose density approaches the threshold, and add a CJK case.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "tests/connectors/test_t1_http_content_type.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "tests/connectors/test_t1_http_content_type.py:224",
+      "defect": "TEST STRENGTH: `test_a_legacy_encoded_page_is_still_text_even_though_it_is_not_utf8` asserts `doc is not None` for 'a latin-1 page with no declared charset', but its specimen is ASCII-transliterated French with three accented bytes patched in \u2014 3/1168 = 0.257% U+FFFD against a 10% threshold. It certifies a property it never exercises, which is why the defect above shipped green. A real French sample measures 9.813%, one percentage point from the cliff; Czech, Turkish and every CJK legacy encoding cross it. Fix: replace the transliterated body with real accented prose whose density approaches the threshold, and add a CJK case.",
+      "finding_id": "e411a435e8bee80489744290e59b0a056fb5017c08a296ffdee1d3327b338a1a",
+      "reproduction": "REPO SPECIMEN: U+FFFD 3/1168 = 0.257%, looks_binary=False. REAL SPECIMEN: 163/1661 = 9.813%, looks_binary=False. Measured by the cycle-5 adversarial verifier."
+    },
+    {
+      "id": "T-046",
+      "title": "T-025's headline defect survives on every cache directory that already exists. 'Absent expires_at means durable' is applied to entries written BEFORE expiries existed, so a JS-shell 200 frozen into a pre-fix cache is still frozen. The commit's claim that 'a transient failure heals instead of being frozen into the corpus' is true only for entries written after the fix. Fix: in the envelope branch, treat an absent expires_at as durable ONLY when payload['text'] is non-empty; an absent-expiry entry with empty text is a pre-fix negative and should be a MISS. This cannot touch the recorded-fixture path, whose fallback branch at line 138 already requires non-empty text.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/cache.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/cache.py:133",
+      "defect": "T-025's headline defect survives on every cache directory that already exists. 'Absent expires_at means durable' is applied to entries written BEFORE expiries existed, so a JS-shell 200 frozen into a pre-fix cache is still frozen. The commit's claim that 'a transient failure heals instead of being frozen into the corpus' is true only for entries written after the fix. Fix: in the envelope branch, treat an absent expires_at as durable ONLY when payload['text'] is non-empty; an absent-expiry entry with empty text is a pre-fix negative and should be a MISS. This cannot touch the recorded-fixture path, whose fallback branch at line 138 already requires non-empty text.",
+      "finding_id": "5be1d9a55845cf1e21605cc08e78100f6dd584d80aa4616f17f7be2fb25f9ade",
+      "reproduction": "Write an old-format entry (30 days old, no expires_at, empty text) and read it back: HIT, extraction ('',''), never heals. Reproduced by the cycle-5 adversarial verifier."
+    },
+    {
+      "id": "T-047",
+      "title": "`verdict_attribute` collapses two INDEPENDENT attributes into one whenever both evidence spans happen to quote the employer \u2014 which is the overwhelmingly common case, since the employer is what a model quotes to disambiguate. Step 2 (`if corroborated: return corroborated[0]`) overrides the label unconditionally. MEASURED with documents held fixed and labels unchanged: role+employer where both spans quote the employer -> attrs ['employer'], independent=False, where the OLD label-only code gave ['employer','role'], independent=True. Same for handle+employer: verdict_attribute('handle', 'github.com/dwhitfield \u2014 Harrowgate Systems') -> 'employer', because the span DOES name the handle but PersonRef.details carries nothing to check a handle against, so the employer wins. This is the documented design and it fixes three real failures, but Decision 4's second arm is now measurably harder to satisfy and the docstring lists none of the resolutions it costs. Fix if unintended: prefer the label's family when the label is a known family AND the corroborated detail is not the one the label names \u2014 i.e. swap steps 2 and 3 for in-contract labels.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/resolve.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/resolve.py:564",
+      "defect": "`verdict_attribute` collapses two INDEPENDENT attributes into one whenever both evidence spans happen to quote the employer \u2014 which is the overwhelmingly common case, since the employer is what a model quotes to disambiguate. Step 2 (`if corroborated: return corroborated[0]`) overrides the label unconditionally. MEASURED with documents held fixed and labels unchanged: role+employer where both spans quote the employer -> attrs ['employer'], independent=False, where the OLD label-only code gave ['employer','role'], independent=True. Same for handle+employer: verdict_attribute('handle', 'github.com/dwhitfield \u2014 Harrowgate Systems') -> 'employer', because the span DOES name the handle but PersonRef.details carries nothing to check a handle against, so the employer wins. This is the documented design and it fixes three real failures, but Decision 4's second arm is now measurably harder to satisfy and the docstring lists none of the resolutions it costs. Fix if unintended: prefer the label's family when the label is a known family AND the corroborated detail is not the one the label names \u2014 i.e. swap steps 2 and 3 for in-contract labels.",
+      "finding_id": "6819dfa58695187850cab819e3885e7c8f73f64d45d78745233a191a0f52ac23",
+      "reproduction": "P7/P8 probes by the cycle-5 adversarial verifier, documents held fixed across both code paths."
+    },
+    {
+      "id": "T-048",
+      "title": "`_company_domain` did not remove the arrival-order dependence \u2014 it replaced it with a HIT-COUNT dependence, and then refuses on a tie. Every company_domain candidate is scored (value, 1), so evidence can NEVER separate two hosts; only how many documents each host got can, and that count is chosen by the same remote APIs whose ranking the fix set out to stop trusting. MEASURED: .com x2 / .io x1 -> .com; .com x1 / .io x2 -> .io; .com x1 / .io x1 -> '' (refusal). A company with a .com plus a .io, .co.uk or GitHub-Pages docs site is common and one document each is the common case, so the refusal fires on ordinary input. The order-independence invariant DOES hold (verified over all 120 permutations of a 5-document corpus, 1 distinct answer) \u2014 the problem is what the set is scored on. Fix: score the domain candidate on evidence the way the other three extractors do (e.g. _details_matched(doc.title + doc.text, person)), so a page naming the person and the city outranks a bare host match.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/resolve.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/resolve.py:742",
+      "defect": "`_company_domain` did not remove the arrival-order dependence \u2014 it replaced it with a HIT-COUNT dependence, and then refuses on a tie. Every company_domain candidate is scored (value, 1), so evidence can NEVER separate two hosts; only how many documents each host got can, and that count is chosen by the same remote APIs whose ranking the fix set out to stop trusting. MEASURED: .com x2 / .io x1 -> .com; .com x1 / .io x2 -> .io; .com x1 / .io x1 -> '' (refusal). A company with a .com plus a .io, .co.uk or GitHub-Pages docs site is common and one document each is the common case, so the refusal fires on ordinary input. The order-independence invariant DOES hold (verified over all 120 permutations of a 5-document corpus, 1 distinct answer) \u2014 the problem is what the set is scored on. Fix: score the domain candidate on evidence the way the other three extractors do (e.g. _details_matched(doc.title + doc.text, person)), so a page naming the person and the city outranks a bare host match.",
+      "finding_id": "f8031e7898dbcf10164dfa30790e11ea7ee8ba1884616fb2e974360c36a0872d",
+      "reproduction": "P2 probe by the cycle-5 adversarial verifier: .com+.io -> '', .com+.co.uk -> '', .com+github.io -> ''; apex+subdomain of the same value canonicalises correctly to one host."
+    },
+    {
+      "id": "T-049",
+      "title": "CROSS-MODULE COMPOSITION: T-032's priority fix and T-031's tie refusal together lose a strong key that either alone would have kept. _by_display_priority deliberately INCREASES the number of edgar-stamped documents, which increases how often _best sees two edgar candidates with identical evidence \u2014 and then refuses. MEASURED on a corpus where EDGAR returns filings A and B and `search` also returns B: after both fixes, kinds ['edgar','edgar'] -> sec_cik ''; simulating the pre-research-fix outcome (search answered first for B), kinds ['search','edgar'] -> sec_cik '0001111111'. This is realistic rather than contrived: search engines routinely surface sec.gov filing pages, and _CIK.search takes the FIRST CIK in the page while an EDGAR Form 4 page carries both the issuer's and the reporting owner's CIK \u2014 so two filings naming one person and one employer with different CIKs is the ordinary EDGAR shape. A related composition also demonstrated: a document lost to the legacy-encoding binary check can turn a decided key into a refusal.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/research.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/research.py:367",
+      "defect": "CROSS-MODULE COMPOSITION: T-032's priority fix and T-031's tie refusal together lose a strong key that either alone would have kept. _by_display_priority deliberately INCREASES the number of edgar-stamped documents, which increases how often _best sees two edgar candidates with identical evidence \u2014 and then refuses. MEASURED on a corpus where EDGAR returns filings A and B and `search` also returns B: after both fixes, kinds ['edgar','edgar'] -> sec_cik ''; simulating the pre-research-fix outcome (search answered first for B), kinds ['search','edgar'] -> sec_cik '0001111111'. This is realistic rather than contrived: search engines routinely surface sec.gov filing pages, and _CIK.search takes the FIRST CIK in the page while an EDGAR Form 4 page carries both the issuer's and the reporting owner's CIK \u2014 so two filings naming one person and one employer with different CIKs is the ordinary EDGAR shape. A related composition also demonstrated: a document lost to the legacy-encoding binary check can turn a decided key into a refusal.",
+      "finding_id": "905cd46ee33c59035b569d66008e7f459afdaa166ecd93d27af7e231216c0c2b",
+      "reproduction": "P8 cross-module probe by the cycle-5 adversarial verifier. Fixing either the _company_domain/_sec_cik evidence scoring or the tie rule should settle it; the two tickets should be worked together."
+    },
+    {
+      "id": "T-050",
+      "title": "`read_record`'s fixture fallback branch bypasses the expiry check entirely: an entry whose envelope is present and EXPIRED but whose `body` is not a str falls through to the `text` branch and is served. Not reachable from write_record, so it is a contract hole rather than a live path. Fix: hoist the expires_at read above the if/elif.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/cache.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "LOW",
+      "location": "src/arrival/http/cache.py:138",
+      "defect": "`read_record`'s fixture fallback branch bypasses the expiry check entirely: an entry whose envelope is present and EXPIRED but whose `body` is not a str falls through to the `text` branch and is served. Not reachable from write_record, so it is a contract hole rather than a live path. Fix: hoist the expires_at read above the if/elif.",
+      "finding_id": "e0ebad2c1d7208aaf29fc9780ca6b0b9cc40ceca27762aa60a9461294e6408ee",
+      "reproduction": "P5 probe by the cycle-5 adversarial verifier: envelope body not a str + expired expires_at -> HIT, expiry bypassed."
+    },
+    {
+      "id": "T-051",
+      "title": "DEAD CODE: `_any_detail_matches` has zero call sites across 134 files, is not in __all__, and is not reachable from src/arrival/__main__.py. It was live before T-031 \u2014 `git show a3fc1a4^:src/arrival/resolve.py` line 501 called it from _wikidata_qid \u2014 and that commit replaced the call with _details_matched and left the function behind. Delete it.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/resolve.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "LOW",
+      "location": "src/arrival/resolve.py:845",
+      "defect": "DEAD CODE: `_any_detail_matches` has zero call sites across 134 files, is not in __all__, and is not reachable from src/arrival/__main__.py. It was live before T-031 \u2014 `git show a3fc1a4^:src/arrival/resolve.py` line 501 called it from _wikidata_qid \u2014 and that commit replaced the call with _details_matched and left the function behind. Delete it.",
+      "finding_id": "c191a0ef38ae16fa9655cb19a0a78cd5dda7e1dd8f8c1ea72aebd61b7f4eaa87",
+      "reproduction": "Reachability sweep by the cycle-5 adversarial verifier; every other new helper in the batch is WIRED."
     }
   ],
   "cut_list": [
