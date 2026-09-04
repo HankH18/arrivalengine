@@ -298,6 +298,25 @@ def test_a_spliced_clause_is_refused_even_when_a_hub_label_is_declared(line):
     )
 
 
+def test_a_word_the_label_happens_to_contain_does_not_exempt_it_elsewhere():
+    """The declaration covers a SEQUENCE, not a vocabulary.
+
+    "Building Futures Fund" is a legitimate hub label, and "Building" is also a real verb.
+    Exempting the label must not exempt the second "Building", which opens a clause of its
+    own after a bare "about". A rule that exempted any word appearing anywhere in a declared
+    label would admit this line, and every test above would stay green -- found by
+    sabotage, not by reading.
+    """
+    line = "Both connected to Building Futures Fund and about Building a status page."
+
+    assert not is_speakable(line, noun_phrases=["Building Futures Fund"]), (
+        f"a word borrowed from the label exempted a clause it does not cover: {line!r}"
+    )
+    assert is_speakable("Both connected to Building Futures Fund.", noun_phrases=[
+        "Building Futures Fund"
+    ]), "positive control: the declared label itself must still be exempt"
+
+
 def test_only_the_declared_span_is_exempt_inside_a_real_why():
     """A why that names a legitimate hub AND splices a clause is still refused.
 
