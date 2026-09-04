@@ -38,6 +38,7 @@ from arrival.util import doc_id
 __all__ = [
     "BaseConnector",
     "affiliations",
+    "bare_domains_in",
     "hosts_in",
     "parse_date",
     "text_block",
@@ -48,29 +49,142 @@ log = logging.getLogger(__name__)
 
 _URL_IN_TEXT = re.compile(r"https?://[^\s<>\"')]+", re.IGNORECASE)
 
+#: A HOSTNAME sitting in prose with no scheme in front of it, optionally with a path.
+#:
+#: THE MEASURED DEFECT (T-072). A roster writes a member's own site the way a person says
+#: it out loud — `"writes the AVC blog (avc.com)"`, `"feld.com"`,
+#: `"essays at nabeelqu.co"` — and none of those matches `_URL_IN_TEXT`, which requires a
+#: scheme. So `urls_in` returned `[]` for EVERY person on the live roster, `self_page`
+#: (the highest-trust `SourceKind` in the system) never received a seed, and `wayback`,
+#: `hn` and `identity.on_own_host` lost the same input. Measured live on 2026-09-04:
+#: ten people, ten empty seed lists, `self_page` in all ten zero-result lists.
+#:
+#: The lookahead-free shape below is deliberately conservative — the cost of a false
+#: positive here is an outbound HTTP request to a host the member never named, and the
+#: highest-trust stamp in the system on whatever comes back.
+_BARE_DOMAIN = re.compile(
+    r"(?<![\w@./-])"                      # not mid-word, not an e-mail local part
+    r"((?:[a-z0-9][a-z0-9-]{0,61}\.)+[a-z]{2,24})"  # labels + TLD
+    r"(?![\w-])"                          # the TLD ends here
+    r"(/[^\s<>\"')\]]*)?",                # an optional path
+    re.IGNORECASE,
+)
+
+#: The TLDs a bare domain is recognised under. An ALLOWLIST rather than "two or more
+#: letters", because the loose rule reads ordinary prose as addresses: `Ph.D`, `M.Sc`,
+#: `i.e`, and every sentence whose full stop is followed by a two-letter word. A domain
+#: under a TLD not listed here is simply not seeded from prose — the roster can always
+#: write `https://` in front of it, which is the unambiguous spelling and always wins.
+_BARE_TLDS = frozenset(
+    {
+        "com", "org", "net", "edu", "gov", "int", "mil", "info", "biz", "name", "pro",
+        "io", "co", "ai", "dev", "app", "me", "xyz", "blog", "news", "tech", "site",
+        "online", "page", "link", "email", "press", "wiki", "space", "world", "today",
+        "club", "life", "live", "media", "studio", "design", "works", "team", "company",
+        "ventures", "capital", "fund", "group", "network", "house", "systems", "codes",
+        "one", "cloud", "digital", "agency", "consulting", "institute", "foundation",
+        "academy", "school", "eu", "uk", "us", "ca", "au", "nz", "de", "fr", "nl", "es",
+        "it", "se", "no", "dk", "fi", "ie", "pt", "pl", "cz", "at", "ch", "be", "gr",
+        "il", "za", "sg", "hk", "jp", "kr", "in", "br", "mx", "ar", "cl", "ru", "tr",
+        "ua", "tv", "fm", "gg", "ly", "to", "sh", "is", "cc", "st", "so", "re", "am",
+    }
+)
+
 #: Role nouns that describe a person's relationship to an organisation rather than naming
 #: one. Stripped before an affiliation is used as a search term, so "co-founder, Pelmyre
 #: Works" searches for the company and not for the job title.
+#:
+#: MATCHED PER TOKEN, NOT AS A WHOLE CANDIDATE (T-073). The check used to be
+#: `candidate.lower() in _ROLE_WORDS`, which recognises `"co-founder"` and does not
+#: recognise `"co-founder and partner"` — so a CONJOINED role phrase survived, sorted
+#: first (it is written first in the roster) and became `identity.best_affiliation`'s
+#: answer. Measured live on the ten-person roster: nine of ten people had a JOB TITLE
+#: where their employer should be, so `wikipedia` searched
+#: `"Josh Kopelman founder and partner"` and his own article was not in the first twenty
+#: results.
 _ROLE_WORDS = frozenset(
     {
-        "advisor", "analyst", "board", "board member", "ceo", "cfo", "chair", "chairman",
-        "chief", "co-founder", "cofounder", "coo", "cto", "director", "engineer",
-        "founder", "gp", "head", "investor", "lead", "manager", "member", "partner",
-        "president", "principal", "professor", "researcher", "scientist", "svp", "vp",
+        "advisor", "analyst", "architect", "artist", "associate", "author", "blogger",
+        "board", "board member", "ceo", "cfo", "chair", "chairman", "chairperson",
+        "chairwoman", "chief", "cio", "cmo", "co-founder", "cofounder", "consultant",
+        "coo", "cro", "cto", "director", "editor", "engineer", "entrepreneur", "evp",
+        "executive", "fellow", "founder", "general", "gp", "head", "investor",
+        "journalist", "lead", "manager", "managing", "md", "member", "officer",
+        "operator", "owner", "partner", "president", "principal", "professor",
+        "researcher", "scientist", "staff", "svp", "trustee", "vp", "writer",
     }
 )
+
+#: Words that GLUE a role phrase together without naming anything. A candidate made only
+#: of these and `_ROLE_WORDS` names a job, not an organisation.
+_ROLE_CONNECTIVES = frozenset(
+    {
+        "a", "acting", "an", "and", "at", "briefly", "co", "current", "currently",
+        "deputy", "emeritus", "ex", "for", "former", "formerly", "global", "in",
+        "interim", "junior", "of", "senior", "the", "with", "&",
+    }
+)
+
+#: Leading words stripped off an otherwise good organisation phrase: `"formerly Palantir"`
+#: is a search for Palantir. Role words are NOT stripped this way — "General Electric"
+#: would become "Electric" — so only the temporal/qualifying prefixes are listed.
+_LEADING_QUALIFIERS = frozenset(
+    {"acting", "briefly", "current", "currently", "ex", "former", "formerly", "interim"}
+)
+
+_TOKENS = re.compile(r"[a-z0-9&]+", re.IGNORECASE)
+
+#: `;` joins two INDEPENDENT clauses of a detail — `"co-founder, Foundry Group;
+#: co-founder, Techstars"` names two companies, and `"formerly Palantir; essays at
+#: nabeelqu.co"` names one company and one website. Splitting there first is what lets a
+#: clause carrying a URL be dropped without taking the company beside it down with it.
+_SPLIT_CLAUSE = re.compile(r"\s*;\s*")
 
 _SPLIT_AFFILIATION = re.compile(r"\s+(?:of|at|for|with)\s+|,\s*|\s+[|@]\s+", re.IGNORECASE)
 
 _WAYBACK_TIMESTAMP = re.compile(r"^\d{14}$")
 
 
+def _is_bare_domain(host: str) -> bool:
+    """Is `host` a hostname a roster would write without a scheme? See `_BARE_TLDS`."""
+    labels = host.lower().split(".")
+    if len(labels) < 2 or labels[-1] not in _BARE_TLDS:
+        return False
+    # Every label at least two characters: `M.Sc`, `e.g` and `U.S.A` are prose, and a
+    # one-letter label is rare enough in a roster to be worth losing to keep them out.
+    return all(len(label) >= 2 for label in labels)
+
+
+def bare_domains_in(text: str) -> list[str]:
+    """Every scheme-less address in `text`, as `https://` URLs, in order, deduped.
+
+    Scheme-carrying URLs are removed first so `https://notes.example.org/m` is read once,
+    by `_URL_IN_TEXT`, and not a second time as the bare host inside it.
+    """
+    found: list[str] = []
+    for host, path in _BARE_DOMAIN.findall(_URL_IN_TEXT.sub(" ", text)):
+        if not _is_bare_domain(host):
+            continue
+        url = f"https://{host}{(path or '').rstrip('.,;')}"
+        if url not in found:
+            found.append(url)
+    return found
+
+
 def urls_in(details: list[str]) -> list[str]:
-    """Every http(s) URL mentioned in a `PersonRef.details` list, in order, deduped."""
+    """Every address mentioned in a `PersonRef.details` list, in order, deduped.
+
+    Both spellings a roster actually uses: a full `http(s)://` URL, and a bare hostname
+    sitting in prose (`"writes the AVC blog (avc.com)"`), which is promoted to `https://`.
+    See `_BARE_DOMAIN` for the measured reason the second one is here.
+    """
     found: list[str] = []
     for detail in details:
         for match in _URL_IN_TEXT.findall(detail):
             url = match.rstrip(".,;")
+            if url not in found:
+                found.append(url)
+        for url in bare_domains_in(detail):
             if url not in found:
                 found.append(url)
     return found
@@ -86,6 +200,29 @@ def hosts_in(details: list[str]) -> list[str]:
     return hosts
 
 
+def _names_a_job(candidate: str) -> bool:
+    """True when every word of `candidate` is a role word or the glue between two.
+
+    `"co-founder"` yes, `"co-founder and partner"` yes, `"general partner"` yes,
+    `"Foundry Group"` no, `"General Electric"` no — `electric` is not a role word, so the
+    phrase survives even though `general` is.
+    """
+    tokens = [token.lower() for token in _TOKENS.findall(candidate)]
+    if not tokens:
+        return False
+    return all(token in _ROLE_WORDS or token in _ROLE_CONNECTIVES for token in tokens)
+
+
+def _without_qualifier(candidate: str) -> str:
+    """`"formerly Palantir"` -> `"Palantir"`. Only `_LEADING_QUALIFIERS` are stripped."""
+    stripped = candidate
+    while True:
+        head, separator, tail = stripped.partition(" ")
+        if not separator or head.lower() not in _LEADING_QUALIFIERS:
+            return stripped
+        stripped = tail.strip()
+
+
 def affiliations(details: list[str]) -> list[str]:
     """Organisation-shaped phrases from `details`, best first.
 
@@ -94,19 +231,37 @@ def affiliations(details: list[str]) -> list[str]:
     terms* handed to sources that will simply return nothing for a bad one, and a resolver
     (T-2) decides afterwards which hits are actually this person.  Being wrong here costs
     one request; being too narrow costs the only lead.
+
+    Generous is not the same as indiscriminate, and two measured failures were the latter
+    (T-073, live roster of ten):
+
+    * **A conjoined job title is not an organisation.** The role check compared the WHOLE
+      candidate against `_ROLE_WORDS`, so `"co-founder"` was dropped and
+      `"co-founder and partner"` was kept — and because the roster writes the title before
+      the company, the job title became the FIRST affiliation and therefore
+      `identity.best_affiliation`'s answer for nine of the ten people. `_names_a_job`
+      reads the candidate word by word instead.
+    * **A `;` joins two clauses, and one of them may carry the website.** Skipping a whole
+      detail because it mentions a URL threw away `"formerly Palantir"` along with
+      `"essays at nabeelqu.co"`. The clause carrying the address is dropped; the company
+      beside it is not.
     """
     out: list[str] = []
     for detail in details:
-        if _URL_IN_TEXT.search(detail):
-            continue
-        for fragment in _SPLIT_AFFILIATION.split(detail):
-            candidate = fragment.strip(" .;:-")
-            if not candidate or candidate.lower() in _ROLE_WORDS:
+        for clause in _SPLIT_CLAUSE.split(detail):
+            # An address is not an employer, in either spelling. The whole CLAUSE goes:
+            # what is left of `"site: https://x.example/"` once the url is removed is the
+            # word "site", which is worse than nothing as a search term.
+            if _URL_IN_TEXT.search(clause) or bare_domains_in(clause):
                 continue
-            if len(candidate) < 3 or not any(ch.isalpha() for ch in candidate):
-                continue
-            if candidate not in out:
-                out.append(candidate)
+            for fragment in _SPLIT_AFFILIATION.split(clause):
+                candidate = _without_qualifier(fragment.strip(" .;:-"))
+                if not candidate or _names_a_job(candidate):
+                    continue
+                if len(candidate) < 3 or not any(ch.isalpha() for ch in candidate):
+                    continue
+                if candidate not in out:
+                    out.append(candidate)
     return out
 
 

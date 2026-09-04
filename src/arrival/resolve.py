@@ -131,6 +131,32 @@ _ORG_SUFFIXES = frozenset(
     {"co", "inc", "corp", "corporation", "ltd", "llc", "plc", "gmbh", "ab", "as", "the"}
 )
 
+# The vocabulary `_names_a_role` reads, in `_tokens` form — `slug()`ged and split, so
+# "co-founder" arrives here as `co` + `founder`. It exists to answer ONE question: is the
+# half of a detail sitting before `", "` a job title or a place name? See `_names_a_role`
+# for the two live rosters this got wrong.
+_ROLE_TOKENS = frozenset(
+    {
+        "advisor", "analyst", "architect", "artist", "associate", "author", "blogger",
+        "ceo", "cfo", "chair", "chairman", "chairperson", "chairwoman", "chief", "cio",
+        "cmo", "cofounder", "consultant", "coo", "cro", "cto", "director", "editor",
+        "engineer", "entrepreneur", "evp", "executive", "fellow", "founder", "general",
+        "gp", "head", "investor", "journalist", "lead", "manager", "managing", "md",
+        "member", "officer", "operator", "owner", "partner", "president", "principal",
+        "professor", "researcher", "scientist", "staff", "svp", "trustee", "vp", "writer",
+    }
+)
+
+# Words that hold a role phrase together without naming anything: "co-founder AND FORMER
+# ceo" is one job title, not a job title plus an organisation.
+_ROLE_GLUE = frozenset(
+    {
+        "a", "acting", "an", "and", "at", "board", "briefly", "co", "current",
+        "currently", "deputy", "emeritus", "ex", "for", "former", "formerly", "global",
+        "in", "interim", "junior", "of", "senior", "the", "with",
+    }
+)
+
 # The six attributes RESOLVE_SYSTEM enumerates ("employer, city, role, handle, school, or
 # coauthor"), each with the spellings a model reaches for instead. Matched as substrings of
 # the lower-cased label, first family wins, so the order of the rows is the tie-break:
@@ -901,12 +927,23 @@ def _employer(person: PersonRef) -> list[str]:
     `"co-founder, Quarrystone Labs"` -> `["quarrystone", "labs"]`. The role half is dropped
     because "director" and "engineer" match half the internet, and the legal suffix is
     dropped because "Co." does too.
+
+    Only the FIRST `;` clause of the organisation half is read. `_mentions` requires EVERY
+    token, so `"co-founder, Foundry Group; co-founder, Techstars"` used to demand
+    `foundry AND group AND founder AND techstars` in one evidence span — four words no
+    real document about Brad Feld puts together, which made his employer permanently
+    uncorroborable. A second `;` clause is a second affiliation, not more of the first
+    one's name.
     """
     for detail in person.details:
-        organisation = _organisation_part(detail)
+        organisation = _organisation_part(detail, person)
         if organisation is None:
             continue
-        tokens = [token for token in _tokens(organisation) if token not in _ORG_SUFFIXES]
+        tokens = [
+            token
+            for token in _tokens(organisation.split(";", 1)[0])
+            if token not in _ORG_SUFFIXES
+        ]
         if tokens:
             return tokens
     return []
@@ -915,7 +952,7 @@ def _employer(person: PersonRef) -> list[str]:
 def _city(person: PersonRef) -> list[str]:
     """The distinctive tokens of the person's city detail: the detail naming no role."""
     for detail in person.details:
-        if _organisation_part(detail) is not None:
+        if _organisation_part(detail, person) is not None:
             continue
         tokens = [token for token in _tokens(detail) if token not in _ORG_SUFFIXES]
         if tokens:
@@ -923,13 +960,66 @@ def _city(person: PersonRef) -> list[str]:
     return []
 
 
-def _organisation_part(detail: str) -> str | None:
-    """The organisation half of a `<role> at <Organisation>` detail, else None."""
+def _names_a_role(head: str) -> bool:
+    """Is `head` a JOB rather than a name — every word a role word or the glue between?
+
+    This is the test that separates `"co-founder, Foundry Group"` from
+    `"Boulder, Colorado"`. `", "` is the separator a roster uses for BOTH, so a rule that
+    reads the separator alone reads a city as an employer. Measured on the live roster:
+    `"Boulder, Colorado"` became the organisation `"Colorado"`, which pushed Brad Feld's
+    city detail off the end of `_city` and left `["feld", "com"]` — his blog's domain —
+    standing in for the city he lives in; `"Sydney, Australia"` did the same to Melanie
+    Perkins and left her with no city at all.
+
+    Spelled here rather than imported from `connectors.identity`: `research` imports this
+    module at module scope and is deliberately free of httpx, which every module under
+    `connectors` pulls in.
+    """
+    tokens = [token for token in _tokens(head) if token]
+    if not tokens:
+        return False
+    return all(token in _ROLE_TOKENS or token in _ROLE_GLUE for token in tokens)
+
+
+def _splits(detail: str, *, role_headed: bool) -> str | None:
+    """The tail of the FIRST split `detail` admits, or None.
+
+    First-separator-wins, and the strict form does not fall through to a later one. It
+    used to: `"Head of research at Quarrystone Labs"` splits on `" at "` with a head that
+    is not a role phrase, and a `continue` there went on to try `" of "`, which splits the
+    same detail into `"Head"` and `"research at Quarrystone Labs"` — a head that IS a role
+    phrase and a tail that is not an organisation. A separator that fails the role test is
+    this detail's answer being "no", not a reason to look for a worse cut of it.
+    """
     for separator in (" at ", ", ", " of ", " @ "):
         head, found, tail = detail.partition(separator)
-        if found and tail.strip() and head.strip():
-            return tail.strip()
+        if not found or not tail.strip() or not head.strip():
+            continue
+        if role_headed and not _names_a_role(head):
+            return None
+        return tail.strip()
     return None
+
+
+def _organisation_part(detail: str, person: PersonRef | None = None) -> str | None:
+    """The organisation half of a `<role> at <Organisation>` detail, else None.
+
+    Two passes, and `person` is what makes the second one safe. The STRICT pass accepts a
+    split only when the head names a role, which is what tells `"co-founder, Foundry
+    Group"` from `"Boulder, Colorado"`. The LENIENT pass is the original separator-only
+    rule, and it runs only when the strict pass found no organisation ANYWHERE in this
+    person's details — a roster that writes an employer in a shape this module cannot
+    recognise keeps the employer it used to get instead of losing it to a stricter
+    reading. Passing no `person` asks the strict question alone.
+    """
+    strict = _splits(detail, role_headed=True)
+    if strict is not None:
+        return strict
+    if person is None:
+        return None
+    if any(_splits(other, role_headed=True) is not None for other in person.details):
+        return None
+    return _splits(detail, role_headed=False)
 
 
 def _mentions(text: str, tokens: list[str]) -> bool:
