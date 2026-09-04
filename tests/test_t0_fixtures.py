@@ -24,7 +24,38 @@ pytestmark = pytest.mark.ticket("T-0")
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 DOSSIER_DIR = FIXTURES / "dossiers"
 DOC_DIR = FIXTURES / "http"
-PEOPLE = ("alpha", "bravo", "charlie", "delta")
+
+# T-0b/D6a. The four fixture people are still "alpha".."delta" in every document that
+# describes them, and those names survive here as the constants — but a dossier's
+# person_id is `slug(name)` (contracts.py:59, DESIGN §Interfaces, SPEC Q1) and its file is
+# `{person_id}.json` (DESIGN §Data models), exactly as in the frozen grading corpus. The
+# ids used to be the bare mnemonics, so 0 of 4 satisfied the rule the whole system states,
+# and a reader learned that person ids are arbitrary handles.
+ALPHA = "teodoro-vance"
+BRAVO = "nadia-ellingsworth"
+CHARLIE = "selin-ardahan"
+DELTA = "hollis-trent"
+PEOPLE = (ALPHA, BRAVO, CHARLIE, DELTA)
+
+#: The paired RawDoc fixtures keep the mnemonic filenames they were committed under.
+DOC_FIXTURE_STEM = {ALPHA: "alpha", BRAVO: "bravo", CHARLIE: "charlie", DELTA: "delta"}
+
+#: T-0b/D6b. The generic hub every fixture person shares, so its IDF clamps to 0. It used
+#: to be `topic:ai`, whose label is on DESIGN Decision 3's stop-hub list — a corpus a
+#: conformant extractor could never produce. `topic:machine-learning` is not a stop word,
+#: is supported by all four people's cited facts, and clamps identically.
+GENERIC_HUBS = {"city:austin", "topic:machine-learning"}
+
+# THE STOP LIST IS MATCHED AGAINST A HUB'S *LABEL*, LOWERCASED — NEVER AGAINST ITS TYPE
+# OR THE `type:` PREFIX OF ITS hub_id. Decision 3's list is
+#   {texas, startup, founder, ai, technology, business, ceo, investor}
+# and `investor` is on it AND is a HubType. `investor:foundry-seed-2019` below is the rare
+# hub the ENTIRE matching-score design rests on (charlie-delta 100, every other pair 0);
+# an implementation that filters on `hub.type` or on the id's prefix deletes it and
+# silently destroys the scoring. Its label is "Foundry Seed 2019", which is not a stop
+# word, so it survives — while `topic:ai` (label "AI") does not, which is why no fixture
+# carries that hub any more. `tests/test_t0b_fixture_conventions.py` executes both halves.
+RARE_HUB = "investor:foundry-seed-2019"
 
 # DESIGN Decision 3. Repeated here on purpose: these are the numbers the fixture was
 # DESIGNED to produce, and this module is the fixture's spec, not graph.py's.
@@ -53,7 +84,8 @@ def load_dossier(name: str) -> Dossier:
 
 
 def load_docs(name: str) -> dict[str, RawDoc]:
-    raw = json.loads((DOC_DIR / f"fixture_dossier_docs_{name}.json").read_text())
+    stem = DOC_FIXTURE_STEM[name]
+    raw = json.loads((DOC_DIR / f"fixture_dossier_docs_{stem}.json").read_text())
     docs = [RawDoc.model_validate(d) for d in raw]
     return {d.doc_id: d for d in docs}
 
@@ -161,40 +193,45 @@ def _hub_ids(dossier: Dossier) -> set[str]:
 
 
 def test_all_four_share_the_two_generic_hubs(dossiers):
+    # T-0b/D6b. Was: `assert "topic:ai" in _hub_ids(dossier)`. The requirement it encoded —
+    # all four share a generic topic hub whose IDF therefore clamps to 0 — is unchanged and
+    # still asserted; only the hub's label moved off DESIGN Decision 3's stop list, which a
+    # conformant extractor is forbidden to emit. Would this test still be wrong if the
+    # fixture change were reverted? Yes: it would once again require the corpus to contain
+    # a hub the pipeline that is supposed to produce it can never produce.
     for name, dossier in dossiers.items():
-        assert "city:austin" in _hub_ids(dossier), name
-        assert "topic:ai" in _hub_ids(dossier), name
+        for hub_id in GENERIC_HUBS:
+            assert hub_id in _hub_ids(dossier), f"{name} is missing {hub_id}"
 
 
 def test_alpha_and_bravo_share_nothing_beyond_the_generic_hubs(dossiers):
-    shared = _hub_ids(dossiers["alpha"]) & _hub_ids(dossiers["bravo"])
-    assert shared == {"city:austin", "topic:ai"}
+    shared = _hub_ids(dossiers[ALPHA]) & _hub_ids(dossiers[BRAVO])
+    assert shared == GENERIC_HUBS
 
 
 def test_charlie_and_delta_share_exactly_one_rare_hub(dossiers):
-    shared = _hub_ids(dossiers["charlie"]) & _hub_ids(dossiers["delta"])
-    assert shared == {"city:austin", "topic:ai", "investor:foundry-seed-2019"}
-    rare = next(h for h in dossiers["charlie"].hubs if h.hub_id == "investor:foundry-seed-2019")
+    shared = _hub_ids(dossiers[CHARLIE]) & _hub_ids(dossiers[DELTA])
+    assert shared == GENERIC_HUBS | {RARE_HUB}
+    rare = next(h for h in dossiers[CHARLIE].hubs if h.hub_id == RARE_HUB)
     assert rare.type == "investor"
     assert rare.recency == 1.0
-    other = next(h for h in dossiers["delta"].hubs if h.hub_id == "investor:foundry-seed-2019")
+    other = next(h for h in dossiers[DELTA].hubs if h.hub_id == RARE_HUB)
     assert other.recency == 1.0
 
 
 def test_the_rare_hub_is_on_exactly_two_people(dossiers):
-    holders = [n for n, d in dossiers.items() if "investor:foundry-seed-2019" in _hub_ids(d)]
-    assert sorted(holders) == ["charlie", "delta"]
+    holders = [n for n, d in dossiers.items() if RARE_HUB in _hub_ids(d)]
+    assert sorted(holders) == sorted([CHARLIE, DELTA])
 
 
 def test_no_other_cross_person_hub_overlap_exists(dossiers):
     """Any extra overlap would move the scores off their pinned values."""
-    generic = {"city:austin", "topic:ai"}
     for a in PEOPLE:
         for b in PEOPLE:
             if a >= b:
                 continue
-            extra = (_hub_ids(dossiers[a]) & _hub_ids(dossiers[b])) - generic
-            expected = {"investor:foundry-seed-2019"} if {a, b} == {"charlie", "delta"} else set()
+            extra = (_hub_ids(dossiers[a]) & _hub_ids(dossiers[b])) - GENERIC_HUBS
+            expected = {RARE_HUB} if {a, b} == {CHARLIE, DELTA} else set()
             assert extra == expected, f"unexpected overlap between {a} and {b}: {extra}"
 
 
@@ -241,14 +278,14 @@ def test_fixture_hub_math_pins_the_scores(dossiers):
     def score(a: str, b: str) -> int:
         return min(100, round(100 * raw(a, b) / ref))
 
-    assert holders["investor:foundry-seed-2019"] == 2
+    assert holders[RARE_HUB] == 2
     assert math.isclose(_idf(n, 2), math.log(4 / 3))
-    assert math.isclose(raw("charlie", "delta"), math.log(4 / 3) * 1.5)
+    assert math.isclose(raw(CHARLIE, DELTA), math.log(4 / 3) * 1.5)
     assert math.isclose(ref, math.log(4 / 3) * 1.5)
-    assert score("charlie", "delta") == 100
-    assert score("alpha", "bravo") == 0
-    assert score("alpha", "charlie") == 0
-    assert score("bravo", "delta") == 0
+    assert score(CHARLIE, DELTA) == 100
+    assert score(ALPHA, BRAVO) == 0
+    assert score(ALPHA, CHARLIE) == 0
+    assert score(BRAVO, DELTA) == 0
 
 
 # --------------------------------------------------------------------------
@@ -257,7 +294,7 @@ def test_fixture_hub_math_pins_the_scores(dossiers):
 
 
 def test_alpha_has_the_two_excluded_facts_t8_must_never_render(dossiers):
-    alpha = dossiers["alpha"]
+    alpha = dossiers[ALPHA]
     excluded = [f for f in alpha.facts if f.excluded]
     assert len(excluded) >= 2
     reasons = {f.exclusion_reason for f in excluded}
@@ -275,11 +312,18 @@ def test_alpha_has_the_two_excluded_facts_t8_must_never_render(dossiers):
 # digest renders, INCLUDING provenance URLs and titles: R7 renders the source URL in "Why we
 # know this" and R9 makes the citation visible, so a source URL is displayed text.
 WITHHELD_TOKENS = (
-    "quarrystone",       # the street in the excluded home_or_property fact
+    "quarrystone",       # the street in alpha's excluded home_or_property fact
     "1442",              # its house number
-    "delia",             # the spouse in the excluded family fact
+    "delia",             # the spouse in alpha's excluded family fact
     "moreno-vance",
-    "travisledger",      # the host that carries both excluded facts
+    "travisledger",      # the host that carries both of alpha's excluded facts
+    # T-0b/D7: charlie is the person T-8 arrives and points /debug at, so charlie now
+    # carries withheld material of its own. Added, not substituted — alpha's tokens are
+    # unchanged and still checked.
+    "mockingbird",       # the street in charlie's excluded home_or_property fact
+    "emre",              # the spouse in charlie's excluded family fact
+    "bagci",
+    "hillcrestledger",   # the host that carries both of charlie's excluded facts
 )
 
 
@@ -348,7 +392,7 @@ def test_the_non_obvious_fact_is_cited_to_an_unrelated_host(dossiers):
     So the one kept wayback fact's URL is displayed text, and pinning it here stops the
     co-op host drifting back onto the withheld street name.
     """
-    alpha = dossiers["alpha"]
+    alpha = dossiers[ALPHA]
     fact = next(f for f in alpha.facts if f.category == "non_obvious" and not f.excluded)
     assert "rillwater-coop.example" in fact.provenance.url
     assert "quarrystone" not in fact.provenance.url.lower()
@@ -356,7 +400,7 @@ def test_the_non_obvious_fact_is_cited_to_an_unrelated_host(dossiers):
 
 def test_alpha_has_a_non_obvious_wayback_fact(dossiers):
     """R7's "Not on the first page" slot needs eligible material in the fixture."""
-    alpha = dossiers["alpha"]
+    alpha = dossiers[ALPHA]
     candidates = [
         f
         for f in alpha.facts
@@ -367,7 +411,7 @@ def test_alpha_has_a_non_obvious_wayback_fact(dossiers):
     assert candidates, "alpha needs at least one non_obvious fact sourced from wayback"
 
 
-@pytest.mark.parametrize("name", ["charlie", "delta"])
+@pytest.mark.parametrize("name", [CHARLIE, DELTA])
 def test_charlie_and_delta_have_digest_material(dossiers, name):
     """T-7 builds a who_line from current_work and a say-out-loud from a hook fact."""
     dossier = dossiers[name]
