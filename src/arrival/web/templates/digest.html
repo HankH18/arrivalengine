@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}{{ digest.person.name }} just arrived{% endblock %}
+{% block content %}
+{#
+  R7 pins SIX sections, in THIS order, with hard caps:
+      Who -> Meet -> Lately -> Not on the first page -> Say out loud -> Why we know this
+  Each is both a <section> whose id names it and an <h2> whose text names it, so the page is
+  addressable either way and the order is the order of the document.
+
+  R18 governs the three SPOKEN lines (who_line, every Meet why, say_out_loud): they carry no
+  URL, no [n] marker, no parenthetical. Citations therefore hang OUTSIDE the sentence, in a
+  <sup> after it, and the numbered list at the bottom is where a URL is allowed to live.
+#}
+<article class="digest">
+  <h1>{{ digest.person.name }}</h1>
+  <p class="lede">Arrived {{ digest.created_at | day }} &middot; digest <code>{{ digest.digest_id }}</code></p>
+
+  <section id="who">
+    <h2>Who</h2>
+    <p class="who-line">{{ digest.who_line }}{% for n in who_citations %}<sup class="cite"><a href="#source-{{ n }}">[{{ n }}]</a></sup>{% endfor %}</p>
+    {% if digest.person.details %}
+    <p class="quote">On the roster as: {{ digest.person.details | join('; ') }}.</p>
+    {% endif %}
+  </section>
+
+  <section id="meet">
+    <h2>Meet</h2>
+    {% if meet_rows %}
+    <ol class="meet-list">
+      {% for row in meet_rows %}
+      <li>
+        <p>
+          <span class="score">{{ row.match.score | score }}</span>
+          &middot; <strong>{{ row.match.other.name }}</strong>
+          {% if row.match.other.details %}<span class="quote">&mdash; {{ row.match.other.details[0] }}</span>{% endif %}
+        </p>
+        <p class="why">{{ row.match.why }}{% for n in row.citations %}<sup class="cite"><a href="#source-{{ n }}">[{{ n }}]</a></sup>{% endfor %}</p>
+        {#
+          R10: the score components, behind a toggle, per Meet row. TASKS T-8 acceptance 3
+          pins the attribute name `data-reasoning`, so it is spelled exactly that.
+          EVERY shared hub is listed, including the ones whose IDF clamped to zero: "we do
+          both live in Austin, and Austin is worth nothing here" is part of the answer to
+          what the score is made of, and hiding the zeroes would make the arithmetic on the
+          page stop adding up.
+        #}
+        <details class="reasoning" data-reasoning="score-components">
+          <summary>Show reasoning</summary>
+          {% if row.match.contributions %}
+          <table class="components">
+            <caption>Score components &mdash; weight &times; recency &times; type boost</caption>
+            <tr>
+              <th scope="col">Shared hub</th>
+              <th scope="col">Weight (IDF)</th>
+              <th scope="col">Recency</th>
+              <th scope="col">Type boost</th>
+              <th scope="col">Contribution</th>
+            </tr>
+            {% for c in row.match.contributions %}
+            <tr>
+              <td>{{ c.hub.label }} <code>{{ c.hub.type }}</code></td>
+              <td>{{ c.idf_weight | number }}</td>
+              <td>{{ c.recency | number }}</td>
+              <td>{{ c.type_boost | number }}</td>
+              <td>{{ c.contribution | number }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+          {% else %}
+          <p class="absent">No shared hub at all, so there are no components to show.</p>
+          {% endif %}
+        </details>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    {# R8: an explicit absence, never a padded list. #}
+    <p class="absent">Nobody else is in the building right now, so there is nobody to introduce.</p>
+    {% endif %}
+  </section>
+
+  <section id="lately">
+    <h2>Lately</h2>
+    {% if lately_rows %}
+    <ul class="lately-list">
+      {% for row in lately_rows %}
+      <li>
+        {{ row.fact.text }}{% for n in row.citations %}<sup class="cite"><a href="#source-{{ n }}">[{{ n }}]</a></sup>{% endfor %}
+        <br><span class="quote">&ldquo;{{ row.fact.provenance.quote }}&rdquo;</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="absent">Nothing dated recently enough to read as news.</p>
+    {% endif %}
+  </section>
+
+  <section id="not-on-the-first-page">
+    <h2>Not on the first page</h2>
+    {% if digest.non_obvious %}
+    <p>
+      {{ digest.non_obvious.text }}{% for n in non_obvious_citations %}<sup class="cite"><a href="#source-{{ n }}">[{{ n }}]</a></sup>{% endfor %}
+      <br><span class="quote">&ldquo;{{ digest.non_obvious.provenance.quote }}&rdquo;</span>
+    </p>
+    {% else %}
+    <p class="absent">Nothing here a first page of results would not already have shown.</p>
+    {% endif %}
+  </section>
+
+  <section id="say-out-loud">
+    <h2>Say out loud</h2>
+    <p class="opener">{{ digest.say_out_loud }}</p>
+  </section>
+
+  {#
+    R7 / R9: every document the page leaned on, numbered, with an openable URL, the
+    retrieval date and the verbatim quote. The numbering is `Digest.sources`' OWN order
+    (first use as T-7 assembled the page), not the order the sections appear in, so
+    citation [n] always indexes sources[n-1]. See `render.py` for why.
+  #}
+  <section id="why-we-know-this">
+    <h2>Why we know this</h2>
+    {% if sources %}
+    <ol class="sources">
+      {% for n, source in sources %}
+      <li id="source-{{ n }}">
+        <a href="{{ source.url }}">{{ source.url }}</a>
+        <br><span class="quote">{{ source.source_kind }} &middot; retrieved {{ source.retrieved_at | day }}{% if source.published_at %} &middot; published {{ source.published_at | day }}{% endif %} &middot; confidence {{ source.confidence }}</span>
+        <br><span class="quote">&ldquo;{{ source.quote }}&rdquo;</span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="absent">Nothing on this page came from a document, so there is nothing to cite.</p>
+    {% endif %}
+  </section>
+</article>
+
+{# R13: the one-paragraph statement of what is never surfaced, on every digest. #}
+<footer class="exclusion-policy">
+  <h2>What this digest never shows</h2>
+  <p>{{ digest.exclusion_policy }}</p>
+</footer>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Arrival Engine &mdash; roster{% endblock %}
+{% block content %}
+{#
+  The demo driver (TASKS T-8 acceptance 6). Plain HTML forms posting to the real routes:
+  no JavaScript, so "the demo is one click" is true in a browser with scripting off, and
+  the buttons exercise exactly the endpoints an integration would call.
+
+  NOTHING researched is rendered here. Only the roster's own self-description, which the
+  member wrote. A page that listed facts would be a second host-facing surface to keep the
+  R11/R12 gate on, and there is no reason for it to exist.
+#}
+<h1>Arrival Engine</h1>
+<p>{{ roster | length }} member{{ '' if roster | length == 1 else 's' }} on the roster, {{ present_count }} in the building.</p>
+
+<table class="roster">
+  <caption>Roster &mdash; press Arrive to fire the webhook this member would fire</caption>
+  <tr>
+    <th scope="col">Member</th>
+    <th scope="col">Here?</th>
+    <th scope="col">Drive the demo</th>
+  </tr>
+  {% for row in roster %}
+  <tr>
+    <td>
+      <strong>{{ row.person.name }}</strong>
+      <br><code>{{ row.person.person_id }}</code>
+      {% if row.person.details %}<br><span class="quote">{{ row.person.details | join('; ') }}</span>{% endif %}
+    </td>
+    <td>{% if row.present %}in the building{% else %}<span class="absent">out</span>{% endif %}</td>
+    <td>
+      <form method="post" action="/arrive">
+        <input type="hidden" name="person_id" value="{{ row.person.person_id }}">
+        <button type="submit">Arrive</button>
+      </form>
+      <form method="post" action="/leave">
+        <input type="hidden" name="person_id" value="{{ row.person.person_id }}">
+        <button type="submit">Leave</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<p class="quote">Dossiers read from <code>{{ dossier_dir }}</code>. No research happens here: a
+member who is not on this list is refused, not looked up.</p>
+
+<footer class="exclusion-policy">
+  <h2>What a digest never shows</h2>
+  <p>{{ exclusion_policy }}</p>
+</footer>
+{% endblock %}
