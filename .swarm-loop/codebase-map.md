@@ -235,7 +235,13 @@ is the seam T-1's tests use. Opt out with `@pytest.mark.network`; no frozen test
     of `RawDoc`s; `tests/fixtures/dossiers/*.json` are single `Dossier`s;
     `.swarm-loop/acceptance/fixtures/docs/*.json` are single `RawDoc`s named `{doc_id}.json`;
     `resolve_cases/*.json` are `{case_id, person, docs, scripted_verdicts, expect}`.
-17. **Tests are append-only.** The `test_t0b_*` modules are regression tripwires for eight
+17. **A stale `.pyc` can execute code that is not in the tree.** A same-length edit made
+    within the same second as the last one leaves a cache CPython accepts as valid (mtime
+    at 1s resolution + size both match). Reproduced twice: source reading `return 9`
+    executed as `return 2`. Neither an empty `git diff` nor re-running pytest clears it;
+    `find src tests -name __pycache__ -exec rm -rf {} +` does. This silently invalidates
+    any sabotage or revert-the-fix check, in both directions.
+18. **Tests are append-only.** The `test_t0b_*` modules are regression tripwires for eight
     already-repaired scaffold defects — a failure there means a repair was undone.
 
 ## 7. The frozen measurement harness

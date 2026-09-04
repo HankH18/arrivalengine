@@ -200,6 +200,21 @@ Never trust the installer's exit code.
   commands are wired) but is not an all-clear either — confirm by eye that the table is
   imported and mounted, and say so in DECISIONS. Exit 3 is the tool refusing your
   arguments, never a finding about your code.
+- **CLEAR `__pycache__` BETWEEN EVERY SABOTAGE VARIANT AND AFTER EVERY RESTORE.** A
+  same-LENGTH edit made within the same second as the previous one leaves a stale `.pyc`
+  that CPython **accepts as valid**: the pyc header records the source's mtime at
+  one-second resolution plus its size, and when both match the cached bytecode is reused
+  and the source is never recompiled. Reproduced independently, twice: a file whose text
+  read `return 9` was executed as `return 2`, and clearing the cache fixed it. A lane hit
+  this during its own sabotage step — it flipped `>= 2` to `>= 1`, saw four tests fail,
+  restored the file, confirmed `git diff --stat` was EMPTY, and the suite still reported
+  the four sabotaged failures. It fails in BOTH directions: you can conclude a restore
+  failed when it worked, or measure a number belonging to code you already reverted and
+  report it as evidence about code that is in the tree. Neither an empty `git diff` nor
+  re-running pytest clears it. Only this does:
+
+      find src tests -name __pycache__ -exec rm -rf {} +
+
 - **The packet is a hypothesis, not a set of facts — measure a premise before you build on
   it.** Every file:line in your packet may have drifted; a named test or target may be the
   wrong one; a prescribed fix is a starting point, not a solution. This has already

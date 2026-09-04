@@ -134,3 +134,12 @@ anything under the project's `tests/` is forbidden, because it looks helpful.
   that bought nothing measurable while breaking seven ticket lines the dependent tickets were
   built against. Two lanes also refused a directive that would have clobbered a sibling's live
   branch.
+
+- (cycle 1) **Clear the interpreter's bytecode cache between every sabotage variant and after
+  every restore; an empty diff is not evidence the tree is what runs.** — A same-length source
+  edit made within the same second as the previous one leaves a .pyc that CPython accepts as
+  valid, because the header matches on size and on an mtime stored at one-second resolution.
+  Reproduced twice: a file whose text read 'return 9' executed as 'return 2'. A lane hit it
+  mid-sabotage, restored the file, confirmed git diff --stat was empty, and still measured the
+  sabotaged failures — so a verification step can report a number belonging to code that is no
+  longer in the tree, in either direction.
