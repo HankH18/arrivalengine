@@ -503,3 +503,34 @@ def test_the_one_word_answer_agrees_with_the_set_and_is_deterministic() -> None:
             f"{label!r}/{evidence!r}: one-word answer {single!r} is not in {sorted(every)}"
         )
         assert single == verdict_attribute(THREE_DETAILS, verdict(holder, evidence, label))
+
+
+def test_a_job_title_with_no_organisation_after_it_is_not_a_city() -> None:
+    """A detail that is a bare job title has no separator, so it fell through to `_city`.
+
+    Measured on the live roster: Nabeel Qureshi's `"writer and researcher"` became his
+    CITY, and every document calling him a writer and researcher then corroborated where
+    he lives -- an attribute manufactured out of a detail that is not a place, on the arm
+    that decides whether the person exists at all. A wrong city is strictly worse than no
+    city, so this fails closed.
+    """
+    bare_title = PersonRef(
+        person_id="dara-whitfield",
+        name="Dara Whitfield",
+        details=["writer and researcher", "formerly Pelmyre; essays at dwhitfield.example"],
+    )
+    assert city_detail(bare_title) == "", (
+        f"a job title became the city detail: {city_detail(bare_title)!r}"
+    )
+
+    span = "Dara Whitfield is a writer and researcher based in Oslo"
+    assert "city" not in attributes_of(bare_title, span, "role"), (
+        "a span calling her a writer and researcher corroborated her CITY"
+    )
+    # And a real place is still found, with a role-shaped detail sitting in front of it.
+    with_place = PersonRef(
+        person_id="dara-whitfield",
+        name="Dara Whitfield",
+        details=["writer and researcher", "Trondheim"],
+    )
+    assert city_detail(with_place) == "Trondheim"

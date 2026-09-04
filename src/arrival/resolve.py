@@ -1150,11 +1150,22 @@ def _employer_detail(person: PersonRef) -> tuple[int, list[str]] | None:
 
 
 def _city_detail(person: PersonRef) -> tuple[int, list[str]] | None:
-    """`(detail index, distinctive tokens)` of the city detail: the one naming no role."""
+    """`(detail index, distinctive tokens)` of the city detail: the one naming no role.
+
+    "Naming no role" is asked TWICE, of two different shapes, and the second question was
+    missing. `_organisation_part` finds `"<role> at <Organisation>"` and skips it, but a
+    detail that is a job title with no organisation after it has no separator to split on,
+    so it fell through to here and became the city. Measured on the live roster:
+    Nabeel Qureshi's `"writer and researcher"` became his CITY, tokens
+    `["writer", "and", "researcher"]`, and any document calling him a writer and researcher
+    then corroborated where he lives — a manufactured attribute, from a detail that is not
+    a place, on the arm that decides whether the person exists at all. A wrong city is
+    strictly worse than no city, so this fails closed: he now has none.
+    """
     for index, detail in enumerate(person.details):
         if asserts_negation(detail):
             continue
-        if _organisation_part(detail, person) is not None:
+        if _organisation_part(detail, person) is not None or _names_a_role(detail):
             continue
         tokens = [token for token in _tokens(detail) if token not in _ORG_SUFFIXES]
         if tokens:
