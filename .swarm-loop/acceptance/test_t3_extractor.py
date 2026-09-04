@@ -1,9 +1,10 @@
 """FROZEN acceptance tests for ticket T-3 — fact/hub extraction and the citation guard.
 
 Graded requirements: SPEC R9 (every displayed fact carries a verbatim quote), SPEC C8
-(a fact with no verbatim quote in its source is dropped, not shown), SPEC S6, and
-DESIGN Decision 5 (the citation check is mechanical) and Decision 3 (stop-hubs, hub
-canonicalisation, recency).
+(a fact with no verbatim quote in its source is dropped, not shown), SPEC S6, SPEC R7
+(the "Not on the first page" slot, whose `non_obvious` label the extractor assigns —
+DESIGN §Data models, non-obvious eligibility), and DESIGN Decision 5 (the citation check
+is mechanical) and Decision 3 (stop-hubs, hub canonicalisation, recency).
 
 Source documents come from the orchestrator-owned corpus (`fixtures/docs/` and the
 wikidata document inside `fixtures/resolve_cases/strong-key-wikidata.json`), so the
@@ -35,17 +36,46 @@ import pytest
 # purpose: neither dialect replaces the other.
 pytestmark = [pytest.mark.t3, pytest.mark.ticket("T-3")]
 
-# Frozen documents used as source text. Both are committed RawDoc dumps.
+# Frozen documents used as source text. All are committed RawDoc dumps.
 _ABOUT_DOC = "35b4e2600c8a6ea6.json"  # self_page — Runa Okonkwo's own about page
 _ROADMAP_DOC = "92b1d32390d8795f.json"  # search — trade-press piece on the same company
+_STATUS_DOC = "d9902fb9cd225788.json"  # wayback — archived 2017 status page for the same company
 
 # Verbatim spans of those documents. Every test asserts the pre-condition before using them.
 _ABOUT_SPAN = "I co-founded Quarrystone Labs in 2016 and I run the platform team there"
+_FOUNDRY_SPAN = "Quarrystone Labs raised its first outside money from Foundry Seed in 2019"
 _ROADMAP_SPAN = "Quarrystone Labs opened its platform team roadmap to customers this month"
 _WIKIDATA_SPAN = "Employer: Belmarch Optics. Work location: Rotterdam."
+_STATUS_SPAN = (
+    "Quarrystone Labs shipped a public status page in 2017, which at the time was unusual "
+    "for a company of eleven people"
+)
+_STATUS_SPAN_2 = "We will keep this page up even on the days it makes us look bad."
 
 # DESIGN Decision 3, verbatim: never nodes, after lowercasing.
+#
+# These are hub LABELS, never hub_id type PREFIXES. `investor` and `technology` are each
+# simultaneously a stop-list label AND a `HubType`, so an implementation that matches the
+# stop list against `hub_id` (or against `Hub.type`) silently deletes every investor and
+# every technology hub — including `investor:foundry-seed-2019`, the rare high-signal hub
+# T-5's whole matching score is built on. `test_stop_hub_matching_is_on_labels_not_hub_id_
+# type_prefixes` below is the assertion that holds that line.
 _STOP_HUBS = {"texas", "startup", "founder", "ai", "technology", "business", "ceo", "investor"}
+
+# DESIGN §Data models, non-obvious eligibility (R7), verbatim. Copied rather than imported:
+# the frozen suite never measures the gradee with the gradee's own ruler. `self_page` and
+# `search` are deliberately absent — a subject's own about page IS the first page.
+_NON_OBVIOUS_ELIGIBLE_SOURCE_KINDS = {
+    "edgar",
+    "uspto",
+    "propublica",
+    "wayback",
+    "github",
+    "hn",
+    "openalex",
+    "wikidata",
+    "podcast",
+}
 
 
 # --------------------------------------------------------------------------------------
@@ -102,6 +132,11 @@ _HUB_ALIASES = {
     "wikidata": "qid",
 }
 
+# Every model field name that can carry a fact's sentence: `text` itself plus every alias
+# key that maps onto it. Used only to prove an over-length probe really reached the
+# extractor rather than being truncated on the way in.
+_FACT_TEXT_FIELDS = {"text"} | {k for k, v in _FACT_ALIASES.items() if v == "text"}
+
 
 def _unwrap_optional(annotation):
     if get_origin(annotation) is Union:
@@ -147,7 +182,27 @@ def _default_for(annotation):
     return None
 
 
-def _fill(model, payload, aliases):
+def _instantiate(model, kwargs, lenient):
+    """`model(**kwargs)`, falling back to an unvalidated build when `lenient`.
+
+    WHY the fallback exists: a probe that feeds the extractor a deliberately
+    contract-breaching candidate (an over-length fact) must reach the extractor
+    whatever the implementation's OWN internal extraction schema says. If that
+    schema pins `max_length=200`, strict construction raises here and the probe
+    dies on the way in — grading a correct implementation as a failure and
+    grading a permissive one not at all. `model_construct` keeps the delivery
+    unconditional so the CONTRACT is graded where it belongs: on the facts the
+    extractor returns. Never used by the ordinary tests, which stay strict.
+    """
+    if not lenient:
+        return model(**kwargs)
+    try:
+        return model(**kwargs)
+    except Exception:
+        return model.model_construct(**kwargs)
+
+
+def _fill(model, payload, aliases, lenient=False):
     """Instantiate `model` from a flat payload, matching by field name then by alias."""
     fields = getattr(model, "model_fields", None)
     if fields is None:
@@ -163,10 +218,33 @@ def _fill(model, payload, aliases):
             continue
         annotation = _unwrap_optional(field.annotation)
         if hasattr(annotation, "model_fields"):
-            kwargs[name] = _fill(annotation, payload, aliases)
+            kwargs[name] = _fill(annotation, payload, aliases, lenient)
         elif field.is_required():
             kwargs[name] = _default_for(annotation)
-    return model(**kwargs)
+    return _instantiate(model, kwargs, lenient)
+
+
+def _carried_fact_texts(obj):
+    """Every fact sentence the built extraction object actually carries.
+
+    Walks the object the scripted LLM is about to hand back, so a test can assert its
+    own pre-condition — that the candidate it scripted survived construction intact
+    — instead of assuming it did.
+    """
+    found: list[str] = []
+    fields = getattr(obj, "model_fields", None)
+    if fields is None:
+        return found
+    for name in fields:
+        value = getattr(obj, name, None)
+        if name in _FACT_TEXT_FIELDS and isinstance(value, str):
+            found.append(value)
+        elif isinstance(value, list):
+            for item in value:
+                found.extend(_carried_fact_texts(item))
+        elif hasattr(value, "model_fields"):
+            found.extend(_carried_fact_texts(value))
+    return found
 
 
 def _list_role(field_name, item_model):
@@ -183,7 +261,7 @@ def _list_role(field_name, item_model):
     return None
 
 
-def _build_extraction(schema, fact_payloads, hub_payloads):
+def _build_extraction(schema, fact_payloads, hub_payloads, lenient=False):
     """Build whatever extraction schema the implementation asked for."""
     fields = getattr(schema, "model_fields", None)
     if fields is None:
@@ -191,7 +269,7 @@ def _build_extraction(schema, fact_payloads, hub_payloads):
     list_fields = {n: _list_item_model(f.annotation) for n, f in fields.items()}
     if not any(list_fields.values()):
         if fact_payloads:
-            return _fill(schema, fact_payloads[0], _FACT_ALIASES)
+            return _fill(schema, fact_payloads[0], _FACT_ALIASES, lenient)
         raise AssertionError(
             f"extraction schema {getattr(schema, '__name__', schema)!r} carries no list of "
             "models and there is no scripted fact to fill it with"
@@ -202,18 +280,20 @@ def _build_extraction(schema, fact_payloads, hub_payloads):
         if item_model is not None:
             role = _list_role(name, item_model)
             if role == "fact":
-                kwargs[name] = [_fill(item_model, p, _FACT_ALIASES) for p in fact_payloads]
+                kwargs[name] = [
+                    _fill(item_model, p, _FACT_ALIASES, lenient) for p in fact_payloads
+                ]
             elif role == "hub":
-                kwargs[name] = [_fill(item_model, p, _HUB_ALIASES) for p in hub_payloads]
+                kwargs[name] = [_fill(item_model, p, _HUB_ALIASES, lenient) for p in hub_payloads]
             else:
                 kwargs[name] = []
         elif field.is_required():
             annotation = _unwrap_optional(field.annotation)
             if hasattr(annotation, "model_fields") and fact_payloads:
-                kwargs[name] = _fill(annotation, fact_payloads[0], _FACT_ALIASES)
+                kwargs[name] = _fill(annotation, fact_payloads[0], _FACT_ALIASES, lenient)
             else:
                 kwargs[name] = _default_for(annotation)
-    return schema(**kwargs)
+    return _instantiate(schema, kwargs, lenient)
 
 
 def _text_probe(doc) -> str:
@@ -264,11 +344,14 @@ def _hub_payload(doc, spec, fact_ids):
 class _ScriptedExtractionLLM:
     """Satisfies `contracts.LLMClient`: returns the scripted facts/hubs for the prompted docs."""
 
-    def __init__(self, docs, facts_by_doc, hubs_by_doc):
+    def __init__(self, docs, facts_by_doc, hubs_by_doc, lenient=False):
         self.docs = list(docs)
         self.facts_by_doc = dict(facts_by_doc)
         self.hubs_by_doc = dict(hubs_by_doc)
+        self.lenient = lenient
         self.calls: list[dict] = []
+        # Every fact sentence actually delivered to the extractor, across all calls.
+        self.delivered_fact_texts: list[str] = []
 
     async def structured(
         self, *, system: str, user: str, schema, max_tokens: int = 2000, cache_prefix: bool = True
@@ -289,7 +372,9 @@ class _ScriptedExtractionLLM:
                 fact_payloads.append(payload)
             for spec in self.hubs_by_doc.get(doc.doc_id, []):
                 hub_payloads.append(_hub_payload(doc, spec, fact_ids))
-        return _build_extraction(schema, fact_payloads, hub_payloads)
+        result = _build_extraction(schema, fact_payloads, hub_payloads, self.lenient)
+        self.delivered_fact_texts.extend(_carried_fact_texts(result))
+        return result
 
 
 # --------------------------------------------------------------------------------------
@@ -326,8 +411,13 @@ def _derived_doc(base, url: str, prefix: str, published_at, fetched_at=None):
     return base.model_copy(update=update)
 
 
-def _run_extract(docs, accepted_doc_ids, facts_by_doc, hubs_by_doc):
-    """Run `extract` with a scripted LLM and return `(facts, hubs)`."""
+def _run_extract_capturing(docs, accepted_doc_ids, facts_by_doc, hubs_by_doc, lenient=False):
+    """Run `extract` with a scripted LLM and return `(facts, hubs, llm)`.
+
+    The scripted LLM comes back so a test can assert what was actually DELIVERED to the
+    extractor, not merely what it intended to deliver.
+    """
+    llm = _ScriptedExtractionLLM(docs, facts_by_doc, hubs_by_doc, lenient=lenient)
 
     async def _inner():
         from arrival.contracts import PersonRef, Resolution
@@ -346,10 +436,16 @@ def _run_extract(docs, accepted_doc_ids, facts_by_doc, hubs_by_doc):
             rejected=[],
             confidence=0.91,
         )
-        llm = _ScriptedExtractionLLM(docs, facts_by_doc, hubs_by_doc)
         return await extract(person, resolution, docs, llm)
 
-    return asyncio.run(_inner())
+    facts, hubs = asyncio.run(_inner())
+    return facts, hubs, llm
+
+
+def _run_extract(docs, accepted_doc_ids, facts_by_doc, hubs_by_doc):
+    """Run `extract` with a scripted LLM and return `(facts, hubs)`."""
+    facts, hubs, _llm = _run_extract_capturing(docs, accepted_doc_ids, facts_by_doc, hubs_by_doc)
+    return facts, hubs
 
 
 # --------------------------------------------------------------------------------------
@@ -545,6 +641,164 @@ def test_stop_hub_labels_are_never_emitted_as_hubs(frozen_fixtures):
     assert "quarrystone labs" in emitted, f"the non-stop label was dropped too, got {sorted(emitted)}"
 
 
+def test_stop_hub_matching_is_on_labels_not_hub_id_type_prefixes(frozen_fixtures):
+    """DESIGN Decision 3: the stop list is matched against hub LABELS, never against the
+    `{type}:` prefix of a canonical `hub_id` and never against `Hub.type`.
+
+    Two of the eight stop words — `investor` and `technology` — are also `HubType` values,
+    so `investor:foundry-seed-2019` and `technology:developer-platform` both contain a stop
+    word in their canonical id while neither is a stop hub. An implementation that filters
+    on the id (or on the type) deletes EVERY investor and EVERY technology hub in the graph.
+    `investor:foundry-seed-2019` is exactly the rare, high-signal shared node T-5's matching
+    score is designed around — losing it degrades the score to generic overlap while
+    `test_stop_hub_labels_are_never_emitted_as_hubs` above stays green, because that test
+    happens to use only stop labels whose types (`topic`, `city`) are not stop words.
+
+    Discriminating in both directions in one batch: a prefix/type matcher loses the two
+    rare hubs, and an extractor with no stop list at all emits the two stop LABELS.
+    """
+    doc = _frozen_doc(frozen_fixtures, _ABOUT_DOC)
+    assert _is_quoted_in(_ABOUT_SPAN, doc.text)
+    assert _is_quoted_in(_FOUNDRY_SPAN, doc.text)
+    # The premise this test rests on, asserted rather than assumed.
+    assert {"investor", "technology"} <= _STOP_HUBS
+
+    facts, hubs = _run_extract(
+        [doc],
+        [doc.doc_id],
+        {
+            doc.doc_id: [
+                {
+                    "text": "Runa Okonkwo co-founded Quarrystone Labs and runs its platform team.",
+                    "quote": _ABOUT_SPAN,
+                    "category": "current_work",
+                },
+                {
+                    "text": (
+                        "Quarrystone Labs took its first outside money from Foundry Seed in 2019."
+                    ),
+                    "quote": _FOUNDRY_SPAN,
+                    "category": "affiliation",
+                },
+            ]
+        },
+        {
+            doc.doc_id: [
+                # Rare, high-signal hubs whose canonical ids CONTAIN a stop word.
+                {"label": "Foundry Seed 2019", "type": "investor"},
+                {"label": "Developer platform", "type": "technology"},
+                # The same two words as LABELS: these are the real stop hubs and must go.
+                {"label": "Investor", "type": "topic"},
+                {"label": "Technology", "type": "topic"},
+            ]
+        },
+    )
+    assert facts, "the facts for this document must survive, or the hubs prove nothing"
+
+    ids = {h.hub_id for h in hubs}
+    labels = {h.label.strip().casefold() for h in hubs}
+    assert "investor:foundry-seed-2019" in ids, (
+        "the `investor:` type prefix is not a stop hub — `investor` is a stop LABEL. "
+        f"Dropping this hub guts T-5's matching score; got {sorted(ids)}"
+    )
+    assert "technology:developer-platform" in ids, (
+        "the `technology:` type prefix is not a stop hub — `technology` is a stop LABEL; "
+        f"got {sorted(ids)}"
+    )
+    # And the converse, so an extractor with no stop list cannot pass this test either.
+    banned = labels & _STOP_HUBS
+    assert not banned, f"stop-hub LABELS were emitted as graph nodes: {sorted(banned)}"
+    assert not ids & {"topic:investor", "topic:technology"}, f"got {sorted(ids)}"
+
+
+def test_non_obvious_is_assigned_only_to_flagged_facts_from_eligible_sources(frozen_fixtures):
+    """T-3 acceptance 5 / SPEC R7: `category='non_obvious'` is the extractor's own label.
+
+    Verbatim from TASKS: "Facts from non-obvious-eligible source kinds are labelled
+    category='non_obvious' when the LLM flags them as not-bio-page material, else their
+    natural category." Both halves of that sentence are graded here, in one batch:
+
+      A. wayback source (eligible), LLM flags it   -> MUST be `non_obvious`
+      B. wayback source (eligible), LLM does not   -> MUST NOT be `non_obvious`
+      C. self_page source (NOT eligible), LLM flags it -> MUST NOT be `non_obvious`
+
+    C is the discriminator that matters: a subject's own about page IS the first page, so
+    "I co-founded Quarrystone Labs in 2016" is obvious biographical filler no matter what
+    the model says about it. DESIGN §Data models puts `self_page` outside the eligible set.
+
+    An extractor that labels everything `non_obvious` fails on B and C; one that labels
+    nothing fails on A; one that ignores the LLM's flag and labels by source kind alone
+    fails on B. Nothing passes by returning a constant.
+    """
+    status = _frozen_doc(frozen_fixtures, _STATUS_DOC)
+    about = _frozen_doc(frozen_fixtures, _ABOUT_DOC)
+    assert status.source_kind in _NON_OBVIOUS_ELIGIBLE_SOURCE_KINDS, (
+        f"fixture pre-condition: {_STATUS_DOC} must be a non-obvious-eligible source, "
+        f"got {status.source_kind!r}"
+    )
+    assert about.source_kind not in _NON_OBVIOUS_ELIGIBLE_SOURCE_KINDS, (
+        f"fixture pre-condition: {_ABOUT_DOC} must NOT be eligible, got {about.source_kind!r}"
+    )
+    assert _is_quoted_in(_STATUS_SPAN, status.text)
+    assert _is_quoted_in(_STATUS_SPAN_2, status.text)
+    assert _is_quoted_in(_ABOUT_SPAN, about.text)
+
+    flagged_eligible = "Quarrystone Labs shipped a public status page in 2017, with eleven people."
+    unflagged_eligible = "Quarrystone Labs keeps its incident log public on the bad days too."
+    flagged_ineligible = (
+        "Runa Okonkwo co-founded Quarrystone Labs in 2016 and runs its platform team."
+    )
+    for text in (flagged_eligible, unflagged_eligible, flagged_ineligible):
+        assert len(text) <= 200, "fixture pre-condition: every candidate is inside the cap"
+
+    facts, _hubs = _run_extract(
+        [status, about],
+        [status.doc_id, about.doc_id],
+        {
+            status.doc_id: [
+                {"text": flagged_eligible, "quote": _STATUS_SPAN, "category": "non_obvious"},
+                {
+                    "text": unflagged_eligible,
+                    "quote": _STATUS_SPAN_2,
+                    "category": "recent_activity",
+                },
+            ],
+            about.doc_id: [
+                {"text": flagged_ineligible, "quote": _ABOUT_SPAN, "category": "non_obvious"},
+            ],
+        },
+        {},
+    )
+
+    by_text = {f.text: f for f in facts}
+    # Every candidate is cited, accepted and inside the cap, so all three must survive —
+    # otherwise "not labelled non_obvious" could be satisfied by not emitting the fact.
+    candidates = (flagged_eligible, unflagged_eligible, flagged_ineligible)
+    missing = [t for t in candidates if t not in by_text]
+    assert not missing, f"cited, in-cap facts were dropped: {missing}; got {sorted(by_text)}"
+
+    assert by_text[flagged_eligible].category == "non_obvious", (
+        "a flagged fact from a non-obvious-eligible source (wayback) is exactly the "
+        "'Not on the first page' material R7 exists for; got "
+        f"{by_text[flagged_eligible].category!r}"
+    )
+    assert by_text[unflagged_eligible].category != "non_obvious", (
+        "an eligible SOURCE is not enough — the LLM must have flagged the fact; "
+        "labelling by source kind alone makes the whole batch non_obvious"
+    )
+    assert by_text[flagged_ineligible].category != "non_obvious", (
+        "obvious biographical filler from the subject's own about page must fall back to "
+        "its natural category — `self_page` is not on the non-obvious eligibility list"
+    )
+    non_obvious = [f.text for f in facts if f.category == "non_obvious"]
+    assert non_obvious == [flagged_eligible], (
+        f"exactly one candidate here warrants the label; got {non_obvious}"
+    )
+    # And the label must not be bought by breaking provenance: it stays on its own source.
+    assert by_text[flagged_eligible].provenance.doc_id == status.doc_id
+    assert by_text[flagged_eligible].provenance.source_kind == status.source_kind
+
+
 def test_hub_recency_follows_the_age_of_its_source_document(frozen_fixtures):
     """T-3 acceptance 4: 1.0 within 12 months, 0.6 within 3 years, 0.3 older, 0.5 unknown.
 
@@ -597,7 +851,16 @@ def test_hub_recency_follows_the_age_of_its_source_document(frozen_fixtures):
 
 
 def test_no_surviving_fact_exceeds_two_hundred_characters(frozen_fixtures):
-    """DESIGN Interfaces/Fact: `text` is at most 200 chars — the extractor must enforce it."""
+    """DESIGN Interfaces/Fact: `text` is at most 200 chars — the extractor must enforce it.
+
+    The cap is asserted DIRECTLY on `extract`'s own return value, and the over-length
+    candidate is delivered with `lenient=True` so that delivery does not depend on the
+    implementation's internal extraction schema being permissive. Grading the contract
+    through the gradee's own schema measures the schema, not the extractor: if the
+    implementation pins `max_length=200` there, strict construction raises inside the
+    scripted LLM and a CORRECT implementation is graded as a failure; if it pins nothing,
+    the probe lands. Neither outcome may be left to chance.
+    """
     doc = _frozen_doc(frozen_fixtures, _ABOUT_DOC)
     assert _is_quoted_in(_ABOUT_SPAN, doc.text)
     short_text = "Runa Okonkwo co-founded Quarrystone Labs and runs its platform team."
@@ -607,8 +870,9 @@ def test_no_surviving_fact_exceeds_two_hundred_characters(frozen_fixtures):
         "that a company selling to engineers is selling to people who read whatever it ships."
     )
     assert len(long_text) > 200, "fixture pre-condition: the long fact must breach the cap"
+    assert len(short_text) <= 200, "fixture pre-condition: the control fact is inside the cap"
 
-    facts, _hubs = _run_extract(
+    facts, _hubs, llm = _run_extract_capturing(
         [doc],
         [doc.doc_id],
         {
@@ -618,7 +882,19 @@ def test_no_surviving_fact_exceeds_two_hundred_characters(frozen_fixtures):
             ]
         },
         {},
+        lenient=True,
     )
+
+    # Probe pre-condition, asserted rather than assumed: the extractor really was handed
+    # an over-length candidate. Skipped only when the implementation's fact model names
+    # its sentence field something no alias covers — in which case `short_text` below
+    # fails anyway, so the test still cannot pass by mis-delivering.
+    if llm.delivered_fact_texts:
+        assert any(len(t) > 200 for t in llm.delivered_fact_texts), (
+            "the over-length candidate never reached the extractor — it was truncated or "
+            f"dropped on the way in, so this test measured nothing; delivered lengths: "
+            f"{sorted(len(t) for t in llm.delivered_fact_texts)}"
+        )
 
     oversized = [f.text for f in facts if len(f.text) > 200]
     assert not oversized, f"facts over the 200-char cap were emitted: {[len(t) for t in oversized]}"
