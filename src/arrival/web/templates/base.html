@@ -1,28 +1,458 @@
 {# The whole design system, such as it is. SPEC's non-goals: no design system, no JS
    framework, no mobile layout, "no CSS beyond a few inline rules". A host reads this off a
-   phone or a laptop in a lobby, so it is one readable column and nothing else. #}
+   phone or a laptop in a lobby, so it is one readable column and nothing else.
+
+   T-056: the column is now dressed in the owner's "Arena Hall" skin. It is still one
+   stylesheet inlined here and nothing else — no JS, no static mount, no build step.
+
+   THREE THINGS IN THIS FILE ARE LOAD-BEARING FOR TESTS, and `tests/web/test_t056_skin.py`
+   pins each of them against the RENDERED page:
+
+     1. the literal string `exclusion-policy` must not appear in the CSS. R13's footer is
+        styled as `main > footer`, never as a class, because
+        `tests/web/test_t8_render.py` asserts `html.count("exclusion-policy") == 1`.
+     2. no attribute selector may spell `id="..."`. The frozen T-8 suite and
+        `tests/web/test_t8_render.py` locate the six R7 sections with
+        `html.index('id="who"')`, so an `[id="say-out-loud"]` in <head> would silently
+        move every section boundary. Bare id selectors (`#say-out-loud`) are fine — the
+        string is not in them.
+     3. no `<script`, anywhere, on any page. The fonts therefore load through a <link>.
+#}
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Arrival Engine{% endblock %}</title>
+{# The app mounts no StaticFiles, so the two faces cannot be self-hosted. A <link> is the
+   only no-JS way to fetch them, and every rule below names a local fallback first-class:
+   with the network blocked the page renders in Iowan Old Style / Georgia and system-ui,
+   which is the difference between "a lobby with bad wifi" and "a broken page". #}
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  body { font: 16px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 46rem; padding: 1.5rem; color: #14161a; }
-  nav { font-size: 0.85rem; margin-bottom: 1.5rem; }
-  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
-  h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 1.75rem 0 0.4rem; color: #4a5058; }
-  p, li { margin: 0.4rem 0; }
-  .cite { font-size: 0.75rem; }
-  .quote { color: #4a5058; font-size: 0.9rem; }
-  .score { font-weight: 700; }
-  .absent { color: #6b7280; font-style: italic; }
-  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
-  td, th { border-bottom: 1px solid #e2e5ea; padding: 0.2rem 0.4rem; text-align: left; }
-  details { margin: 0.4rem 0; font-size: 0.9rem; }
-  form { display: inline; }
-  code { font-size: 0.8rem; color: #4a5058; }
-  footer { margin-top: 2.5rem; font-size: 0.85rem; color: #4a5058; }
+:root {
+  --olive:      #3b4626;
+  --olive-d:    #2c3520;
+  --paper:      #f1eadb;
+  --paper-2:    #e7decc;
+  --cream:      #f1eadb;
+  --cream-dim:  #cdc7b3;
+  --ink:        #26241d;
+  --ink-soft:   #403c32;
+  --mut:        #6f685a;
+  --bronze:     #7b5732;
+  --gold:       #b89257;
+  --rule:       rgba(123, 87, 50, 0.18);
+  --rule-firm:  rgba(38, 36, 29, 0.22);
+  --serif:      'Cormorant Garamond', 'Iowan Old Style', Georgia, serif;
+  --ui:         'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ---------- shell ---------- */
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 19px/1.6 var(--serif);
+  margin: 0 auto;
+  max-width: 46rem;
+  padding: 1.5rem 1.5rem 4rem;
+  -webkit-font-smoothing: antialiased;
+}
+
+nav {
+  font-family: var(--ui);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  padding-bottom: 0.9rem;
+  margin-bottom: 2.2rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--mut);
+}
+nav a { color: var(--bronze); text-decoration: none; }
+nav a:hover { color: var(--olive); text-decoration: underline; }
+
+/* ---------- headings ---------- */
+
+h1 {
+  font-family: var(--serif);
+  font-weight: 300;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.08;
+  letter-spacing: -0.005em;
+  margin-bottom: 0.35rem;
+  text-wrap: balance;
+}
+
+h2 {
+  font-family: var(--ui);
+  font-weight: 500;
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  margin: 2.4rem 0 0.6rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ---------- body copy ---------- */
+
+p, li { margin: 0.45rem 0; }
+p { color: var(--ink-soft); }
+
+strong { font-weight: 600; color: var(--ink); }
+
+a { color: var(--bronze); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { color: var(--olive); }
+
+code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.72em;
+  letter-spacing: 0.02em;
+  color: var(--mut);
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  padding: 0.05em 0.35em;
+}
+
+/* the three spoken lines — biggest type on the page, because they are read aloud */
+.who-line, .why, .opener {
+  font-family: var(--serif);
+  font-size: 23px;
+  line-height: 1.42;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.lede {
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.5rem;
+  font-variant-numeric: lining-nums;
+}
+.lede code { background: none; border: 0; padding: 0; color: var(--mut); letter-spacing: 0.06em; }
+
+.quote {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--mut);
+}
+
+.absent {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--mut);
+}
+
+.cite {
+  font-family: var(--ui);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  vertical-align: super;
+  line-height: 0;
+}
+.cite a { color: var(--gold); text-decoration: none; }
+.cite a:hover { color: var(--bronze); text-decoration: underline; }
+
+/* ---------- Meet ---------- */
+
+.meet-list { list-style: none; padding: 0; margin: 0.8rem 0 0; }
+.meet-list > li {
+  padding: 1rem 0 1.2rem;
+  border-top: 1px solid var(--rule);
+  margin: 0;
+}
+
+.score {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--olive);
+  font-variant-numeric: lining-nums tabular-nums;
+  margin-right: 0.15rem;
+}
+
+.meet-list > li > p:first-of-type {
+  font-family: var(--ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  margin: 0 0 0.45rem;
+  line-height: 1.25;
+}
+.meet-list > li > p:first-of-type .quote {
+  font-family: var(--serif);
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.why { margin: 0; }
+
+/* ---------- disclosures + tables ---------- */
+
+details { margin: 0.7rem 0 0; font-family: var(--ui); font-size: 12px; }
+summary {
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mut);
+  list-style: none;
+}
+summary::marker, summary::-webkit-details-marker { display: none; }
+summary::before { content: '+ '; color: var(--gold); }
+details[open] > summary::before { content: '– '; }
+summary:hover { color: var(--bronze); }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: var(--ui);
+  font-size: 12px;
+  margin: 0.7rem 0 0.4rem;
+  font-variant-numeric: tabular-nums;
+}
+caption {
+  font-family: var(--ui);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mut);
+  text-align: left;
+  padding-bottom: 0.45rem;
+}
+th {
+  font-weight: 500;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bronze);
+  white-space: nowrap;
+}
+td, th {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.4rem 0.6rem 0.4rem 0;
+  text-align: left;
+  vertical-align: top;
+  color: var(--ink-soft);
+}
+tr:first-child th { border-bottom-color: var(--rule-firm); }
+td .quote { font-size: 14px; }
+td code { font-size: 10px; }
+
+/* ---------- Lately, Not on the first page ---------- */
+
+.lately-list { list-style: none; padding: 0; margin: 0.8rem 0 0; }
+.lately-list > li {
+  font-size: 20px;
+  line-height: 1.45;
+  color: var(--ink);
+  padding: 0.75rem 0 0.85rem 1.5rem;
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+.lately-list > li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 1.35rem;
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  transform: rotate(45deg);
+}
+.lately-list .quote, #not-on-the-first-page .quote { display: block; margin-top: 0.35rem; }
+
+/* ---------- Say out loud — the ninety-second payload ---------- */
+
+#say-out-loud .opener {
+  background: var(--paper-2);
+  border-top: 2px solid var(--olive);
+  border-bottom: 1px solid var(--rule);
+  font-size: 27px;
+  line-height: 1.32;
+  font-style: italic;
+  color: var(--olive-d);
+  padding: 1.2rem 1.4rem 1.3rem;
+  margin: 0.9rem 0 0;
+  text-wrap: pretty;
+}
+
+/* ---------- Sources ---------- */
+
+.sources { padding-left: 1.6rem; margin: 0.8rem 0 0; }
+.sources > li {
+  padding: 0.6rem 0 0.7rem;
+  border-top: 1px solid var(--rule);
+  font-family: var(--ui);
+  font-size: 12px;
+  color: var(--mut);
+}
+.sources > li::marker { color: var(--gold); font-weight: 500; }
+.sources a { word-break: break-all; font-size: 12px; }
+.sources .quote { font-size: 15px; }
+.sources > li:target { background: rgba(184, 146, 87, 0.14); box-shadow: -1.6rem 0 0 rgba(184, 146, 87, 0.14); }
+
+/*
+  T-040's per-claim evidence, which the guide predates. One <ul class="evidence"> per
+  document, one <li> per quote, each quote followed by a <span class="attribution">
+  naming the claim it backs and its confidence.
+
+  The document's own line (url + kind + dates) is bookkeeping; the quotes are the
+  evidence. So the line steps DOWN into the UI face at the size the rest of the source
+  entry already uses, and the quotes keep the serif that `.sources .quote` gives them —
+  otherwise the two are indistinguishable and the citation reads as four identical
+  italic fragments.
+*/
+.sources > li > .quote {
+  font-family: var(--ui);
+  font-style: normal;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.evidence { list-style: none; padding: 0; margin: 0.55rem 0 0; }
+.evidence > li {
+  margin: 0;
+  padding: 0.15rem 0 0.35rem 0.85rem;
+  border-left: 1px solid var(--rule);
+}
+.evidence > li + li { margin-top: 0.35rem; }
+.evidence .quote { display: block; line-height: 1.45; }
+.evidence > li:target { background: rgba(184, 146, 87, 0.14); }
+
+.attribution {
+  display: block;
+  margin-top: 0.2rem;
+  font-family: var(--ui);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--mut);
+  font-variant-numeric: tabular-nums;
+}
+
+/* an untraceable document: the same absence voice, at the sources' scale */
+.sources .absent { font-size: 15px; }
+
+/* ---------- the R13 footer (styled via the element, never the class) ---------- */
+
+main > footer {
+  margin-top: 3.5rem;
+  padding: 1.4rem 1.6rem 1.6rem;
+  background: var(--olive-d);
+  color: var(--cream-dim);
+  font-family: var(--ui);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+main > footer h2 {
+  color: var(--gold);
+  border-bottom: 1px solid rgba(241, 234, 219, 0.18);
+  margin-top: 0;
+}
+main > footer p { color: var(--cream-dim); }
+
+/* ---------- roster (index) ---------- */
+
+.roster { font-size: 13px; margin-top: 1.2rem; }
+.roster caption {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mut);
+  padding-bottom: 0.7rem;
+}
+.roster th { padding: 0 0.6rem 0.45rem 0; }
+.roster td { padding: 0.7rem 0.6rem 0.7rem 0; }
+.roster td:first-child { font-family: var(--serif); font-size: 20px; color: var(--ink); }
+.roster td:last-child { text-align: right; white-space: nowrap; padding-right: 0; }
+
+form { display: inline; }
+button {
+  font-family: var(--ui);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 0.6rem 1.1rem;
+  margin-left: 0.4rem;
+  background: var(--olive);
+  color: var(--cream);
+  border: 1px solid var(--olive);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+button:hover { background: var(--olive-d); }
+form + form button { background: none; color: var(--bronze); border-color: var(--rule-firm); }
+form + form button:hover { background: var(--paper-2); }
+
+/* ---------- in the building ---------- */
+
+.present { list-style: none; padding: 0; margin: 1rem 0 0; counter-reset: p; }
+.present > li {
+  counter-increment: p;
+  font-family: var(--serif);
+  font-size: 22px;
+  color: var(--ink);
+  padding: 0.7rem 0 0.75rem 2.4rem;
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+.present > li::before {
+  content: counter(p);
+  position: absolute;
+  left: 0;
+  top: 1.05rem;
+  font-family: var(--ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+}
+.present code { margin-left: 0.5rem; }
+
+/* ---------- operator view (/debug) ---------- */
+
+.rejected, .withheld, .facts, .hubs { font-size: 11.5px; }
+.withheld td:first-child, .facts td:first-child { color: var(--ink); }
+.rejected td, .withheld td, .facts td, .hubs td { padding-bottom: 0.5rem; }
+
+/* ---------- phone (the stated non-goal, added deliberately) ---------- */
+
+@media (max-width: 40rem) {
+  body { padding: 1rem 1rem 3rem; font-size: 18px; }
+  h1 { font-size: 30px; }
+  #say-out-loud .opener { font-size: 23px; padding: 1rem 1.1rem; }
+  .score { font-size: 26px; }
+  .who-line, .why { font-size: 21px; }
+  /* the guide un-right-aligns this cell on a phone but leaves the base `nowrap` on, so
+     the two buttons hold the column open and squeeze the member column until names break
+     mid-phrase ("Jem / Arrowood"). Letting them stack finishes the rule. */
+  .roster td:last-child { text-align: left; padding-top: 0; white-space: normal; }
+  table { display: block; overflow-x: auto; }
+  main > footer { padding: 1.1rem 1.1rem 1.3rem; }
+}
 </style>
 </head>
 <body>
