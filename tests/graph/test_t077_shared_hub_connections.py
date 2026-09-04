@@ -92,6 +92,110 @@ def test_one_organisation_typed_two_ways_is_one_node_and_connects_its_carriers()
     assert scored[0].path == ["person:emmett", next(iter(shared)), "person:steve"]
 
 
+def test_an_acronym_and_its_expansion_are_one_institution_and_are_said_once():
+    """The second face of cause 1, measured on the repaired live corpus.
+
+    `school:mit` and `school:massachusetts-institute-of-technology` were carried by the SAME
+    two people, so the pair did not merely fail to join on them -- it joined TWICE for one
+    real reason. Measured: score 53 instead of 27, and the spoken line "Both came through
+    Massachusetts Institute of Technology; both came through MIT."
+    """
+    both = [
+        _hub("school:mit", "MIT", "school"),
+        _hub("school:massachusetts-institute-of-technology",
+             "Massachusetts Institute of Technology", "school"),
+    ]
+    dossiers = [_dossier("brad", *both), _dossier("fred", *both), *_filler(6)]
+    graph = build_graph(dossiers)
+
+    shared = _shared(graph, "brad", "fred")
+    assert len(shared) == 1, f"one institution became {len(shared)} nodes: {sorted(shared)}"
+    scored = match(graph, "brad", ["fred"])
+    assert len(scored[0].contributions) == 1, "one reason was counted twice"
+    why = scored[0].why
+    assert why.count("both") + why.count("Both") == 1, f"one reason, said twice: {why!r}"
+    assert "MIT" in why
+
+
+def test_an_acronym_two_names_could_expand_to_is_refused_rather_than_assigned():
+    """R2 again: an alphabetical winner between two expansions is arrival order in costume."""
+    dossiers = [
+        _dossier("brad", _hub("school:mit", "MIT", "school")),
+        _dossier("fred", _hub("school:massachusetts-institute-of-technology",
+                              "Massachusetts Institute of Technology", "school")),
+        _dossier("nadia", _hub("school:manchester-institute-of-technology",
+                               "Manchester Institute of Technology", "school")),
+        *_filler(5),
+    ]
+    graph = build_graph(dossiers)
+
+    assert not _shared(graph, "brad", "fred"), "a contested acronym was resolved by sorting"
+    assert not _shared(graph, "brad", "nadia"), "a contested acronym was resolved by sorting"
+
+
+def test_a_short_name_that_is_not_written_as_an_acronym_is_never_folded():
+    """The orthography is the evidence. "Only" is not an abbreviation of anything."""
+    dossiers = [
+        _dossier("a", _hub("company:only", "Only", "company")),
+        _dossier("b", _hub("company:oakhurst-nautical-logistics",
+                           "Oakhurst Nautical Logistics", "company")),
+        *_filler(5),
+    ]
+    graph = build_graph(dossiers)
+    assert not _shared(graph, "a", "b"), "an ordinary short name was folded into an expansion"
+
+
+def test_an_acronym_is_not_folded_across_hub_types():
+    """An acronym company and an expansion school are two things however the letters line up."""
+    dossiers = [
+        _dossier("a", _hub("company:mit", "MIT", "company")),
+        _dossier("b", _hub("school:massachusetts-institute-of-technology",
+                           "Massachusetts Institute of Technology", "school")),
+        *_filler(5),
+    ]
+    graph = build_graph(dossiers)
+    assert not _shared(graph, "a", "b"), "the fold crossed a hub type"
+
+
+def test_the_acronym_fold_does_not_depend_on_dossier_order():
+    short = _dossier("brad", _hub("school:mit", "MIT", "school"))
+    long = _dossier("fred", _hub("school:massachusetts-institute-of-technology",
+                                 "Massachusetts Institute of Technology", "school"))
+    forwards = build_graph([short, long, *_filler(6)])
+    backwards = build_graph([long, short, *_filler(6)])
+
+    def hubs(graph):
+        return {
+            node: (data["type"], data["label"], data["n_carriers"])
+            for node, data in graph.nodes(data=True)
+            if data.get("kind") == "hub"
+        }
+
+    assert hubs(forwards) == hubs(backwards)
+    assert match(forwards, "brad", ["fred"])[0].score == match(backwards, "brad", ["fred"])[0].score
+
+
+def test_two_different_names_for_one_institution_are_left_alone():
+    """The case this deliberately does NOT solve, pinned so nobody later thinks it does.
+
+    "The Wharton School of Business" and "University of Pennsylvania" are one institution and
+    both are in the live corpus. Nothing in the two strings relates them; only a knowledge
+    base does, and inventing one here would be manufacturing a connection rather than finding
+    one. Two people who share it stay unconnected, and that is the honest answer until a real
+    alias source exists.
+    """
+    dossiers = [
+        _dossier("fred", _hub("school:the-wharton-school-of-business",
+                              "The Wharton School of Business", "school")),
+        _dossier("josh", _hub("school:university-of-pennsylvania",
+                              "University of Pennsylvania", "school")),
+        *_filler(5),
+    ]
+    graph = build_graph(dossiers)
+    assert not _shared(graph, "fred", "josh")
+    assert match(graph, "fred", ["josh"])[0].score == 0
+
+
 def test_the_elected_type_of_a_split_hub_does_not_depend_on_dossier_order():
     """Which of the two types wins decides the boost, so it may not be a filesystem glob."""
     left = _dossier("emmett", _hub("company:y-combinator", "Y Combinator", "company"))

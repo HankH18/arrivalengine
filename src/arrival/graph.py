@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 from collections.abc import Iterable, Sequence
 
 import networkx as nx
@@ -258,6 +259,106 @@ def _elect_qid(carriers: dict[str, set[str]]) -> str | None:
     return ranked[0][0]
 
 
+#: The shortest acronym that may fold into its expansion. Two letters is where the rule
+#: stops being about one organisation and starts being about a coincidence -- "VC", "PE",
+#: "AI" and "GS" each name several things, and a wrong fold pools two entities' labels,
+#: types and evidence for everybody in the graph. Three is where the abbreviations that
+#: actually appear in dossiers live: MIT, USV, IBM, NYU, LSE.
+MIN_ACRONYM_LETTERS = 3
+
+#: Words an acronym skips. Only closed-class connectives -- nothing that could be the
+#: distinguishing word of a name.
+_ACRONYM_SKIP: frozenset[str] = frozenset({"of", "the", "and", "for", "at", "in", "on", "de"})
+
+_WORDS = re.compile(r"[^0-9A-Za-z]+")
+
+
+def _acronym_of(label: str) -> str | None:
+    """The initials of a multi-word name -- "Massachusetts Institute of Technology" -> "MIT".
+
+    Returns None for anything too short to be worth abbreviating. Connectives are skipped,
+    which is how English forms these, and the count is of the words that survive the skip:
+    "Bank of America" is two significant words and gets no acronym here, deliberately.
+    """
+    words = [word for word in _WORDS.split(label) if word]
+    significant = [word for word in words if word.casefold() not in _ACRONYM_SKIP]
+    if len(significant) < MIN_ACRONYM_LETTERS:
+        return None
+    return "".join(word[0] for word in significant).upper()
+
+
+def _reads_as_an_acronym(label: str) -> bool:
+    """Whether this label is written the way an abbreviation is: one all-capital token.
+
+    "MIT" and "M.I.T." qualify; "Mit", "MIT Sloan" and "Google" do not. The orthography is
+    the evidence -- the same argument :func:`_spoken_label` makes in the other direction --
+    and requiring it is what keeps the fold from reaching an ordinary short name.
+    """
+    token = label.strip().replace(".", "")
+    return len(token) >= MIN_ACRONYM_LETTERS and token.isalpha() and token.isupper()
+
+
+def _acronym_aliases(described: dict[str, list[tuple[str, str]]]) -> dict[str, str]:
+    """Identity keys that are an ACRONYM of another key in the same corpus, folded onto it.
+
+    The second face of the hub-identity defect, and the one the live corpus made visible
+    only once its documents were repaired: ``school:mit`` and
+    ``school:massachusetts-institute-of-technology``, carried by the SAME two people, are one
+    institution. Left split they do not merely fail to join -- they join TWICE for one real
+    reason, which inflated that pair's score from 33 to 53 and produced the spoken line
+    "Both came through Massachusetts Institute of Technology; both came through MIT."
+
+    Four conditions, all of them mechanical, and every one of them is load-bearing:
+
+    1. the short label is WRITTEN as an abbreviation (:func:`_reads_as_an_acronym`), so the
+       fold can never reach an ordinary short name;
+    2. the long label's initials are exactly it (:func:`_acronym_of`), which is a fact about
+       the two strings rather than a guess about the world;
+    3. both groups elect the SAME hub type, so an acronym company is never folded into an
+       expansion school;
+    4. exactly ONE expansion claims the acronym. Two are a genuine ambiguity and the answer
+       is to refuse, not to pick -- the same reasoning :func:`_elect_qid` applies to a
+       contested QID, and for the same reason: an alphabetical winner between "Manchester
+       Institute of Technology" and "Massachusetts Institute of Technology" would be arrival
+       order in a better costume.
+
+    What it deliberately does NOT do is fold two DIFFERENT names for one institution --
+    "The Wharton School of Business" and "University of Pennsylvania", both in this corpus.
+    Nothing in those two strings relates them; only a knowledge base does, and inventing one
+    here would be manufacturing a connection rather than finding it. That case is reported
+    open rather than guessed at.
+    """
+    types = {key: _hub_identity(pairs)[0] for key, pairs in described.items()}
+    labels = {key: _hub_identity(pairs)[1] for key, pairs in described.items()}
+    claims: dict[str, list[str]] = {}
+    for key, label in labels.items():
+        acronym = _acronym_of(label)
+        if acronym is not None:
+            claims.setdefault(slug(acronym), []).append(key)
+
+    alias: dict[str, str] = {}
+    for key, label in sorted(labels.items()):
+        if not _reads_as_an_acronym(label):
+            continue
+        expansions = sorted(
+            other for other in claims.get(key, ()) if other != key and types[other] == types[key]
+        )
+        if not expansions:
+            continue
+        if len(expansions) > 1:
+            log.info(
+                "refusing to expand the acronym %r: %s all abbreviate to it, so a winner "
+                "would be arrival order wearing the costume of evidence",
+                label,
+                [labels[other] for other in expansions],
+            )
+            continue
+        alias[key] = expansions[0]
+        log.info("folding the acronym %r onto %r: one entity, two spellings",
+                 label, labels[expansions[0]])
+    return alias
+
+
 def _identity_key(hub: Hub) -> str:
     """What the evidence actually fixes about a hub: its label, normalised.
 
@@ -338,6 +439,18 @@ def _canonical_hub_ids(dossiers: Sequence[Dossier]) -> dict[str, str]:
                 by_qid = qid_carriers.setdefault(key, {})
                 by_qid.setdefault(hub.hub_id, set()).add(person_id)
 
+    # An acronym and its expansion are one entity written two ways, so their groups are
+    # merged BEFORE anything is elected: the pooled occurrences are what the type, label and
+    # id votes must see. Every fold is a dict merge, so the result does not depend on the
+    # order the dossiers arrived in. See `_acronym_aliases`.
+    alias = _acronym_aliases(described)
+    for short, long in sorted(alias.items()):
+        for hub_id, count in stated.pop(short, {}).items():
+            stated[long][hub_id] = stated[long].get(hub_id, 0) + count
+        for qid, people in qid_carriers.pop(short, {}).items():
+            qid_carriers.setdefault(long, {}).setdefault(qid, set()).update(people)
+        described[long].extend(described.pop(short))
+
     canonical: dict[str, str] = {}
     for key, counts in stated.items():
         qid = _elect_qid(qid_carriers.get(key, {}))
@@ -350,6 +463,10 @@ def _canonical_hub_ids(dossiers: Sequence[Dossier]) -> dict[str, str]:
             continue
         hub_type, label = _hub_identity(described[key])
         canonical[key] = f"{hub_type}:{slug(label)}"
+    # `_identity_key` is called again by `build_graph`, and it does not know about the fold.
+    # Both spellings therefore have to resolve here, to the one id the merged group elected.
+    for short, long in alias.items():
+        canonical[short] = canonical[long]
     return canonical
 
 
