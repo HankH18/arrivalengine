@@ -164,7 +164,16 @@ def _raw_doc(kind, url, name):
         f"DOCSENTINEL-{did} marks this record for the offline acceptance harness. "
         "Quarrystone Labs has published its build tooling under an open licence since "
         "2019, and the platform team writes a short public note whenever the command "
-        "line tool changes in a way that anyone outside the company would notice."
+        "line tool changes in a way that anyone outside the company would notice. "
+        # AMENDED 2026-09-04 (ESC-006). Every other sentence in this corpus returns
+        # `keep` from taste.rule_verdict, so before this line NO frozen t6 test could
+        # assert that an exclusion ever happened -- and replacing
+        # `facts = await apply_taste(...)` with `facts = candidates` left this module
+        # 11/11 GREEN. Measured, with the sabotage confirmed present in the loaded
+        # source. Taste is R11-R14, the line this product is scored on.
+        # This sentence returns exclude/home_or_property from taste.rule_verdict
+        # DETERMINISTICALLY, with no LLM call, so it costs the harness nothing.
+        f"{name} bought a four-bedroom house on Pecan Street for 2.4 million dollars."
     )
     return RawDoc(
         doc_id=did,
@@ -672,6 +681,59 @@ def test_unresolved_person_stores_no_facts_and_does_not_run_extraction(tmp_path)
     )
 
 
+def test_the_taste_stage_is_applied_and_the_report_counts_the_exclusion(tmp_path):
+    """R11-R14 / T-6 acceptance 1: the pipeline APPLIES taste, and the row counts it.
+
+    ADDED 2026-09-04 (ESC-006), and this is why. Every other assertion in this module
+    about taste is satisfied when `apply_taste` is never called at all: "at least one
+    fact survives" and "facts_kept + facts_excluded == len(facts)" both hold identically
+    when everything is kept and excluded is 0. Measured, with the sabotage confirmed
+    present in the loaded source: replacing `facts = await apply_taste(...)` with
+    `facts = candidates` left this module 11/11 GREEN. Taste is the line this product is
+    scored on, and nothing frozen could see it missing.
+
+    The corpus cannot carry this on its own -- the LLM double SYNTHESISES fact text from
+    a document's evidence span rather than reading the document's sentences, so adding an
+    excludable sentence to `_raw_doc` produces no excludable FACT. It is scripted here
+    instead, which also keeps the shared corpus, the resolver's independence arithmetic
+    and the budget arithmetic untouched.
+
+    The scripted sentence returns exclude/home_or_property from `taste.rule_verdict`
+    DETERMINISTICALLY, with no LLM call, so this costs the harness nothing. It is a
+    verbatim substring of `_raw_doc`'s text, so the T-3 citation check passes on it.
+    """
+    person_id, name, details = ROSTER[0]
+    docs, registry = _corpus([ROSTER[0]], ("self_page",), 2)
+    person = _person_ref(person_id, name, details)
+
+    house = f"{name} bought a four-bedroom house on Pecan Street for 2.4 million dollars."
+    llm = LLMStub(registry, overrides={"text": house, "quote": house})
+    dossier = _run_build_dossier(
+        person,
+        [ConnectorStub("self_page", docs["self_page"])],
+        llm,
+        _budget(docs_per_connector=8, max_docs_total=40, max_llm_calls=80),
+    )
+
+    assert dossier.facts, (
+        "the pipeline produced no facts at all, so this test cannot say anything about "
+        "whether taste was applied"
+    )
+    excluded = [fact for fact in dossier.facts if fact.excluded]
+    assert excluded, (
+        f"{person_id}'s dossier holds {len(dossier.facts)} fact(s) and NONE is excluded, "
+        f"even though every one of them reads {house!r} -- a sentence `taste.rule_verdict` "
+        "excludes deterministically as home_or_property. The taste stage is not being "
+        "applied to the pipeline's output, and R11-R14 is the line this product is "
+        "scored on"
+    )
+    for fact in excluded:
+        assert fact.exclusion_reason is not None, (
+            f"{person_id} has an excluded fact carrying no exclusion_reason, so /debug "
+            "cannot say WHY it was withheld: " + repr(fact)
+        )
+
+
 def test_max_llm_calls_caps_the_build_without_raising(tmp_path):
     """T-6 acceptance 4: at the budget cap the pipeline keeps what it has and stops."""
     from arrival.contracts import Dossier
@@ -742,6 +804,21 @@ def test_docs_per_connector_and_max_docs_total_are_both_respected(tmp_path):
         "so the tight-budget assertions measure nothing"
     )
 
+    # AMENDED 2026-09-04 (ESC-006), gap 2: the caps below are ALSO satisfied by taking
+    # the first four documents in CONNECTOR ORDER (self_page x2, search x2, github x0),
+    # because with docs_per_connector=2 each source can contribute at most 2 anyway.
+    # Measured: replacing the round-robin merge with flat concatenation left this module
+    # green while `github` never reached the model at all. Going wide over sources is the
+    # entire retrieval strategy, so assert the spread, not just the totals.
+    kinds_reached = {registry[d]["kind"] for d in tight_seen if d in registry}
+    assert kinds_reached == set(kinds), (
+        f"only {sorted(kinds_reached)} of {sorted(kinds)} reached the model under the "
+        f"tight budget ({len(tight_seen)} documents). Four slots over three sources must "
+        "give every source at least one; spending them in connector order starves the "
+        "last source completely, and breadth is what the connector layer is for. "
+        f"Never asked: {sorted(set(kinds) - kinds_reached)}"
+    )
+
     assert len(tight_seen) <= 4, (
         f"max_docs_total was 4 but {len(tight_seen)} documents reached the model: "
         f"{sorted(tight_seen)}"
@@ -757,6 +834,52 @@ def test_docs_per_connector_and_max_docs_total_are_both_respected(tmp_path):
                 f"the {connector.kind} connector was asked for {asked} documents with "
                 "docs_per_connector set to 2"
             )
+
+
+def test_the_per_connector_trim_bites_when_the_total_budget_is_not_binding(tmp_path):
+    """T-6 acceptance 1: docs_per_connector caps EACH source, on its own.
+
+    ADDED 2026-09-04 (ESC-006), gap 3. The sibling test above pairs
+    docs_per_connector=2 with max_docs_total=4 over three connectors, and 4 documents
+    spread across 3 sources is <= 2 from each however much each source returned — so the
+    total budget masks the per-connector trim entirely. Measured: deleting the
+    per-connector `docs = docs[:ask]` trim left that test green. Here the total is opened
+    to 40 so the per-connector cap is the only thing that can bite.
+
+    ConnectorStub deliberately IGNORES `budget` and returns everything it holds, so a
+    pipeline that trusts its connectors to self-cap fails this.
+    """
+    person_id, name, details = ROSTER[0]
+    kinds = ("self_page", "search", "github")
+    docs, registry = _corpus([ROSTER[0]], kinds, 10)
+    person = _person_ref(person_id, name, details)
+
+    llm = LLMStub(registry)
+    _run_build_dossier(
+        person,
+        [ConnectorStub(k, docs[k]) for k in kinds],
+        llm,
+        _budget(docs_per_connector=2, max_docs_total=40, max_llm_calls=400),
+    )
+    seen = llm.doc_ids_seen()
+
+    # Positive control: the sources between them hold far more than the per-connector
+    # cap allows, so a number at or under the cap is the trim and not the fixture.
+    assert sum(len(docs[k][person_id]) for k in kinds) > 3 * 2, (
+        "the corpus does not hold more documents than the per-connector cap admits, so "
+        "this test cannot tell a working trim from an empty one"
+    )
+    per_kind = {}
+    for doc_id in seen:
+        if doc_id in registry:
+            per_kind.setdefault(registry[doc_id]["kind"], []).append(doc_id)
+    for kind, got in per_kind.items():
+        assert len(got) <= 2, (
+            f"{len(got)} documents from {kind} reached the model with "
+            f"docs_per_connector=2 and a total budget that was not binding, so the "
+            "per-connector trim is not being applied and a single chatty source can "
+            "crowd out every other one"
+        )
 
 
 def test_a_raising_connector_is_reported_as_zero_result_not_a_build_failure(tmp_path):
