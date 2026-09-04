@@ -141,8 +141,20 @@ the doubles, and four designed fixture dossiers).
 
 ## Deploy URL
 
-**Live URL:** _TBD — filled in when the Render deploy runs. That deploy is a human gate; the
-blueprint and start command it needs are committed and checked._
+**Live URL:** <https://arrival-engine.onrender.com>
+
+Deployed 2026-09-04 from `main` on the GitHub mirror (Render cannot reach the self-hosted
+GitLab origin). Service `srv-dadarre7bikc73ad29bg`, Oregon, free tier, auto-deploy on push.
+
+**The free instance sleeps after ~15 minutes idle and takes 30-60s to wake — warm it before
+a demo.** `GET /building` is the health check and the cheapest thing to hit; the warm-up
+loop is at the bottom of this section.
+
+Start here: <https://arrival-engine.onrender.com/> is the roster with Arrive/Leave buttons.
+Press Arrive on two or three members, then on one more — the digest you land on is the one
+a host reads. <https://arrival-engine.onrender.com/graph> is the interest graph for whoever
+is currently in the building; <https://arrival-engine.onrender.com/corpus> is everything the
+engine knows. `/debug` is deliberately 404 in production (`DEBUG_VIEWS=0`, SPEC R15).
 
 The app deploys to **Render** from [`render.yaml`](render.yaml): one free-tier web service,
 no database, booting straight from the dossier JSON committed in this repo. Point Render at
@@ -182,10 +194,10 @@ So wake it a few minutes before presenting, and keep it awake:
 
 ```bash
 # one wake-up call, timed
-curl -sS -o /dev/null -w '%{http_code} %{time_total}s\n' https://<your-app>.onrender.com/building
+curl -sS -o /dev/null -w '%{http_code} %{time_total}s\n' https://arrival-engine.onrender.com/building
 
 # keep it warm while you set up
-while :; do curl -s -o /dev/null https://<your-app>.onrender.com/building; sleep 240; done
+while :; do curl -s -o /dev/null https://arrival-engine.onrender.com/building; sleep 240; done
 ```
 
 The first response is the slow one; everything after it is warm. Note that a restart empties
