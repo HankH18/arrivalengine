@@ -12,10 +12,44 @@ builds — headers, redirects, `AsyncClient` construction — so a connector can
 accidentally route around it.  Patching `AsyncClient.send` instead would stop grading the
 header and cache behaviour that `fetch_record` adds.
 
-MATCHING IS BY (method, host, path, and the query parameters the fixture names).  Not by
-exact URL: several connectors size a query parameter off `budget` (`srlimit`, `hits`,
-`hitsPerPage`, `per_page`), so an exact-string match would make every fixture silently
-stop matching at a different budget and read as "the connector is broken".
+MATCHING IS BY (method, host, path, the query parameters the fixture names, and — for a
+POST — the request-body fields it names).  Not by exact URL: several connectors size a
+query parameter off `budget` (`srlimit`, `hits`, `hitsPerPage`, `per_page`), so an
+exact-string match would make every fixture silently stop matching at a different budget
+and read as "the connector is broken".
+
+WHY THE QUESTION IS RECORDED AND NOT ONLY THE PATH (T-042).  This module has compared the
+fixture's query parameters since it was written — and until this change **not one** of the
+`github`, `hn`, `self_page` or `edgar` recordings named a single parameter, so `all()` ran
+over an empty mapping and the comparison was vacuously true.  The oracle graded (method,
+host, path) and nothing else, which means a connector could send an arbitrarily wrong `q`,
+`forms` or `tags` and its recording still answered.  Measured before the repair: replacing
+`edgar.FORMS` with `"10-K"`, `hn`'s `tags` with `"poll"`, `github`'s `q` with a nonsense
+string and `wayback`'s `filter` with a nonsense string each left
+`test_t1_connector_fixtures.py` at 44 passed.  That is how four capabilities shipped with
+acceptance criteria naming endpoints and parameters no code asked for: the corpus could
+not tell a connector that asked the right question from one that asked nothing.
+
+THE MATCHING POLICY, AND WHY IT IS NOT EXACT EQUALITY.  **Every parameter a recording
+names must be present in the request with exactly that value; parameters the recording
+does not name are ignored.**  Order is irrelevant (both sides are parsed into a mapping)
+and a repeated parameter compares on its last value.
+
+* Exact query equality was rejected because it grades things that are not the question.
+  `budget` sizes `srlimit`/`hits`/`hitsPerPage`/`per_page`/`per-page`/`limit`, and
+  `test_connector_respects_its_budget` drives every connector at budget 0, 1 and 5 — an
+  exact match would answer at one of those and 404 at the other two.  Settings size
+  others: OpenAlex sends `mailto=<contact_email>`, so an exact match would bind the corpus
+  to one test's `Settings`.
+* "Ignore unknown parameters" leaves one hole open: a connector that *adds* a wrong
+  parameter beside the right ones still matches.  That is accepted deliberately, because
+  the failure it hides ("asked the right question and also something else") is strictly
+  weaker than the two this closes — a wrong VALUE and a DROPPED parameter both fail, since
+  `asked.get(key)` returns the wrong value or `None` and neither equals what was recorded.
+* So what a recording names is the QUESTION and never the SIZE OF THE ANSWER.  The
+  sizing and environment parameters above are deliberately absent from every fixture;
+  `SIZING_PARAMS` names them, and `test_t1_recorded_query_oracle.py` holds the corpus to
+  the rule by requiring every other parameter a connector actually sends to be pinned.
 """
 
 from __future__ import annotations
@@ -41,11 +75,16 @@ __all__ = [
     "RESERVED_DOMAINS",
     "RESERVED_SUFFIXES",
     "RESERVED_TLDS",
+    "SIZING_PARAMS",
     "fixture_path",
     "install_transport",
     "is_reserved_host",
     "load",
+    "matches",
     "no_real_sleep",
+    "query_of",
+    "required_body",
+    "required_query",
     "settings_for",
 ]
 
@@ -200,13 +239,73 @@ def settings_for(tmp_path: Path, **overrides: Any) -> Settings:
     return Settings(**values)
 
 
-def _query(url: str) -> dict[str, str]:
+#: Parameters a recording must NEVER name, because they say how BIG the answer should be
+#: or which environment asked, not what was asked. `budget` sizes the first group and
+#: `Settings` the second, and both legitimately differ between two runs of the same test.
+SIZING_PARAMS = frozenset(
+    {
+        "hits",
+        "hitsPerPage",
+        "limit",
+        "mailto",
+        "max_results",
+        "per-page",
+        "per_page",
+        "srlimit",
+    }
+)
+
+
+def query_of(url: str) -> dict[str, str]:
+    """The query parameters of `url`, last value winning for a repeated key."""
     return dict(parse_qsl(urlsplit(url).query, keep_blank_values=True))
 
 
-def _matches(entry: dict[str, Any], method: str, url: str) -> bool:
-    """`entry` answers this request iff method, host and path agree and every query
-    parameter the FIXTURE names is present in the request with the same value."""
+def required_query(entry: dict[str, Any]) -> dict[str, str]:
+    """Every query parameter a request must carry, with the value it must carry.
+
+    Two spellings, because both are readable and the older fixtures already use the first:
+    parameters written into the recorded `url`, and a `query` mapping beside it. A `query`
+    mapping is preferred for anything long or punctuated (`q`, `forms`, `filter`) — a
+    percent-encoded url is not something a reviewer can check by eye.
+    """
+    required = query_of(str(entry["url"]))
+    named = entry.get("query")
+    if isinstance(named, dict):
+        required.update({str(key): str(value) for key, value in named.items()})
+    return required
+
+
+def required_body(entry: dict[str, Any]) -> dict[str, Any]:
+    """Fields the request's JSON body must carry. Empty for every GET recording.
+
+    The `search` connector puts its question in a POST body rather than a query string, so
+    without this its recording would be exactly as vacuous as the four this repair is
+    named for: `POST /search` with any body at all would match.
+    """
+    named = entry.get("request_json")
+    return dict(named) if isinstance(named, dict) else {}
+
+
+def _body_json(body: bytes | str | None) -> Any:
+    if not body:
+        return None
+    try:
+        return json.loads(body)
+    except (TypeError, ValueError):
+        return None
+
+
+def matches(
+    entry: dict[str, Any], method: str, url: str, body: bytes | str | None = None
+) -> bool:
+    """`entry` answers this request iff method, host and path agree, every query parameter
+    the FIXTURE names is present in the request with the same value, and every request-body
+    field it names is present in the request's JSON body with the same value.
+
+    Parameters and fields the fixture does not name are ignored — see the module docstring
+    for why that middle policy was chosen over exact equality.
+    """
     if str(entry.get("method", "GET")).upper() != method.upper():
         return False
     want, got = urlsplit(str(entry["url"])), urlsplit(url)
@@ -214,8 +313,18 @@ def _matches(entry: dict[str, Any], method: str, url: str) -> bool:
         return False
     if want.path != got.path:
         return False
-    asked = _query(url)
-    return all(asked.get(key) == value for key, value in _query(str(entry["url"])).items())
+
+    asked = query_of(url)
+    if any(asked.get(key) != value for key, value in required_query(entry).items()):
+        return False
+
+    wanted_body = required_body(entry)
+    if not wanted_body:
+        return True
+    sent = _body_json(body)
+    if not isinstance(sent, dict):
+        return False
+    return all(sent.get(key) == value for key, value in wanted_body.items())
 
 
 def install_transport(
@@ -265,7 +374,7 @@ def install_transport(
             return httpx.Response(404, content=b"no recording", request=request)
 
         for entry in entries:
-            if _matches(entry, request.method, url):
+            if matches(entry, request.method, url, request.content):
                 return httpx.Response(
                     int(entry.get("status", 200)),
                     headers={"content-type": str(entry.get("content_type", "text/html"))},

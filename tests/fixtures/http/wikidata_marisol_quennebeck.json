@@ -15,6 +15,13 @@
     {
       "method": "GET",
       "url": "https://www.wikidata.org/w/api.php?action=wbsearchentities",
+      "query": {
+        "search": "Marisol Quennebeck",
+        "type": "item",
+        "language": "en",
+        "uselang": "en",
+        "format": "json"
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {
@@ -35,6 +42,12 @@
     {
       "method": "GET",
       "url": "https://www.wikidata.org/w/api.php?action=wbgetentities",
+      "query": {
+        "format": "json",
+        "languages": "en",
+        "ids": "Q104882317",
+        "props": "labels|aliases|descriptions|claims|sitelinks/urls"
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {

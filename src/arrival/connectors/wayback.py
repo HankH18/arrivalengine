@@ -13,6 +13,23 @@ keeps one capture per distinct URL instead of two hundred of the homepage, and
 `filter=statuscode:200` drops the error pages an archive is full of.  Then each chosen
 capture is fetched through the shared client, so what lands in `RawDoc.text` is the real
 archived prose rather than a description of a capture that exists.
+
+WHY THIS CONNECTOR DE-DUPLICATES ON ITS OWN (T-038).  Every other connector's URL
+identifies its content, so `BaseConnector._finalise`'s `doc_id == sha1(url)[:16]` is the
+whole rule.  This is the one source where it is not: a replay address is
+`/web/{timestamp}/{original}`, so two captures of ONE page have two urls, two `doc_id`s
+and both survive.  Measured before this was fixed, on two CDX rows for
+`thornfieldloom.example.com/about` with the same `digest`: two HTTP fetches, two documents,
+two distinct `doc_id`s and exactly ONE distinct `RawDoc.text` — two of `max_docs_total`
+spent, two LLM verdicts paid, and one sentence quotable twice as if two sources had said
+it.  `collapse=urlkey` does not prevent it: it collapses by URL KEY, and `http://site/`,
+`https://site/` and `site/about` vs `site/about/` are four keys over the same bytes.
+
+The rule belongs here and not in `_finalise` for the reason the defect exists: the shared
+base knows only urls, and a replay url is not one.  What identifies an archived page is
+Wayback's own content hash, the `digest` column CDX already returns — see
+`dedupe_by_digest`, which also runs BEFORE the fetch, so a duplicate costs no request
+either.
 """
 
 from __future__ import annotations
@@ -24,13 +41,64 @@ from arrival.connectors.base import BaseConnector, parse_date, urls_in
 from arrival.connectors.identity import is_shared_host, on_own_host
 from arrival.contracts import PersonRef, RawDoc
 
-__all__ = ["WaybackConnector"]
+__all__ = ["WaybackConnector", "dedupe_by_digest"]
 
 CDX = "https://web.archive.org/cdx/search/cdx"
 REPLAY = "https://web.archive.org/web/{timestamp}/{url}"
 
 #: The CDX column order when `fl` is not given. Read from the header row when present.
 _DEFAULT_FIELDS = ["urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"]
+
+#: The CDX column carrying Wayback's own hash of the archived bytes. Two rows sharing it
+#: are two addresses for one page, whatever their timestamps and urls say.
+DIGEST_FIELD = "digest"
+
+
+def _capture_rank(row: dict[str, str]) -> tuple[bool, str]:
+    """Which of two captures of the SAME content to keep. Higher wins.
+
+    `statuscode` first: a row the archive recorded as 200 is one whose replay renders, and
+    `filter=statuscode:200` is a server-side hint the CDX API applies only when it feels
+    like it — a row that arrives non-200 anyway should never displace a good one.
+
+    Then the LATEST timestamp, and that choice is not cosmetic. `published_at` for a
+    wayback document means "the archive observed this text on this date", and
+    `extract.recency_for` turns it into the `recency` that `graph` multiplies into every
+    edge weight. The pair this de-duplicates already contributes the newest capture's
+    recency today, because `extract` takes `max(recency_for(doc.published_at) ...)` across
+    a hub's evidence — so keeping the latest removes the duplicate and changes nothing
+    else, while keeping the earliest would quietly age every de-duplicated capture as
+    well. The prose is identical either way: that is what a shared digest means.
+    """
+    return (str(row.get("statuscode") or "").strip() == "200", str(row.get("timestamp") or ""))
+
+
+def dedupe_by_digest(rows: list[dict[str, str]]) -> list[dict[str, str]]:
+    """One row per distinct archived CONTENT, in first-seen order, best capture winning.
+
+    A row with no `digest` is never merged with anything, including another row with no
+    digest. Absence of the key means "this archive did not tell us", not "the same as the
+    other unknowns", and collapsing on a missing value would silently drop good captures
+    the moment a `fl=` change or a header-less CDX response left the column out. Those
+    rows fall through to `BaseConnector._finalise`, whose url dedupe is still the backstop.
+    """
+    kept: list[dict[str, str]] = []
+    at: dict[str, int] = {}
+    for row in rows:
+        digest = str(row.get(DIGEST_FIELD) or "").strip()
+        if not digest:
+            kept.append(row)
+            continue
+        index = at.get(digest)
+        if index is None:
+            at[digest] = len(kept)
+            kept.append(row)
+        elif _capture_rank(row) > _capture_rank(kept[index]):
+            # The winner takes the loser's PLACE rather than being appended: CDX returns
+            # captures oldest-first, and re-ordering the list would change which pages a
+            # tight budget reaches for reasons that have nothing to do with the budget.
+            kept[index] = row
+    return kept
 
 
 def _cdx_patterns(person: PersonRef) -> list[str]:
@@ -77,14 +145,27 @@ class WaybackConnector(BaseConnector):
         if not patterns:
             return []
 
+        # Shared across patterns, not per pattern: a roster naming both a company site and
+        # a personal one routinely archives the same page under both, and a set that
+        # restarted per pattern would let the second copy back in.
+        seen_digests: set[str] = set()
+
         docs: list[RawDoc] = []
         for pattern in patterns:
             if len(docs) >= budget:
                 break
-            docs.extend(await self._captures(person, pattern, budget - len(docs)))
+            docs.extend(
+                await self._captures(person, pattern, budget - len(docs), seen_digests)
+            )
         return docs
 
-    async def _captures(self, person: PersonRef, pattern: str, limit: int) -> list[RawDoc]:
+    async def _captures(
+        self,
+        person: PersonRef,
+        pattern: str,
+        limit: int,
+        seen_digests: set[str] | None = None,
+    ) -> list[RawDoc]:
         payload = await self.get_json(
             CDX,
             params={
@@ -96,28 +177,42 @@ class WaybackConnector(BaseConnector):
                 "fl": ",".join(_DEFAULT_FIELDS),
             },
         )
-        rows = self._rows(payload)
+        # The identity check belongs on the CDX row, not on the archived page. What is
+        # being cited is a capture OF A URL, and whether that url is the member's web
+        # space is knowable before the fetch and not reliably knowable after it: an
+        # archived About page may never spell her name.
+        #
+        # It also has to run BEFORE the digest dedupe rather than after. A page mirrored
+        # on a shared platform and on the member's own domain gives two rows with one
+        # digest, and de-duplicating first could elect the row this connector is not
+        # allowed to cite and then drop the one it is.
+        candidates = [
+            row
+            for row in self._rows(payload)
+            if row.get("timestamp")
+            and row.get("original")
+            and on_own_host(str(row["original"]), person)
+        ]
 
+        seen = seen_digests if seen_digests is not None else set()
         docs: list[RawDoc] = []
-        for row in rows:
+        for row in dedupe_by_digest(candidates):
             if len(docs) >= limit:
                 break
-            timestamp = row.get("timestamp") or ""
-            original = row.get("original") or ""
-            if not timestamp or not original:
-                continue
-            # The identity check belongs on the CDX row, not on the archived page. What is
-            # being cited is a capture OF A URL, and whether that url is the member's web
-            # space is knowable before the fetch and not reliably knowable after it: an
-            # archived About page may never spell her name.
-            if not on_own_host(original, person):
+            digest = str(row.get(DIGEST_FIELD) or "").strip()
+            if digest and digest in seen:
                 continue
             doc = await self.get_page(
-                REPLAY.format(timestamp=timestamp, url=original),
-                published_at=parse_date(timestamp),
+                REPLAY.format(timestamp=row["timestamp"], url=row["original"]),
+                published_at=parse_date(row["timestamp"]),
             )
-            if doc is not None:
-                docs.append(doc)
+            if doc is None:
+                continue
+            docs.append(doc)
+            if digest:
+                # Recorded only once the fetch actually produced a citation: a capture
+                # that 404s or extracts to nothing must not block the next copy of it.
+                seen.add(digest)
         return docs
 
     @staticmethod

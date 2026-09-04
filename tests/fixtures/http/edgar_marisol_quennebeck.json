@@ -15,6 +15,10 @@
     {
       "method": "GET",
       "url": "https://efts.sec.gov/LATEST/search-index",
+      "query": {
+        "q": "\"Marisol Quennebeck\"",
+        "forms": "3,4,5,D,13F-HR,13F-NT"
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {
