@@ -118,7 +118,17 @@ async def test_llm_double_can_script_a_failure():
 async def test_llm_double_records_calls_with_the_documented_field_order():
     llm = LLMDouble().when("Shape", "", Shape(value="v"))
     await llm.structured(system="sys", user="usr", schema=Shape, max_tokens=512, cache_prefix=False)
-    assert llm.calls == [LLMCall("Shape", "usr", "sys", 512, False)]
+    # T-0b/D5. Was: `LLMCall("Shape", "usr", "sys", 512, False)`.
+    # The requirement it encoded — a recorded call equals a positionally-constructed
+    # LLMCall in the documented field order — is unchanged and is still asserted here;
+    # only the SPELLING moved, because `system` is keyword-only now. That is the repair
+    # for D5: `user` and `system` are both `str`, so the swapped positional construction
+    # `LLMCall("Verdict", system_text, user_text)` used to store the two prompts reversed
+    # in silence, and six downstream tickets assert on recorded calls.
+    # Would this test still be wrong if the D5 change were reverted? No — this keyword
+    # form passes against BOTH the old and the new dataclass, so nothing was weakened;
+    # the old positional form is simply no longer expressible.
+    assert llm.calls == [LLMCall("Shape", "usr", system="sys", max_tokens=512, cache_prefix=False)]
     call = llm.calls[0]
     assert (call.schema_name, call.user) == ("Shape", "usr")
     assert (call.system, call.max_tokens, call.cache_prefix) == ("sys", 512, False)
@@ -128,7 +138,12 @@ async def test_llm_double_records_calls_with_the_documented_field_order():
 
 def test_llm_call_defaults_match_the_protocol_defaults():
     """A positionally-constructed LLMCall must match one recorded from a default call."""
-    assert LLMCall("Shape", "usr") == LLMCall("Shape", "usr", "", 2000, True)
+    # T-0b/D5. Was: `LLMCall("Shape", "usr", "", 2000, True)` on the right-hand side.
+    # Same requirement (the defaults are "", 2000, True and a two-argument construction
+    # reproduces them); same values; only `system` moved to keyword-only. Reverting D5
+    # would leave this assertion correct, so it was not weakened — see the note at
+    # test_llm_double_records_calls_with_the_documented_field_order above.
+    assert LLMCall("Shape", "usr") == LLMCall("Shape", "usr", 2000, True, system="")
 
 
 async def test_llm_double_delay_lets_t7_simulate_a_timeout():
