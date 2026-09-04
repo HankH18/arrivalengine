@@ -60,9 +60,12 @@ from arrival.contracts import (
 from arrival.util import normalize_ws, slug
 
 __all__ = [
+    "FIELD_HUB_VOCABULARY",
     "MAX_DOCS_PER_CALL",
     "MAX_FACT_CHARS",
+    "MAX_FIELD_HUBS",
     "MAX_TOKENS_PER_CALL",
+    "MIN_FIELD_HUB_WORDS",
     "MIN_QUOTE_CHARS",
     "MIN_QUOTE_WORDS",
     "NON_OBVIOUS_ELIGIBLE_KINDS",
@@ -109,6 +112,71 @@ MIN_QUOTE_WORDS = 3
 # rare, high-signal nodes T-5's IDF-weighted score is built on.
 STOP_HUB_LABELS: frozenset[str] = frozenset(
     {"texas", "startup", "founder", "ai", "technology", "business", "ceo", "investor"}
+)
+
+#: How many FIELD hubs (`CandidateHub.field`) one person may carry. A field is an
+#: abstraction over entities — "venture capital" rather than "Union Square Ventures" — and
+#: it exists because nobody shares a portfolio company by accident, so a corpus of proper
+#: nouns joins nobody to anybody. The cap is the structural half of the guard DESIGN
+#: Decision 3's stop list is the lexical half of: a person with two field hubs cannot be
+#: joined to everybody through a cloud of vague topics however the model behaves.
+MAX_FIELD_HUBS = 2
+
+#: A field label must be at least this many words. Every one of DESIGN Decision 3's stop
+#: hubs — texas, startup, founder, ai, technology, business, ceo, investor — is a BARE
+#: SINGLE WORD, and that is not a coincidence: the vagueness that makes a label worthless
+#: is what lets it be said in one word. So the rule generalises the decision rather than
+#: contradicting it, and it needs no list to maintain. It applies only to labels the model
+#: marked `field`; a one-word NAME ("Tech:NYC", "Kubernetes", "Twitch") is unaffected.
+MIN_FIELD_HUB_WORDS = 2
+
+#: The closed vocabulary a FIELD hub must land in, and the one hand-authored artefact in
+#: this module. It exists because free-form field labels were MEASURED not to converge: run
+#: against the live ten-person corpus, the model produced "seed-stage venture capital" for
+#: one venture capitalist, "seed-stage venture" for the same person in another batch, and
+#: nothing at all for the other one — three descriptions of one field, joining nobody, and
+#: five new topic nodes of pure noise. An abstraction that every carrier spells differently
+#: is not an abstraction; a shared field needs a shared word for it.
+#:
+#: **How this reconciles with DESIGN Decision 3.** The stop list is the same mechanism with
+#: the sign flipped: a hand-authored set of labels that decides what may be a node. Decision
+#: 3 says vague hubs are worthless and names eight of them; this says the cure for vagueness
+#: is a NAMED level of abstraction rather than no abstraction at all. Two rules keep them
+#: from colliding: a stop hub may never appear here, and neither may a synonym of one — so
+#: there is no "artificial intelligence" (Decision 3 stopped "ai"), no "technology sector"
+#: (it stopped "technology"), no "early-stage startups" (it stopped "startup"). Every entry
+#: is a level BELOW the one Decision 3 judged universal.
+#:
+#: Membership is necessary and never sufficient. A term becomes a hub only when a document
+#: about the person carries the phrase (`_attested_evidence`), at most `MAX_FIELD_HUBS` per
+#: person, and `graph.hub_idf` still clamps to zero anything the whole population carries.
+#: The list is deliberately generic rather than fitted to a roster; it belongs in
+#: configuration rather than in code, which this ticket does not own.
+FIELD_HUB_VOCABULARY: frozenset[str] = frozenset(
+    {
+        "venture capital",
+        "private equity",
+        "angel investing",
+        "developer tools",
+        "consumer social",
+        "social media",
+        "enterprise software",
+        "open source",
+        "cloud infrastructure",
+        "information security",
+        "digital health",
+        "life sciences",
+        "climate tech",
+        "financial technology",
+        "online marketplaces",
+        "video games",
+        "creative software",
+        "online education",
+        "digital media",
+        "consumer hardware",
+        "supply chain",
+        "public policy",
+    }
 )
 
 #: R7 / DESIGN §Data models: the source kinds whose facts may carry `non_obvious`.
@@ -268,6 +336,14 @@ class CandidateHub(BaseModel):
             "states it; otherwise leave this out"
         ),
     )
+    field: bool = Field(
+        default=False,
+        description=(
+            "true when this label names a FIELD or PRACTICE the person works in — "
+            "'venture capital', 'developer tools', 'consumer social' — rather than a "
+            "named entity. Leave it false for anything with a name."
+        ),
+    )
 
 
 class ExtractionResult(BaseModel):
@@ -275,6 +351,14 @@ class ExtractionResult(BaseModel):
 
     facts: list[CandidateFact] = Field(default_factory=list)
     hubs: list[CandidateHub] = Field(default_factory=list)
+    based_in: str | None = Field(
+        default=None,
+        description=(
+            "the place the Known details say this person is based, copied EXACTLY as the "
+            "details write it. Leave it out when the details name no place. It is checked "
+            "against them, so a place they do not state is discarded."
+        ),
+    )
 
 
 @dataclass
@@ -378,6 +462,10 @@ class _HubGroup:
     qids: list[str] = field(default_factory=list)
     recency: float = 0.0
     evidence: list[str] = field(default_factory=list)
+    #: True once any candidate in the group was marked a FIELD rather than a named entity.
+    #: Sticky on purpose: `MAX_FIELD_HUBS` is a ceiling on abstraction, and a group the
+    #: model called a field once has to stay inside it however it labels the next mention.
+    is_field: bool = False
 
     def describe(self, hub_type: HubType, label: str) -> None:
         self.descriptions.append((hub_type, label))
@@ -393,6 +481,7 @@ class _HubGroup:
         self.qids.extend(other.qids)
         self.add_evidence(other.evidence)
         self.recency = max(self.recency, other.recency)
+        self.is_field = self.is_field or other.is_field
 
     @property
     def qid(self) -> str | None:
@@ -608,6 +697,94 @@ def _states_label(doc: RawDoc, label: str) -> bool:
     return _mentions(f"{doc.title}\n{doc.text}", label)
 
 
+def _attested_evidence(fact_ids: list[str], label: str, sources: dict[str, RawDoc]) -> list[str]:
+    """A FIELD hub's evidence facts whose OWN document names it — the rest are dropped.
+
+    A hub arriving WITH `evidence_fact_ids` is never checked against a document: the ids are
+    translated by `_id_map` and believed. `_corroborated_evidence` applies the corroboration
+    rule only on the `doc_id` fallback path, i.e. only to a hub the model gave no fact ids
+    for. So the model may attach any label to any fact it has just produced, and the label
+    is the graph-wide join key.
+
+    For a NAMED entity that latitude is mostly harmless and removing it is measurably wrong:
+    a model reading "raised its first outside money from Foundry Seed in 2019" and labelling
+    the hub "Foundry Seed 2019" has composed a real name out of a real sentence, and four
+    tests in `tests/extract/` encode exactly that shape. Requiring the label to be a verbatim
+    span there splits hubs that ought to join, which is the defect this whole ticket exists
+    to remove.
+
+    For a FIELD it is the guard. "Venture capital" is not a name that can be slightly
+    misspelled; it is a CLAIM about what somebody does, and a model that has read one funding
+    round can make it about anybody. So the phrase must be IN the document the fact came
+    from. That is the mechanical half; the prompt asks for the other half — that the document
+    says it OF THIS PERSON — which no substring test can check, and which is stated plainly
+    in the report as the limit of this design.
+
+    Per-FACT rather than per-hub, deliberately: the field keeps the citations that name it
+    and loses the ones that do not, so `digest._hub_evidence` cannot print a source for a
+    field that source never mentions. A field left with nothing is unsupported and the caller
+    drops it.
+    """
+    return [
+        fact_id
+        for fact_id in fact_ids
+        if (doc := sources.get(fact_id)) is not None and _states_label(doc, label)
+    ]
+
+
+def _field_label(label: str) -> str | None:
+    """The vocabulary term this proposed field names, or None to refuse it.
+
+    Containment, not equality, and that is the whole point. The model reads "Homebrew, a
+    seed-stage venture capital firm" and proposes "seed-stage venture capital"; the term it
+    is a specialisation OF is `venture capital`, and normalising to that is what lets a
+    second venture capitalist — whose own documents say "a New York City-based venture
+    capital firm" — land on the same node. Left alone, those two spellings are two nodes and
+    the pair scores zero, which is the defect this ticket exists to remove.
+
+    Whole-word via `_mentions`, so "developer tools" is not found inside "developer toolset"
+    by accident. The longest matching term wins, so a label containing both a broad and a
+    narrow entry keeps the narrow one. Ties are broken lexicographically, never by set
+    iteration order, which is not stable across processes.
+    """
+    matches = sorted(
+        (term for term in FIELD_HUB_VOCABULARY if _mentions(label, term)),
+        key=lambda term: (-len(term), term),
+    )
+    if not matches:
+        log.info("refusing the field %r: it names no term in the field vocabulary", label)
+        return None
+    return matches[0]
+
+
+def _confirmed_place(claimed: str | None, person: PersonRef) -> str | None:
+    """The place the ROSTER states for this member, or None. The model may not add one.
+
+    `PersonRef.details` is the club's own record of its member — the one thing in this
+    pipeline that is first-party about where somebody is based, and the roster's own comment
+    is careful about it: "the pipeline verifies them, it does not trust them". So this is
+    `_hub_qid`'s discipline applied to a place: **confirm or refuse, never adopt.** The model
+    reads which free-text detail is a location, which it is good at and a regex is not
+    ("Boulder, Colorado", "Sydney, Australia", "formerly Palantir; essays at nabeelqu.co"),
+    and the answer is believed only where the details literally carry it.
+
+    Whole-word, typography-tolerant, via `_mentions` — the same asymmetry as every other
+    check here. A member whose details name no place gets None, which is a real answer and
+    not a failure: `_city_veto` reads it as "the club has nothing to say", not as "nowhere".
+    """
+    place = _normalise_sentence(claimed or "")
+    if not place:
+        return None
+    if not _mentions("\n".join(person.details), place):
+        log.info(
+            "discarding the claimed location %r for %s: the roster details do not state it",
+            place,
+            person.name,
+        )
+        return None
+    return place
+
+
 def _hub_qid(qid: str | None, label: str, evidence_docs: list[RawDoc]) -> str | None:
     """The QID this hub has EARNED from its own evidence documents, or None.
 
@@ -689,11 +866,24 @@ have from the subject's own bio or the first page of search results. Always also
 6. CONFIDENCE. Fill `confidence` on every fact. A fact below 0.7 is withheld from staff \
 entirely, and an omitted one defaults below that line, so a fact you are sure of and did \
 not rate is a fact nobody sees.
-7. HUBS are the entities worth joining two people on: companies, investors, schools, \
+7. HUBS are the things worth joining two people on: companies, investors, schools, \
 boards, events, causes, cities, technologies, named topics, named people. Give each one \
-the `evidence_fact_ids` of the facts in this same answer that support it. Skip generic \
-labels that would connect everybody — {", ".join(sorted(STOP_HUB_LABELS))} and the like. \
-Set `qid` only when the document is a Wikidata item that states the QID.
+the `evidence_fact_ids` of the facts in this same answer that support it. Use the spelling \
+the document uses: a hub whose label is not in the document it cites is thrown away. Skip \
+generic labels that would connect everybody — {", ".join(sorted(STOP_HUB_LABELS))} and the \
+like. Set `qid` only when the document is a Wikidata item that states the QID.
+8. WHERE THEY ARE BASED. If the Known details name the place this person is based, copy it \
+into `based_in` exactly as the details write it, and — when one of these documents names \
+that place too — emit it as a `city` hub as well. Leave `based_in` out when the details \
+name no place. A place the details do not state is discarded, so never put one there.
+9. WHAT THEY WORK ON, not only who they work for. Two people almost never share an \
+employer or a portfolio company, so alongside the named entities emit at most \
+{MAX_FIELD_HUBS} hubs for the FIELD this person works in, set `field` to true on them, and \
+leave their `type` as `topic`. Use one of these exact phrases and no other — anything else \
+is discarded: {"; ".join(sorted(FIELD_HUB_VOCABULARY))}. Two conditions, both required: the \
+phrase appears in a document you were given, and that document says it OF THIS PERSON — not \
+of some company the document happens to mention. Where none of the phrases fits the person, \
+emit none: a field nobody can point at in the text is worse than no field at all.
 
 Return nothing you cannot point at in the text.\
 """
@@ -1061,15 +1251,39 @@ def _collect_hubs(
             # LABELS, not types and not id prefixes. See STOP_HUB_LABELS.
             tally.dropped_stop_hubs += 1
             continue
+        if candidate.field:
+            term = _field_label(label)
+            if term is None or len(term.split()) < MIN_FIELD_HUB_WORDS:
+                # The word floor is applied to the NORMALISED term, not to the model's
+                # label, because that is where it can still be wrong: a label the
+                # vocabulary refuses is already gone, and the one thing the vocabulary
+                # cannot check about itself is whether somebody widened it with a bare
+                # word. See MIN_FIELD_HUB_WORDS.
+                tally.dropped_stop_hubs += 1
+                log.info("refusing the field %r: no vocabulary term of two or more words",
+                         label)
+                continue
+            # Normalised BEFORE anything downstream sees it: the vocabulary term is the join
+            # key, so the attestation below, the group key and the emitted label are all the
+            # canonical form rather than this document's specialisation of it.
+            label = term
+            key = slug(label)
 
-        evidence = [id_map[raw] for raw in candidate.evidence_fact_ids if raw in id_map]
+        claimed = [id_map[raw] for raw in candidate.evidence_fact_ids if raw in id_map]
+        evidence = _attested_evidence(claimed, label, sources) if candidate.field else claimed
+        if claimed and not evidence:
+            log.info(
+                "the field hub %r cites %d fact(s) whose own documents never name it",
+                label,
+                len(claimed),
+            )
         if not evidence:
             evidence = _corroborated_evidence(
                 label, candidate.doc_id, batch, by_id, kept_by_doc
             )
         if not evidence:
-            # A hub whose every evidence fact failed the citation check is exactly as
-            # unsupported as those facts were.
+            # A hub whose every evidence fact failed the citation check -- or whose every
+            # cited document never names it -- is exactly as unsupported as those facts were.
             tally.dropped_unsupported_hubs += 1
             continue
 
@@ -1081,7 +1295,12 @@ def _collect_hubs(
         if group is None:
             group = _HubGroup(key=key)
             groups[key] = group
-        group.describe(candidate.type, label)
+        # A field is an abstraction and `topic` is the only HubType that can hold one:
+        # `contracts.HubType` is frozen by convention and nine tickets import it, so the
+        # abstraction layer takes the type whose boost DESIGN already prices at 1.0 rather
+        # than inventing an eleventh member. See DECISIONS in the T-077 report.
+        group.describe("topic" if candidate.field else candidate.type, label)
+        group.is_field = group.is_field or candidate.field
         group.add_evidence(evidence)
         group.recency = max(group.recency, recency)
         if qid is not None:
@@ -1114,8 +1333,12 @@ def _merge_groups(
             continue
         existing.absorb(group)
 
+    surplus = _surplus_field_ids(merged, order)
     hubs = []
     for hub_id, group in merged.items():
+        if hub_id in surplus:
+            tally.dropped_stop_hubs += 1
+            continue
         hub_type, label = group.identity
         hubs.append(
             Hub(
@@ -1131,6 +1354,167 @@ def _merge_groups(
     hubs.sort(key=lambda hub: hub.hub_id)
     tally.hubs_kept += len(hubs)
     return hubs
+
+
+def _surplus_field_ids(merged: dict[str, _HubGroup], order: dict[str, int]) -> set[str]:
+    """The FIELD hubs past `MAX_FIELD_HUBS`, by an order that is not the model's.
+
+    The cap is what keeps the abstraction layer from becoming the thing DESIGN Decision 3
+    banned. A named entity is self-limiting — nobody has forty employers — but a field is
+    generated rather than found, and a model asked for "what they work on" will happily
+    produce eight overlapping paraphrases of one career, every one of which joins its owner
+    to somebody. Two per person is the whole abstraction budget.
+
+    Ranked by how many facts evidence the field (a field two documents say of somebody
+    outranks one said once), then by the position that evidence was DISCOVERED at, then by
+    hub id. Deterministic, and never the order the model listed its hubs in — the same
+    property `_merge_groups` and `_hub_identity` are built for.
+    """
+    fields = [(hub_id, group) for hub_id, group in merged.items() if group.is_field]
+    if len(fields) <= MAX_FIELD_HUBS:
+        return set()
+    ranked = sorted(
+        fields,
+        key=lambda item: (
+            -len(item[1].evidence),
+            min((order.get(f, len(order)) for f in item[1].evidence), default=len(order)),
+            item[0],
+        ),
+    )
+    dropped = {hub_id for hub_id, _ in ranked[MAX_FIELD_HUBS:]}
+    log.info(
+        "keeping %d field hub(s) and dropping %s: a person's abstraction budget is %d",
+        MAX_FIELD_HUBS,
+        sorted(dropped),
+        MAX_FIELD_HUBS,
+    )
+    return dropped
+
+
+def _place_candidates(place: str) -> list[str]:
+    """The roster's place narrowed to its leading segment first: "Boulder, Colorado" first
+    tries "Boulder".
+
+    A purely syntactic narrowing of a string the ROSTER wrote, never a widening: "City,
+    Region" is how the roster spells four of its ten entries and how no document spells any
+    of them. The SHORT form is tried first because it is the joinable one — a member whose
+    roster says "Sydney, Australia" and one whose roster says "Sydney" must reach the same
+    node, and only the head does that. Nothing is invented: the shorter form is a prefix of
+    the longer, and both are still checked against a document before anything is emitted.
+    """
+    head = _normalise_sentence(place.split(",")[0])
+    return [place] if head == place or not head else [head, place]
+
+
+def _roster_city_hub(
+    place: str, facts: list[Fact], sources: dict[str, RawDoc], order: dict[str, int]
+) -> Hub | None:
+    """The member's own city as a hub, when their documents corroborate the roster.
+
+    Rule 8 of the prompt asks the model for this and the model usually obliges, but "usually"
+    is not a pipeline, and the shape it obliges in is not joinable. Measured on the live
+    corpus: with the prompt alone, one member's city arrived as `San Francisco` and another's
+    as `San Francisco, California, United States` — two nodes, no join, and a spoken line
+    reading "both rooted in San Francisco, California, United States". So the city is
+    CONSTRUCTED here and the model contributes exactly one thing: which free-text roster
+    detail was a place (`_confirmed_place`), which it is good at and a regex is not.
+
+    Both halves are required and neither is sufficient. The roster says the place is this
+    member's — that is the part no document states, and the part "Hackbright Academy, a San
+    Francisco-based coding school" gets wrong. A document names it — that is the part the
+    roster cannot evidence, and without it the hub would cite nothing and print no source
+    under the match reason.
+
+    Evidence is every fact whose own DOCUMENT names the place, which is the rule the frozen
+    T-3 suite states for all hubs; where some of those facts name the place in their own
+    sentence or quote, only those are kept, because a citation whose text carries the words
+    is the better one to print. Requiring that STRICTLY was measured to cost two of the four
+    members whose documents genuinely place them: one Wikipedia page says San Francisco in
+    prose the extractor did not turn into a fact.
+    """
+    for candidate in _place_candidates(place):
+        if not slug(candidate):
+            # `slug` keeps only ASCII alphanumerics, so a place written in a non-Latin
+            # script slugs to "" and `canonical_hub_id` yields the bare id "city:". That is
+            # not blank, so `Hub`'s non-blank constraint would pass it, and EVERY member
+            # whose roster place slugs away would then land on that one node and be joined
+            # to each other for no reason at all. `_collect_hubs` already refuses a
+            # model-proposed hub on the same test; a constructed one has to refuse too.
+            log.info("refusing the place %r: it leaves no slug to build a hub id from",
+                     candidate)
+            continue
+        from_doc = [
+            fact
+            for fact in facts
+            if (doc := sources.get(fact.fact_id)) is not None
+            and _states_label(doc, candidate)
+        ]
+        if not from_doc:
+            continue
+        spoken = [
+            fact
+            for fact in from_doc
+            if _mentions(f"{fact.text}\n{fact.provenance.quote}", candidate)
+        ]
+        evidence = spoken or from_doc
+        return Hub(
+            hub_id=canonical_hub_id("city", candidate),
+            label=candidate,
+            type="city",
+            recency=max(recency_for(sources[fact.fact_id].published_at) for fact in evidence),
+            evidence_fact_ids=sorted(
+                (fact.fact_id for fact in evidence),
+                key=lambda fact_id: order.get(fact_id, len(order)),
+            ),
+        )
+    log.info("no document corroborates the roster place %r; emitting no city hub", place)
+    return None
+
+
+def _place_hubs(
+    hubs: list[Hub],
+    place: str | None,
+    facts: list[Fact],
+    sources: dict[str, RawDoc],
+    order: dict[str, int],
+    tally: ExtractionStats,
+) -> list[Hub]:
+    """Replace every model-proposed city with the one the roster and the documents agree on.
+
+    A city is the only hub type this pipeline has a first-party answer for, and also the one
+    whose false positives are cheapest to produce: every document about a person names places
+    that are not theirs. Measured on the live corpus — "author of New York Times bestseller
+    The Lean Startup" for a member the roster puts in San Francisco. So where the club states
+    a place, the model's city hubs are not filtered, they are REPLACED: one node, one
+    spelling, the roster's own shortest form, evidenced by documents. R2's refuse-to-guess
+    doctrine, applied to somewhere a host will say out loud.
+
+    Where the club states nothing (`place` is None) this does nothing at all, and a city the
+    documents genuinely support — Wikidata's structured "work location: New York City" for a
+    member whose roster gives no city — stands untouched. Silence in the roster is not a
+    claim that the member is nowhere.
+
+    Runs after `_merge_groups` rather than inside `_collect_hubs` because `based_in` is a
+    reading of the whole answer set — one batch of documents may carry it and the next may
+    not — and because the construction needs every fact, not one batch's.
+    """
+    if place is None:
+        return hubs
+    kept = [hub for hub in hubs if hub.type != "city"]
+    dropped = len(hubs) - len(kept)
+    if dropped:
+        log.info(
+            "replacing %d model-proposed city hub(s) with the roster's own place %r",
+            dropped,
+            place,
+        )
+    tally.hubs_kept -= dropped
+    mine = _roster_city_hub(place, facts, sources, order)
+    if mine is not None:
+        tally.hubs_kept += 1
+        kept.append(mine)
+    kept.sort(key=lambda hub: hub.hub_id)
+    return kept
 
 
 async def extract(
@@ -1165,6 +1549,10 @@ async def extract(
     # Discovery order, so a merged hub's evidence list does not depend on the order the
     # model listed its hubs in. Spans every batch, as the groups themselves do.
     fact_order: dict[str, int] = {}
+    # Every fact's source document, pooled across batches: `_place_hubs` runs once, after
+    # the last answer, and needs to reach a fact any batch produced.
+    all_sources: dict[str, RawDoc] = {}
+    places: list[str] = []
 
     for batch in batched(accepted, MAX_DOCS_PER_CALL):
         result = await _ask(llm, person, batch, tally)
@@ -1178,9 +1566,17 @@ async def extract(
         for fact in batch_facts:
             fact_order.setdefault(fact.fact_id, len(fact_order))
         facts.extend(batch_facts)
+        all_sources.update(sources)
         _collect_hubs(result, batch, id_map, sources, kept_by_doc, groups, tally)
+        confirmed = _confirmed_place(result.based_in, person)
+        if confirmed is not None:
+            places.append(confirmed)
 
     hubs = _merge_groups(groups, fact_order, tally)
+    # `_most_common`, not "the first batch that answered": which documents a batch happened
+    # to hold is not evidence about where somebody lives, and every other reconciliation in
+    # this module is a vote for the same reason.
+    hubs = _place_hubs(hubs, _most_common(places), facts, all_sources, fact_order, tally)
     log.info(
         "extracted %d fact(s) and %d hub(s) for %s from %d document(s); dropped %d uncited, "
         "%d over-length, %d stop-hub(s), %d unsupported hub(s)",
