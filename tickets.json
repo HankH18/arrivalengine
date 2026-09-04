@@ -1051,6 +1051,36 @@
       "defect": "`_why` emits 'Both deep in Developer-tools go-to-market.' \u2014 the hub label is stored capitalised, so a capitalised compound lands mid-sentence on a line R18 exists to keep the host from stumbling over. Not a rule violation; it is the exact shape that forced the hyphenated-word calibration in T-029's verb detector, and a taste pass on spoken lines would want the label lower-cased inside a sentence.",
       "finding_id": "2a3693ea3c7e627cceba1c78336ee52db3fa91d86eee66e79e07a94a78bd7def",
       "reproduction": "Read graph.py:482 and the rendered Meet rows. Reported by the FIX-DIGEST lane."
+    },
+    {
+      "id": "T-042",
+      "title": "TEST STRENGTH, not a product defect: not one of tests/fixtures/http/{github,hn,self_page,edgar}_*.json records a single query parameter, so `t1_recorded._matches` is VACUOUS on the query half for those four connectors. A connector could send an arbitrarily wrong `q`, `forms` or `tags` and the recorded corpus would still answer \u2014 which means the recorded-fixture tests grade that a request was made to the right PATH and nothing about what was asked for. This is exactly how T-021..T-024 shipped acceptance criteria naming capabilities no code asked for: the oracle could not tell. Fix: record the query string in the fixtures and match on it.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "tests/fixtures/http/github_.json"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "tests/fixtures/http/github_.json",
+      "defect": "TEST STRENGTH, not a product defect: not one of tests/fixtures/http/{github,hn,self_page,edgar}_*.json records a single query parameter, so `t1_recorded._matches` is VACUOUS on the query half for those four connectors. A connector could send an arbitrarily wrong `q`, `forms` or `tags` and the recorded corpus would still answer \u2014 which means the recorded-fixture tests grade that a request was made to the right PATH and nothing about what was asked for. This is exactly how T-021..T-024 shipped acceptance criteria naming capabilities no code asked for: the oracle could not tell. Fix: record the query string in the fixtures and match on it.",
+      "finding_id": "0fd06ca8136c82c3fe1bcc689243d8ae4349dacedd716a48d8fd31710d75e274",
+      "reproduction": "Read tests/fixtures/http/*.json for any of the four kinds and look for a recorded query. Reported by the FIX-CONN2 lane, which could not fix it \u2014 tests/fixtures/http/** was outside its ownership."
+    },
+    {
+      "id": "T-043",
+      "title": "`fetch_record` has no response size cap: the entire body is buffered before any caller-side guard runs. The new MAX_FEED_BYTES in the feed connector refuses an oversized feed AFTER download, which bounds parser cost but not memory. A hostile or merely broken endpoint can make the process buffer an unbounded body.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/client.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/client.py",
+      "defect": "`fetch_record` has no response size cap: the entire body is buffered before any caller-side guard runs. The new MAX_FEED_BYTES in the feed connector refuses an oversized feed AFTER download, which bounds parser cost but not memory. A hostile or merely broken endpoint can make the process buffer an unbounded body.",
+      "finding_id": "d835dee4e6979b2f55e45b2e9bd8a47cb24d38159df8f393526fc87b61160321",
+      "reproduction": "Read http/client.py fetch_record \u2014 no streaming, no length check before read. Reported by the FIX-CONN2 lane; belongs to the src/arrival/http/** owner."
     }
   ],
   "cut_list": [
