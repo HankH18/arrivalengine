@@ -1261,6 +1261,21 @@
       "defect": "A Meet row whose `why` reads 'Nothing in common on the record yet.' still renders citation markers. Reproduced on runa-okonkwo -> Mira Hollowell: score 0.0, why='Nothing in common on the record yet.', yet citations == [1], because the row still carries city:austin and topic:remote-work contributions whose IDF clamped to zero. The evidence is real \u2014 those hubs ARE shared \u2014 so this is not a correctness leak, and T-040's attribution now makes it legible rather than confusing. It is a PRODUCT judgement: does 'we both live in Austin, and Austin is worth nothing here' count as a reason to show the host? digest.html:41-44 argues the opposite case for the reasoning table, so the two surfaces currently disagree. Whoever owns that call should settle it in one place.",
       "finding_id": "e04d7639ec008ba40f7ebfe88aacf9687d6f03b678765a34adb45353762bd1c9",
       "reproduction": "Build the runa-okonkwo digest and read the Mira Hollowell Meet row. Reported by the FIX-WEB lane, which deliberately did not fix it as a product judgement outside its brief."
+    },
+    {
+      "id": "T-056",
+      "title": "OWNER-SUPPLIED WORK, not a defect: the 'Arena Hall' design guide is complete and approved by the owner, and the frontend must be restyled to it. The guide ships arena-hall.css (a drop-in replacement for base.html's <style> block, ~330 lines), six rendered preview pages, and screenshots. The previews use exactly the markup the templates already emit \u2014 <main>, <footer class=\"exclusion-policy\"> as a direct child of main, the six section ids, .meet-list, .lately-list, .sources, .roster, .present, .who-line, .why, .opener, .lede, .quote, .absent, .cite, .score, and the /debug tables \u2014 so this is a stylesheet swap, not a restructure. Two things the guide leaves to implementation: a Google Fonts <link> for Cormorant Garamond and Inter (the app mounts no StaticFiles, so self-hosting is unavailable and the CSS's own header says to use the link or fall back to the local stacks), and rules for the ul.evidence / li.evidence-item / span.attribution markup that T-040 added AFTER the guide was authored.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/templates/base.html"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/web/templates/base.html",
+      "defect": "OWNER-SUPPLIED WORK, not a defect: the 'Arena Hall' design guide is complete and approved by the owner, and the frontend must be restyled to it. The guide ships arena-hall.css (a drop-in replacement for base.html's <style> block, ~330 lines), six rendered preview pages, and screenshots. The previews use exactly the markup the templates already emit \u2014 <main>, <footer class=\"exclusion-policy\"> as a direct child of main, the six section ids, .meet-list, .lately-list, .sources, .roster, .present, .who-line, .why, .opener, .lede, .quote, .absent, .cite, .score, and the /debug tables \u2014 so this is a stylesheet swap, not a restructure. Two things the guide leaves to implementation: a Google Fonts <link> for Cormorant Garamond and Inter (the app mounts no StaticFiles, so self-hosting is unavailable and the CSS's own header says to use the link or fall back to the local stacks), and rules for the ul.evidence / li.evidence-item / span.attribution markup that T-040 added AFTER the guide was authored.",
+      "finding_id": "0f4ddbf36aa1790874dbabc6398992f531b952580fd8ac5d27979960a14ed1d6",
+      "reproduction": "Guide extracted at scratchpad/styleguide/. Owner instruction: 'The style guide that I mentioned is complete. You can find it all in the attached zip file. Please implement it.'"
     }
   ],
   "cut_list": [
