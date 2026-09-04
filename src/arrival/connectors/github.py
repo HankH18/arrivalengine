@@ -6,11 +6,29 @@ wrote about their own work.  That is the far side of the "seen vs. dossiered" li
 saying "you pushed a release for the freight scheduler last week" is reading a press
 release the member published themselves.
 
-Three calls, each earning its place: `/search/users` maps a display name to a login;
+Four calls, each earning its place: `/search/users` maps a display name to a login;
 `/users/{login}` returns the profile fields (name, company, blog, location, bio) a resolver
-needs to *reject* the wrong Pell Marrowby, and search results deliberately omit; and
-`/users/{login}/repos?sort=pushed` returns recent work newest-first, which is the half a
-digest can use.
+needs to *reject* the wrong Pell Marrowby, and search results deliberately omit;
+`/users/{login}/repos?sort=pushed` returns recent work newest-first; and
+`/users/{login}/events/public` returns what actually HAPPENED lately — TASKS T-1 acceptance
+2 names "recent public events/repos" and only the second half was ever built (T-022).
+
+WHY EVENTS AND NOT JUST REPOS.  A repository is a standing fact: it exists, it has a
+description, it was last pushed at some point.  An event is dated and specific — "cut the
+0.9 release of the freight scheduler on Tuesday" — and a dated specific is the entire
+difference between a host who sounds briefed and a host who sounds like they read a bio.
+The two are complementary rather than redundant, so the budget is split: recent repos
+first, then a reserved slot or two for what happened.
+
+WHERE THE IDENTITY DECISION IS MADE, FOR ALL THREE DOCUMENT SOURCES.  Once and only once,
+on the ACCOUNT, by `identifies` + `choose_one` in `_find_account`.  `/users/{login}/repos`
+and `/users/{login}/events/public` are both scoped to that verified login, so every item
+they return is that account's; a document from either inherits the account's identity
+rather than re-deriving it.  Re-deriving would in fact be wrong: a commit message does not
+name its author and a login does not carry a person's name, so demanding `identifies` per
+item would reject every correct event.  What each item IS checked for is that its actor is
+the verified login — an events payload naming somebody else (an organisation's feed, a
+push by a collaborator) is not this member's work and is dropped.
 
 `GITHUB_TOKEN` is optional, per `Settings`.  Without it the API allows 60 requests an hour
 by IP, which is enough for a small roster and useless for a large one — so the token is
@@ -38,6 +56,31 @@ API = "https://api.github.com"
 #: Logins to look at before deciding. `/search/users` ranks by follower count, so the
 #: first hit is the most FAMOUS person with the name, not the member.
 CANDIDATE_LOGINS = 3
+
+#: Documents the recent-activity feed may claim out of one person's allowance. Repos come
+#: first because they are the standing picture; the reservation exists so a prolific
+#: account's repository list cannot spend the whole budget and leave the digest with
+#: nothing dated. Never larger than "budget minus the profile minus one repo".
+EVENT_SLOTS = 2
+
+#: Event types that are the member PUBLISHING THEIR OWN WORK, and — by their absence — the
+#: ones deliberately left out. `WatchEvent` (a star) and `ForkEvent` are things a person
+#: did TO somebody else's repository; `FollowEvent` and `MemberEvent` are a social graph;
+#: `IssueCommentEvent` is an argument in somebody else's thread. Repeating any of those to
+#: a member is reading them their browsing history, which is the wrong side of the
+#: "seen vs. dossiered" line this product is scored on. What is left is what they shipped.
+PUBLISHING_EVENTS = frozenset(
+    {"PushEvent", "PullRequestEvent", "ReleaseEvent", "CreateEvent", "PublicEvent"}
+)
+
+#: What each event type is called in a sentence, and the page a reader should land on.
+_EVENT_PROSE: dict[str, tuple[str, str]] = {
+    "PushEvent": ("Pushed commits to", "commits"),
+    "PullRequestEvent": ("Opened a pull request on", "pulls"),
+    "ReleaseEvent": ("Published a release of", "releases"),
+    "CreateEvent": ("Created", ""),
+    "PublicEvent": ("Made public", ""),
+}
 
 
 def _account_fields(account: dict[str, Any]) -> dict[str, list[str]]:
@@ -95,8 +138,19 @@ class GithubConnector(BaseConnector):
             docs.append(profile)
 
         remaining = budget - len(docs)
-        if remaining > 0:
-            docs.extend(await self._repositories(login, remaining))
+        if remaining <= 0:
+            return docs
+
+        # Events are asked for FIRST and returned LAST, and both halves of that matter.
+        # Reserved rather than leftover, because "whatever repos did not use" is zero for
+        # every account with more repositories than budget — which is most of them — and a
+        # capability nothing ever reaches is the defect T-022 recorded. Asked first so the
+        # reservation can be handed back: a source that is empty, dead or rate-limited
+        # must not cost the repositories their slots. Returned last because display order
+        # is standing-picture-then-latest-news, not request order.
+        events = await self._events(login, min(EVENT_SLOTS, max(0, remaining - 1)))
+        docs.extend(await self._repositories(login, remaining - len(events)))
+        docs.extend(events)
         return docs
 
     async def _find_account(self, person: PersonRef) -> dict[str, Any] | None:
@@ -164,7 +218,8 @@ class GithubConnector(BaseConnector):
             params={
                 "sort": "pushed",
                 "direction": "desc",
-                # Headroom for the fork filter below.
+                # Headroom for the fork filter below, for the same reason `_events` asks
+                # for more rows than it will keep.
                 "per_page": max(1, min(limit * 2, 30)),
             },
             headers=self._headers(),
@@ -201,3 +256,120 @@ class GithubConnector(BaseConnector):
             if doc is not None:
                 docs.append(doc)
         return docs
+
+    async def _events(self, login: str, limit: int) -> list[RawDoc]:
+        """Recent public activity by `login` (TASKS T-1 acceptance 2, "recent public events").
+
+        `/users/{login}/events/public` is the public half of the activity feed — the same
+        thing the profile page shows a logged-out visitor — so nothing here is visible to
+        this process that is not already visible to anyone who types the member's login
+        into a browser. That is the line: the connector reads a published feed, it does
+        not assemble one.
+        """
+        if limit <= 0:
+            return []
+        payload = await self.get_json(
+            f"{API}/users/{login}/events/public",
+            # Headroom: most of a busy account's feed is stars and forks, which
+            # `PUBLISHING_EVENTS` drops, so asking for exactly `limit` rows routinely
+            # returns `limit` rows of noise and no documents.
+            params={"per_page": max(1, min(limit * 10, 30))},
+            headers=self._headers(),
+        )
+        rows: Any = payload
+        if isinstance(payload, dict):
+            rows = payload.get("items") or payload.get("events")
+        if not isinstance(rows, list):
+            return []
+
+        docs: list[RawDoc] = []
+        for event in rows:
+            if len(docs) >= limit:
+                break
+            doc = self._event(login, event)
+            if doc is not None:
+                docs.append(doc)
+        return docs
+
+    def _event(self, login: str, event: Any) -> RawDoc | None:
+        """One activity item as a citation, or `None` when it is not the member's own work."""
+        if not isinstance(event, dict):
+            return None
+        if event.get("public") is False:
+            return None
+        actor = event.get("actor")
+        actor_login = str(actor.get("login") or "") if isinstance(actor, dict) else ""
+        # The identity check for this endpoint: the account was verified once, in
+        # `_find_account`, and an item whose actor is somebody else did not come from it.
+        if actor_login.lower() != login.lower():
+            return None
+
+        kind = str(event.get("type") or "")
+        if kind not in PUBLISHING_EVENTS:
+            return None
+        payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+        if kind == "CreateEvent" and str(payload.get("ref_type") or "") != "repository":
+            # A branch or a tag is bookkeeping; a new repository is news.
+            return None
+
+        repo = event.get("repo") if isinstance(event.get("repo"), dict) else {}
+        full_name = str(repo.get("name") or "")
+        if not full_name:
+            return None
+
+        verb, page = _EVENT_PROSE.get(kind, ("Public activity on", ""))
+        url = _payload_url(payload) or f"https://github.com/{full_name}" + (
+            f"/{page}" if page else ""
+        )
+        return self.doc(
+            url,
+            title=f"{verb} {full_name}",
+            text=text_block(
+                f"{verb} {full_name} on GitHub.",
+                _event_detail(kind, payload),
+                f"Repository: https://github.com/{full_name}",
+                f"Public activity by {actor_login}.",
+            ),
+            published_at=parse_date(event.get("created_at")),
+        )
+
+
+def _payload_url(payload: dict[str, Any]) -> str:
+    """The event's own landing page when the payload carries one.
+
+    Preferred over a repository path because it cites the exact thing that happened — the
+    release, the pull request — rather than the list it appears in.
+    """
+    for key in ("release", "pull_request", "issue"):
+        item = payload.get(key)
+        if isinstance(item, dict):
+            url = str(item.get("html_url") or "")
+            if url.startswith(("http://", "https://")):
+                return url
+    return ""
+
+
+def _event_detail(kind: str, payload: dict[str, Any]) -> str:
+    """The one line of this event worth repeating out loud."""
+    if kind == "PushEvent":
+        commits = payload.get("commits")
+        messages = [
+            str(commit["message"]).strip()
+            for commit in (commits if isinstance(commits, list) else [])
+            if isinstance(commit, dict) and commit.get("message")
+        ]
+        if messages:
+            return "Latest commit message: " + messages[0].splitlines()[0]
+        size = payload.get("size")
+        return f"{size} commits." if isinstance(size, int) else ""
+    for key, label in (("release", "Release"), ("pull_request", "Pull request")):
+        item = payload.get(key)
+        if isinstance(item, dict):
+            name = str(item.get("name") or item.get("title") or item.get("tag_name") or "")
+            body = str(item.get("body") or "").strip().splitlines()
+            headline = f"{label}: {name}".strip(": ")
+            return text_block(headline, body[0] if body else None)
+    description = payload.get("description")
+    if isinstance(description, str) and description.strip():
+        return description.strip()
+    return ""
