@@ -23,6 +23,13 @@ free and both are load-bearing here:
 RATES.  TASKS T-1 acceptance 1 writes down: SEC 10/s, arXiv 1/3s, USPTO 45/min,
 Wayback 1/s, default 2/s.  They are host-suffix matched, so `efts.sec.gov` and
 `www.sec.gov` share one budget, as the operator of sec.gov would expect.
+
+WHAT THIS CANNOT EXPRESS.  SPEC C5's fifth entry is "Wikidata <= a few *concurrent*", and
+a token bucket has no opinion about concurrency: it schedules ARRIVAL times and never
+learns when a request finished, so any number of the requests it released may be in flight
+at once.  `HOST_RATE_PER_SEC` carries the closest rate for those hosts (T-076) and the
+entry says why; an actual in-flight cap would be a semaphore held across the request in
+`client`, not a value here.
 """
 
 from __future__ import annotations
@@ -52,6 +59,32 @@ HOST_RATE_PER_SEC: dict[str, float] = {
     "arxiv.org": 1.0 / 3.0,
     "uspto.gov": 45.0 / 60.0,
     "api.crossref.org": 1.0,
+    # Wikimedia, for SPEC C5's "Wikidata <= a few concurrent" (T-076). Both hosts the
+    # connectors talk to -- `www.wikidata.org/w/api.php` and `en.wikipedia.org/w/api.php`
+    # -- are the MediaWiki Action API, and the Wikimedia Robot policy publishes its
+    # unauthenticated limit as a PAIR: "keep the concurrency of your requests to 1 at a
+    # time, and below 5 requests per second overall".
+    # https://wikitech.wikimedia.org/wiki/Robot_policy
+    #
+    # This table can express only the second half of that pair, so the value is chosen to
+    # honour the CONJUNCTION rather than one conjunct. Writing the published 5.0/s here
+    # would encode the looser half and silently discard the tighter one, and it would make
+    # this process LESS polite than the 2.0/s default it falls through to today: burst
+    # capacity is `rate * 2` capped at 8, so 5.0/s would let eight requests leave at once
+    # against a host that asked for one at a time.
+    #
+    # 1.0/s is that pair's serial shape. API:Etiquette states the remedy in exactly those
+    # terms -- "make your requests in series rather than in parallel, by waiting for one
+    # request to finish before sending a new request" -- and 1/s is where a bucket lands
+    # when one request is in flight at a time over a typical round trip. It also gives
+    # capacity 2 rather than 4, which is the closest this mechanism gets to "1 at a time".
+    #
+    # A rate is still NOT a concurrency cap: this limiter schedules ARRIVALS and never
+    # observes completions, so nothing here can bound requests in flight. Capping that
+    # needs an `asyncio.Semaphore` around the request, which is a change to `client`'s
+    # shape rather than a number in this table. Reported under CONCERNS.
+    "wikidata.org": 1.0,
+    "wikipedia.org": 1.0,
 }
 
 #: Burst allowance, in seconds of the host's own rate. Two seconds of credit lets a

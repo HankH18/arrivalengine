@@ -54,7 +54,24 @@ def doc_id(url: str) -> str:
 
     Not a security hash — it is a short, stable cache filename and join key.
 
+    TOTAL ON PURPOSE (T-067).  This used to be a bare `url.encode()`, which is utf-8 in
+    STRICT mode and therefore raises `UnicodeEncodeError` on a lone surrogate.  That is
+    not a theoretical input: a JSON body containing the escape `"\\ud800"` is decoded by
+    `json.loads` into a real lone surrogate, and a url read out of such a payload — or
+    out of scraped page text — reaches here.  Three of this function's four call paths
+    were unguarded (`http/cache.py:cache_path`, `http/cache.py:write_record` and
+    `http/client.py:fetch_text` all call it OUTSIDE their own try blocks), so the raise
+    escaped `fetch_text`, which DESIGN Decision 8 says degrades and never raises.
+
+    `surrogatepass` is chosen over hardening those three call sites because it changes
+    NOTHING about this function's answer: it differs from strict only on surrogate code
+    points, which strict refuses outright, so every id this function has ever returned it
+    still returns byte for byte.  It only DEFINES a return where there used to be an
+    exception, which is what a join key for the whole pipeline has to have.  Hardening
+    the callers instead would leave the fourth (and any future) caller broken and would
+    give one url two different ids depending on who asked.
+
     >>> doc_id("https://example.com/")
     'b559c7edd3fb6737'
     """
-    return hashlib.sha1(url.encode()).hexdigest()[:16]
+    return hashlib.sha1(url.encode("utf-8", "surrogatepass")).hexdigest()[:16]
