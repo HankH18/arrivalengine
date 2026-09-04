@@ -14,19 +14,96 @@ User-Agent already advertises.
 ABSTRACTS ARE INVERTED.  OpenAlex ships `abstract_inverted_index` — `{word: [positions]}` —
 and no plain abstract, for licensing reasons.  Reconstructing it is four lines and is the
 difference between a citable paragraph and a title.
+
+WHICH AUTHOR (T-019).  `/authors?search=` is a FUZZY search over a corpus with hundreds of
+thousands of duplicate and near-duplicate names, and it always returns something.  Taking
+the first result that carries a `display_name` — which is all of them — attributes a
+stranger's entire publication record to the member, and then pulls every work filtered by
+that author id.  It is the worst shape this failure can take: a DOI resolves, the abstract
+really does contain the sentence T-3 quoted, so the citation check passes and the digest
+says "she wrote the ice-sheet paper" *with a source*.
+
+So the author is chosen, not taken:
+
+* a candidate must carry every word of the member's name — necessary, never sufficient;
+* one such candidate is accepted (a single unambiguous hit is what this source usually
+  gives, and refusing it would throw the source away);
+* several are decided by `details` — the institution or research area that echoes an
+  affiliation the roster supplied;
+* and if nothing separates them, the connector returns `[]`.  A coin flip wearing a DOI is
+  the one outcome worse than no document at all.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
 from arrival.contracts import PersonRef, RawDoc
+from arrival.util import normalize_ws
 
 __all__ = ["OpenAlexConnector", "deinvert_abstract"]
 
 AUTHORS = "https://api.openalex.org/authors"
 WORKS = "https://api.openalex.org/works"
+
+#: Candidates to consider before disambiguating. Larger than any budget: the point is to
+#: SEE the same-name authors, because two of them is the signal to decline.
+AUTHOR_CANDIDATES = 10
+
+_WORD = re.compile(r"[^0-9a-z]+")
+
+
+def _tokens(text: str) -> set[str]:
+    """Comparable word tokens. Single letters are dropped: initials match anything."""
+    return {word for word in _WORD.split(normalize_ws(text)) if len(word) >= 2}
+
+
+def _names(author: dict[str, Any]) -> list[str]:
+    """Every name OpenAlex records for an author profile."""
+    found = [str(author.get("display_name") or "")]
+    alternatives = author.get("display_name_alternatives")
+    if isinstance(alternatives, list):
+        found.extend(str(entry) for entry in alternatives if entry)
+    return [name for name in found if name]
+
+
+def _carries_name(author: dict[str, Any], name: str) -> bool:
+    """True when one of this profile's names contains every word of `name`."""
+    wanted = _tokens(name)
+    if not wanted:
+        return False
+    return any(wanted <= _tokens(candidate) for candidate in _names(author))
+
+
+def _display_names(value: Any) -> list[str]:
+    """`display_name`s out of any of the shapes OpenAlex nests them in."""
+    found: list[str] = []
+    if isinstance(value, dict):
+        if value.get("display_name"):
+            found.append(str(value["display_name"]))
+        for nested in value.values():
+            if isinstance(nested, (dict, list)):
+                found.extend(_display_names(nested))
+    elif isinstance(value, list):
+        for entry in value:
+            found.extend(_display_names(entry))
+    return found
+
+
+def _corroboration(author: dict[str, Any], terms: list[str]) -> int:
+    """How many of the roster's affiliations this profile independently echoes."""
+    haystack = normalize_ws(
+        " ".join(
+            _display_names(author.get("last_known_institutions"))
+            + _display_names(author.get("last_known_institution"))
+            + _display_names(author.get("affiliations"))
+            + _display_names(author.get("x_concepts"))
+            + _display_names(author.get("topics"))
+        )
+    )
+    return sum(1 for term in terms if term and term in haystack)
 
 
 def deinvert_abstract(index: Any) -> str:
@@ -75,19 +152,43 @@ class OpenAlexConnector(BaseConnector):
         return docs
 
     async def _author(self, person: PersonRef) -> dict[str, Any] | None:
+        """The member's author profile, or `None` when the search cannot identify her."""
         payload = await self.get_json(
             AUTHORS,
-            params={"search": person.name, "per-page": 5, **self._polite()},
+            params={
+                "search": person.name,
+                "per-page": AUTHOR_CANDIDATES,
+                **self._polite(),
+            },
         )
         if not isinstance(payload, dict):
             return None
         results = payload.get("results")
         if not isinstance(results, list):
             return None
-        for result in results:
-            if isinstance(result, dict) and result.get("display_name"):
-                return result
-        return None
+
+        named = [
+            result
+            for result in results
+            if isinstance(result, dict) and _carries_name(result, person.name)
+        ]
+        if not named:
+            return None
+        if len(named) == 1:
+            return named[0]
+
+        # More than one person publishes under this name, so the name has stopped being
+        # an identifier. Only a detail the roster supplied can break the tie, and a tie
+        # that stays tied is answered with nothing rather than with the first result.
+        terms = [normalize_ws(term) for term in affiliations(person.details)]
+        scored = sorted(
+            ((_corroboration(author, terms), index) for index, author in enumerate(named)),
+            key=lambda pair: (-pair[0], pair[1]),
+        )
+        best, runner_up = scored[0], scored[1]
+        if best[0] == 0 or best[0] == runner_up[0]:
+            return None
+        return named[best[1]]
 
     def _profile_document(self, author: dict[str, Any]) -> RawDoc | None:
         identifier = _openalex_id(author.get("id"))

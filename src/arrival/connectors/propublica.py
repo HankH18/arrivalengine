@@ -12,19 +12,38 @@ TASTE.  The same filing carries revenue, expenses and officer compensation.  T-4
 *mission code* and stops there.  A compensation figure that is never displayable is a
 figure there is no reason to have collected.
 
+WHAT THE 990 ROSTER IS ALSO FOR (T-018).  It is the only thing in this source that
+connects a PERSON to an ORGANISATION, so it is also the filter.  Nonprofit Explorer
+indexes organisation names, and `affiliations(details)` is documented as deliberately
+generous — it cannot tell an employer from a city, so it hands back
+`['Thornfield Loom', 'Providence', 'Rhode Island']` and a query on `Providence` returns
+every charity in Providence.  Each of those used to become a `RawDoc` stamped
+`source_kind="propublica"` and presented as a document about the member.  Downstream that
+is worse than useless: T-3 extracts a fact about the SUBJECT from whatever text arrives,
+the quote really is in the document and the url really does resolve, so the citation guard
+passes and a stranger's charity is displayed as hers, sourced.
+
+So two rules, and both matter:
+
+* **A place is not an organisation name.**  A detail that ends in a US state is where she
+  lives; it is never sent to a search over charity names.
+* **She is emitted only if the 990 names her.**  No match on the officer list means no
+  document — not a document that merely declines to claim she is on the board.  Names are
+  compared word-by-word rather than as a substring, because half the filings in the real
+  corpus read `QUENNEBECK MARISOL A`.
+
 Two steps, both on the free v2 API with no key: `search.json?q=` to find candidate
-organisations, then `organizations/{ein}.json` for the officer list.  The queries are the
-person's name and their affiliations, because Nonprofit Explorer indexes organisation
-names, not people — searching only for the person finds the foundation named after them
-and nothing else.
+organisations, then `organizations/{ein}.json` for the officer list.
 """
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from arrival.connectors.base import BaseConnector, affiliations, text_block
 from arrival.contracts import PersonRef, RawDoc
+from arrival.util import normalize_ws
 
 __all__ = ["ProPublicaConnector"]
 
@@ -34,6 +53,73 @@ ORG_PAGE = "https://projects.propublica.org/nonprofits/organizations/{ein}"
 #: More than a few org queries per person is a fishing expedition, not research.
 MAX_QUERIES = 3
 
+#: How many candidate organisations may be looked up before the budget is filled. Larger
+#: than `budget` because most candidates are about to be rejected for not naming her.
+MAX_CANDIDATES = 8
+
+_WORD = re.compile(r"[^0-9a-z]+")
+
+#: Names and postal codes of the US states, plus DC. A `detail` ending in one of these is
+#: an address, and an address searched against a charity-name index returns that town's
+#: charities — none of which the member need have any connection to.
+_US_STATES = frozenset(
+    {
+        "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
+        "connecticut", "delaware", "district of columbia", "florida", "georgia",
+        "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky",
+        "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota",
+        "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire",
+        "new jersey", "new mexico", "new york", "north carolina", "north dakota",
+        "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina",
+        "south dakota", "tennessee", "texas", "utah", "vermont", "virginia",
+        "washington", "west virginia", "wisconsin", "wyoming",
+        "al", "ak", "az", "ar", "ca", "co", "ct", "dc", "de", "fl", "ga", "hi", "ia",
+        "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms",
+        "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "ny", "oh", "ok", "or", "pa",
+        "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy",
+    }
+)
+
+
+def _tokens(text: str) -> set[str]:
+    """Comparable word tokens. Single letters are dropped: a middle initial matches all."""
+    return {word for word in _WORD.split(normalize_ws(text)) if len(word) >= 2}
+
+
+def _is_the_member(person_name: str, officer_name: str) -> bool:
+    """Does this roster line name the member?
+
+    Word-set containment, not substring: real 990 rosters are written
+    `QUENNEBECK MARISOL A` about as often as `Marisol Quennebeck`, and a substring test
+    on the full name in roster order misses every one of them — which silently turns the
+    one fact this connector exists to state, "she chairs this", into "this exists near
+    her". Containment also means a shared surname alone is never a match.
+    """
+    wanted = _tokens(person_name)
+    return bool(wanted) and wanted <= _tokens(officer_name)
+
+
+def _is_an_address(detail: str) -> bool:
+    """`"Providence, Rhode Island"` yes; `"co-founder, Thornfield Loom"` no."""
+    normalised = normalize_ws(detail)
+    if normalised in _US_STATES:
+        return True
+    fragments = [fragment.strip() for fragment in detail.split(",")]
+    return len(fragments) >= 2 and normalize_ws(fragments[-1]) in _US_STATES
+
+
+def organisation_queries(person: PersonRef) -> list[str]:
+    """The member's name plus the ORGANISATIONS in `details` — never the places."""
+    queries = [person.name]
+    for detail in person.details:
+        if _is_an_address(detail):
+            continue
+        for term in affiliations([detail]):
+            if normalize_ws(term) in _US_STATES or term in queries:
+                continue
+            queries.append(term)
+    return queries[:MAX_QUERIES]
+
 
 class ProPublicaConnector(BaseConnector):
     """`kind="propublica"` — nonprofit affiliations and the boards they imply."""
@@ -41,12 +127,12 @@ class ProPublicaConnector(BaseConnector):
     kind = "propublica"
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        queries = [person.name, *affiliations(person.details)][:MAX_QUERIES]
+        limit = max(1, min(budget + 3, MAX_CANDIDATES))
 
         seen_eins: list[str] = []
         rows: list[dict[str, Any]] = []
-        for query in queries:
-            if len(rows) >= budget:
+        for query in organisation_queries(person):
+            if len(rows) >= limit:
                 break
             for row in await self._organisations(query):
                 ein = str(row.get("ein") or "")
@@ -54,11 +140,13 @@ class ProPublicaConnector(BaseConnector):
                     continue
                 seen_eins.append(ein)
                 rows.append(row)
-                if len(rows) >= budget:
+                if len(rows) >= limit:
                     break
 
         docs: list[RawDoc] = []
-        for row in rows[:budget]:
+        for row in rows:
+            if len(docs) >= budget:
+                break
             doc = await self._document(person, row)
             if doc is not None:
                 docs.append(doc)
@@ -87,9 +175,13 @@ class ProPublicaConnector(BaseConnector):
                 if isinstance(filings, list) and filings and isinstance(filings[0], dict):
                     officers = _officer_lines(filings[0].get("officers"))
 
-        # Say plainly whether the subject is on this roster: the alternative is a fact that
-        # reads as "they are involved with X" when the truth is "X exists near them".
-        named = [line for line in officers if person.name.lower() in line.lower()]
+        # The roster IS the filter. An organisation that does not name her is one that
+        # exists near her, and a document saying otherwise is false attribution with a
+        # real url and a real quote attached.
+        named = [line for line in officers if _is_the_member(person.name, line)]
+        if not named:
+            return None
+
         place = ", ".join(part for part in (row.get("city"), row.get("state")) if part)
 
         return self.doc(
@@ -99,7 +191,7 @@ class ProPublicaConnector(BaseConnector):
                 str(row.get("name") or ""),
                 f"EIN {row.get('strein') or ein}" + (f" — {place}" if place else ""),
                 f"NTEE code {row['ntee_code']}" if row.get("ntee_code") else None,
-                f"{person.name} is listed as: {'; '.join(named)}" if named else None,
+                f"{person.name} is listed as: {'; '.join(named)}",
                 ("Officers and directors: " + "; ".join(officers)) if officers else None,
             ),
         )
