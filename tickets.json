@@ -676,6 +676,156 @@
       "defect": "Match.path can name a hub that Match.why denies, and it reproduces on the frozen corpus itself. _why names only hubs with contribution > 0; _path routes through components[0] even when its contribution is 0. T-5 acceptance 3 makes the path the picture of the why, so the two contradicting each other is a defect in the product's exposed reasoning (R10).",
       "finding_id": "5cea665c63ee25ee93d48819e2c45caf0037f3ea0c253994d78ec861b12daf4b",
       "reproduction": "On the frozen corpus: mira-hollowell -> why='Nothing in common on the record yet.' while path=['person:runa-okonkwo','hub:city:austin','person:mira-hollowell']."
+    },
+    {
+      "id": "T-017",
+      "title": "The Wikidata connector does not filter candidates by person.details, and it is the only name-searching connector that never calls affiliations(). It uses the action API rather than SPARQL. This connector produces the `wd:` identity spine that hub ids are keyed on, so a wrong QID poisons hub joins for EVERY person, not just this one. Acceptance 2 says the connector is 'filtered by detail'. Separately at wikidata.py:57-61, item-valued claims render as bare QIDs \u2014 measured text contains 'instance of: Q5 | occupation: Q131524' \u2014 while acceptance 2 asks for LABELLED affiliations as text; there is no label lookup for referenced entities.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/wikidata.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/connectors/wikidata.py:81",
+      "defect": "The Wikidata connector does not filter candidates by person.details, and it is the only name-searching connector that never calls affiliations(). It uses the action API rather than SPARQL. This connector produces the `wd:` identity spine that hub ids are keyed on, so a wrong QID poisons hub joins for EVERY person, not just this one. Acceptance 2 says the connector is 'filtered by detail'. Separately at wikidata.py:57-61, item-valued claims render as bare QIDs \u2014 measured text contains 'instance of: Q5 | occupation: Q131524' \u2014 while acceptance 2 asks for LABELLED affiliations as text; there is no label lookup for referenced entities.",
+      "finding_id": "82abc8aea33561c41fbf1afbd2793a2aa23ef5a32c5a1071fc08960cbbaced2a",
+      "reproduction": "grep affiliations src/arrival/connectors/wikidata.py -> no hits, unlike every other name-searching connector. Read wikidata.py:57-61 for the claim rendering. The frozen t1 suite cannot see this: its recorded _WIKIDATA_API fixture supplies exactly ONE candidate, so no disambiguation is ever exercised."
+    },
+    {
+      "id": "T-018",
+      "title": "The person's CITY is used as a nonprofit-name query, and there is NO filter requiring the person to appear in the officer list. affiliations() returns ['Thornfield Loom','Providence','Rhode Island'], so a search on 'Providence' returns Providence-area charities and each becomes a RawDoc presented as a document ABOUT the subject. This is false attribution reaching the extractor, which will then extract cited facts about a person from an organisation she has no connection to.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/propublica.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/connectors/propublica.py:44",
+      "defect": "The person's CITY is used as a nonprofit-name query, and there is NO filter requiring the person to appear in the officer list. affiliations() returns ['Thornfield Loom','Providence','Rhode Island'], so a search on 'Providence' returns Providence-area charities and each becomes a RawDoc presented as a document ABOUT the subject. This is false attribution reaching the extractor, which will then extract cited facts about a person from an organisation she has no connection to.",
+      "finding_id": "93d1214a0a07e1f2539dd5079399fd98e9778dbb17a9341911a58ce99371a36b",
+      "reproduction": "The lane's own recorded fixture pins this deliberately: PROVIDENCE RIVER CONSERVANCY is emitted as a propublica doc about the subject with no connection to her. test_propublica_says_plainly_whether_the_member_is_on_the_board pins the boundary \u2014 it must never claim she is listed."
+    },
+    {
+      "id": "T-019",
+      "title": "No author disambiguation: the first search result carrying a display_name wins. Another researcher who shares the name has their papers attributed to the member, complete with a citable DOI \u2014 which is the worst shape this failure can take, because the citation check will pass and the fact will be displayed as sourced.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/openalex.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/connectors/openalex.py:87",
+      "defect": "No author disambiguation: the first search result carrying a display_name wins. Another researcher who shares the name has their papers attributed to the member, complete with a citable DOI \u2014 which is the worst shape this failure can take, because the citation check will pass and the fact will be displayed as sourced.",
+      "finding_id": "e416bf6bd49634deb8390fc9e94e320dd202e6d5bb6c9e9d07e8067031442878",
+      "reproduction": "Read openalex.py:87-90. Invisible to the frozen suite: its recorded _OA_AUTHORS fixture has exactly one result, so the selection branch is never exercised."
+    },
+    {
+      "id": "T-020",
+      "title": "No relevance filter, so a page about the member's COMPANY is emitted as a document about the PERSON \u2014 measured: 2 docs returned, one of them about Thornfield_Loom rather than the member. Also srlimit=budget with no headroom, so budget=1 can return 0 documents in production; and quote() keeps '/' safe, so a title containing a slash builds a broken path.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/wikipedia.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/wikipedia.py",
+      "defect": "No relevance filter, so a page about the member's COMPANY is emitted as a document about the PERSON \u2014 measured: 2 docs returned, one of them about Thornfield_Loom rather than the member. Also srlimit=budget with no headroom, so budget=1 can return 0 documents in production; and quote() keeps '/' safe, so a title containing a slash builds a broken path.",
+      "finding_id": "a90a60834ef001cc6177939ae949e2a9e4c607a73d9c06c1489386016ffa15ed",
+      "reproduction": "Run the connector against its recorded fixture and read the returned doc urls. The frozen suite hides it: every page/summary path in its fixture returns the same content_urls, so three off-topic docs collapse into one by doc_id."
+    },
+    {
+      "id": "T-021",
+      "title": "Acceptance 2 requires the self_page connector to fetch '/feed' RSS if present. It is implemented BACKWARDS: /feed and /rss are on _SKIP_SEGMENTS, and there is no RSS or Atom parsing anywhere in the codebase.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/self_page.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/self_page.py:39",
+      "defect": "Acceptance 2 requires the self_page connector to fetch '/feed' RSS if present. It is implemented BACKWARDS: /feed and /rss are on _SKIP_SEGMENTS, and there is no RSS or Atom parsing anywhere in the codebase.",
+      "finding_id": "05878cee20b7b080e8ecfbe3c44f106b244f3ca96a7f14e71bd84efbb8f97da4",
+      "reproduction": "Read self_page.py:39 for the skip list; grep -ri 'rss\\|atom\\|feedparser' src/ for the absent parser."
+    },
+    {
+      "id": "T-022",
+      "title": "The /events endpoint is entirely absent \u2014 grep events returns zero hits \u2014 while acceptance 2 names 'recent public events/repos'. Only repos are fetched.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/github.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/github.py",
+      "defect": "The /events endpoint is entirely absent \u2014 grep events returns zero hits \u2014 while acceptance 2 names 'recent public events/repos'. Only repos are fetched.",
+      "finding_id": "0c01a5e683348a82e64c4863d2e1e6eb904fc4b9582f7c37fdb747d50ce25995",
+      "reproduction": "grep -n events src/arrival/connectors/github.py -> no hits."
+    },
+    {
+      "id": "T-023",
+      "title": "FORMS is '3,4,5,D' against the ticket's stated 'D/4/13F'. The docstring argues 13F is holdings data and therefore R11-excluded, which is a defensible reading \u2014 but it is a stated acceptance criterion the code does not meet, and the deviation should be ratified or corrected rather than left in a docstring. Also edgar.py:96 renders 'SEC Form [\\'4\\']' via str(source.get('root_forms')) when form is absent, with _first_str defined two lines above and unused.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/edgar.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/edgar.py:34",
+      "defect": "FORMS is '3,4,5,D' against the ticket's stated 'D/4/13F'. The docstring argues 13F is holdings data and therefore R11-excluded, which is a defensible reading \u2014 but it is a stated acceptance criterion the code does not meet, and the deviation should be ratified or corrected rather than left in a docstring. Also edgar.py:96 renders 'SEC Form [\\'4\\']' via str(source.get('root_forms')) when form is absent, with _first_str defined two lines above and unused.",
+      "finding_id": "15c3b331743655338798a1fe65018a9d435bf36599dd5c9e996605f872804b31",
+      "reproduction": "Read edgar.py:34 and compare to the ticket's acceptance 2. For the rendering bug, the frozen fixture supplies BOTH form and root_forms so the malformed branch never runs."
+    },
+    {
+      "id": "T-024",
+      "title": "No author search and no comment retrieval; the ticket says 'Algolia by author/name'. Only story search by name is implemented.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/hn.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/hn.py:39",
+      "defect": "No author search and no comment retrieval; the ticket says 'Algolia by author/name'. Only story search by name is implemented.",
+      "finding_id": "d50be877296294f15cd90080143cc75938a9811b234995893d40ba813f35faca",
+      "reproduction": "Read hn.py:39."
+    },
+    {
+      "id": "T-025",
+      "title": "There is NO TTL anywhere in the HTTP cache. An empty or unextractable 200 is cached permanently: fetched_at is written but never compared against anything. One transient JS-shell response makes that URL return None forever, for the life of the cache directory. Related, client.py:90: the cache key ignores the HTTP method when there is no body, so GET/POST/HEAD/DELETE of one URL collide, and it ignores headers entirely, so an authenticated and an anonymous GitHub fetch of the same URL share one cache file.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/client.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/client.py:162",
+      "defect": "There is NO TTL anywhere in the HTTP cache. An empty or unextractable 200 is cached permanently: fetched_at is written but never compared against anything. One transient JS-shell response makes that URL return None forever, for the life of the cache directory. Related, client.py:90: the cache key ignores the HTTP method when there is no body, so GET/POST/HEAD/DELETE of one URL collide, and it ignores headers entirely, so an authenticated and an anonymous GitHub fetch of the same URL share one cache file.",
+      "finding_id": "a38b45bf0a54255af1b29abeb5aedb104bf7cb68aa8a2b36a8e1ee5976d5c036",
+      "reproduction": "Read client.py:162 and cache.py; grep for any comparison against fetched_at -> none. For the key, read client.py:90."
+    },
+    {
+      "id": "T-026",
+      "title": "A response with no Content-Type defaults to text/html, and the HTML extractor then strips angle brackets from inside JSON string VALUES, corrupting the payload. A binary body becomes a mojibake RawDoc rather than None \u2014 contradicting the module's own docstring, which promises that a body which is not text yields None every time.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/client.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/client.py:158",
+      "defect": "A response with no Content-Type defaults to text/html, and the HTML extractor then strips angle brackets from inside JSON string VALUES, corrupting the payload. A binary body becomes a mojibake RawDoc rather than None \u2014 contradicting the module's own docstring, which promises that a body which is not text yields None every time.",
+      "finding_id": "957cd218057af37dc6d7684dcc9b420c259ff81948a0dfb144f699112b72a9d8",
+      "reproduction": "Read client.py:158 and :175, then the docstring at the top of the module."
     }
   ],
   "cut_list": [
