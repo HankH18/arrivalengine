@@ -205,8 +205,22 @@ class CandidateFact(BaseModel):
         default=FALLBACK_CATEGORY,
         description="the best category for this fact IGNORING whether it is non-obvious",
     )
-    fact_id: str = ""
-    confidence: float = 0.5
+    fact_id: str = Field(
+        default="",
+        description=(
+            "a short name for this fact, unique within this answer, so a hub below can "
+            "point at it in `evidence_fact_ids`. Any string will do; we assign our own."
+        ),
+    )
+    confidence: float = Field(
+        default=0.5,
+        description=(
+            "how sure you are the sentence is true OF THIS PERSON, 0 to 1. This number is "
+            "load-bearing and it is not a formality: anything below 0.7 is withheld from "
+            "staff entirely. Use 0.9+ when the document names the person and states the "
+            "fact outright, and something low when you are inferring across a name match."
+        ),
+    )
 
 
 class CandidateHub(BaseModel):
@@ -496,7 +510,10 @@ about this person's work, affiliations, interests or recent activity.
 5. CATEGORY. Use `non_obvious` only for material a well-prepared person would NOT already \
 have from the subject's own bio or the first page of search results. Always also fill \
 `natural_category` with the best category ignoring non-obviousness.
-6. HUBS are the entities worth joining two people on: companies, investors, schools, \
+6. CONFIDENCE. Fill `confidence` on every fact. A fact below 0.7 is withheld from staff \
+entirely, and an omitted one defaults below that line, so a fact you are sure of and did \
+not rate is a fact nobody sees.
+7. HUBS are the entities worth joining two people on: companies, investors, schools, \
 boards, events, causes, cities, technologies, named topics, named people. Give each one \
 the `evidence_fact_ids` of the facts in this same answer that support it. Skip generic \
 labels that would connect everybody — {", ".join(sorted(STOP_HUB_LABELS))} and the like. \
