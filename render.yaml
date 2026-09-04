@@ -1,0 +1,51 @@
+# Render Blueprint — T-9 acceptance 2 / SPEC C4, S7.
+#
+# One free-tier web service that boots the ASGI app from the dossiers committed in this
+# repository. There is no database and no build-time network research: `data/dossiers/`
+# and `data/docs/` are ordinary tracked JSON, so a deploy is a checkout plus `uv sync`.
+#
+# WHY THE START COMMAND LOOKS LIKE THIS
+#   * `$PORT` is Render's, not ours. A service that binds a fixed port never goes live —
+#     Render's health check hits $PORT and the deploy hangs "in progress" forever.
+#   * `--host 0.0.0.0`, not 127.0.0.1: the router reaches the container from outside it.
+#   * `arrival.web.app:app` is the module-level instance built by `create_app()`. It reads
+#     `DOSSIER_DIR` at construction time, so the corpus is chosen by the environment
+#     below rather than baked in.
+#   * `uv run --no-sync` starts the interpreter from the environment `uv sync` already
+#     built during the build step; `--no-sync` keeps the boot from trying to re-resolve
+#     dependencies (and reach the network) on every cold start.
+#   * One worker on purpose. Presence and issued digests live in process memory (DESIGN:
+#     no database), so a second worker would answer `/building` from a different building.
+#
+# COLD START: the free instance sleeps after ~15 minutes idle and takes ~30-60s to wake.
+# Warm it before a demo — see README §Deploy.
+
+services:
+  - type: web
+    name: arrival-engine
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    autoDeploy: true
+    buildCommand: pip install uv && uv sync --frozen --no-dev
+    startCommand: uv run --no-sync uvicorn arrival.web.app:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /building
+    envVars:
+      # Matches .python-version and pyproject's requires-python (>=3.12,<3.13).
+      - key: PYTHON_VERSION
+        value: "3.12"
+      # R15: the operator-only view stays 404 on the public URL unless deliberately opened.
+      - key: DEBUG_VIEWS
+        value: "0"
+      # Absolute, because a relative DOSSIER_DIR resolves against the process working
+      # directory. Render checks the repo out at /opt/render/project/src.
+      - key: DOSSIER_DIR
+        value: /opt/render/project/src/data/dossiers
+      # SPEC C5: the contact address advertised in the outbound User-Agent.
+      - key: CONTACT_EMAIL
+        sync: false
+      # The arrival-time "say out loud" line (SPEC Q5). Unset is not a crash — T-7 falls
+      # back to a templated hook fact — so this is set in the dashboard, never committed.
+      - key: ANTHROPIC_API_KEY
+        sync: false
