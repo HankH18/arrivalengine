@@ -57,6 +57,8 @@ from arrival.contracts import (
     Budget,
     BuildReport,
     Dossier,
+    Fact,
+    Hub,
     LLMError,
     PersonRef,
     RawDoc,
@@ -238,6 +240,7 @@ class BuildTrace:
     connector_errors: dict[str, str] = field(default_factory=dict)
     llm_calls: int = 0
     llm_refused: int = 0
+    hubs_dropped_unsupported: list[str] = field(default_factory=list)
     extraction: ExtractionStats = field(default_factory=ExtractionStats)
 
     def accepted_documents(self, doc_ids: Iterable[str]) -> list[RawDoc]:
@@ -346,6 +349,42 @@ async def _fan_out(
 # --------------------------------------------------------------------------
 
 
+def _supported_hubs(hubs: list[Hub], facts: list[Fact], trace: BuildTrace) -> list[Hub]:
+    """Drop any hub whose every evidence fact was excluded by the taste filter.
+
+    The stage order makes this necessary and it belongs to nobody else. `extract` already
+    refuses a hub with no surviving evidence, but it runs BEFORE `apply_taste`, so a hub
+    can leave extraction properly evidenced and then have its entire evidence excluded a
+    moment later. Nothing downstream looks again: `Hub` carries a LABEL, T-5 joins on it
+    and T-7 prints it in `Match.why`, so the surviving hub reintroduces exactly the
+    sentence taste just removed.
+
+    Reproduced before this guard existed: a fact excluded `home_or_property` left behind
+    `city:pecan-street` — the member's street, as a joinable graph node and a candidate
+    match reason. That is the wrong side of the "seen vs. dossiered" line (SPEC R11).
+
+    Deliberately narrow. A hub keeps its place if ANY evidence fact survived, and one whose
+    evidence ids resolve to no fact at all is left alone rather than judged on silence —
+    `extract` cannot currently emit that shape, and inventing a rule for it here would be
+    guessing.
+    """
+    excluded = {fact.fact_id for fact in facts if fact.excluded}
+    known = {fact.fact_id for fact in facts}
+    kept: list[Hub] = []
+    for hub in hubs:
+        evidence = [fact_id for fact_id in hub.evidence_fact_ids if fact_id in known]
+        if evidence and all(fact_id in excluded for fact_id in evidence):
+            trace.hubs_dropped_unsupported.append(hub.hub_id)
+            log.info(
+                "dropping hub %s (%r): every fact evidencing it was excluded by taste",
+                hub.hub_id,
+                hub.label,
+            )
+            continue
+        kept.append(hub)
+    return kept
+
+
 async def build_dossier(
     person: PersonRef,
     connectors: Sequence[Connector],
@@ -398,6 +437,7 @@ async def build_dossier(
             person, resolution, docs, metered, stats=trace.extraction
         )
         facts = await apply_taste(candidates, metered)
+        hubs = _supported_hubs(hubs, facts, trace)
 
     trace.llm_calls = metered.used
     trace.llm_refused = metered.refused

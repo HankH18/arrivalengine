@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from t6_corpus import PERSON, PRIVATE, docs_for, script_extraction, script_verdicts
+from t6_corpus import EMPLOYER, PERSON, PRIVATE, docs_for, script_extraction, script_verdicts
 
 from arrival.contracts import Budget, Dossier
 from arrival.research import BuildTrace, build_dossier
@@ -156,3 +156,77 @@ async def test_the_dossier_round_trips_through_json():
     assert again.schema_version == 1
     assert [f.fact_id for f in again.facts] == [f.fact_id for f in dossier.facts]
     assert [h.hub_id for h in again.hubs] == [h.hub_id for h in dossier.hubs]
+
+
+async def test_a_hub_whose_every_fact_was_excluded_never_reaches_the_dossier():
+    """R11 across the stage boundary: `extract` evidences hubs BEFORE taste rules.
+
+    `Hub` carries a label, T-5 joins on it and T-7 prints it in `Match.why`, so a hub left
+    standing on excluded evidence reintroduces the sentence taste just removed. Reproduced
+    before the guard existed: a `home_or_property` exclusion left `city:pecan-street` — the
+    member's street — as a joinable node and a candidate match reason.
+    """
+    from arrival.extract import CandidateFact, CandidateHub, ExtractionResult
+
+    docs = docs_for("self_page", 2, private_index=0)
+    private_doc = docs[0]
+    llm = LLMDouble()
+    script_verdicts(llm, docs)
+    llm.when(
+        "ExtractionResult",
+        private_doc.doc_id,
+        ExtractionResult(
+            facts=[
+                CandidateFact(
+                    doc_id=private_doc.doc_id,
+                    fact_id="kept",
+                    text=f"{PERSON.name} {EMPLOYER}.",
+                    quote=f"{PERSON.name} {EMPLOYER}",
+                    category="current_work",
+                    natural_category="current_work",
+                    confidence=0.9,
+                ),
+                CandidateFact(
+                    doc_id=private_doc.doc_id,
+                    fact_id="private",
+                    text=f"{PERSON.name} {PRIVATE}.",
+                    quote=f"{PERSON.name} {PRIVATE}",
+                    category="hook",
+                    natural_category="hook",
+                    confidence=0.9,
+                ),
+            ],
+            hubs=[
+                CandidateHub(
+                    label="Pecan Street",
+                    type="city",
+                    doc_id=private_doc.doc_id,
+                    evidence_fact_ids=["private"],
+                ),
+                CandidateHub(
+                    label="Quarrystone Labs",
+                    type="company",
+                    doc_id=private_doc.doc_id,
+                    evidence_fact_ids=["kept"],
+                ),
+            ],
+        ),
+    )
+    llm.when("ExtractionResult", docs[1].doc_id, ExtractionResult(facts=[], hubs=[]))
+    trace = BuildTrace()
+
+    dossier = await build_dossier(
+        PERSON, [ConnectorDouble(kind="self_page", docs=docs)], llm, Budget(), trace=trace
+    )
+
+    # Positive control: the excluded fact really was produced and really was excluded.
+    assert any(fact.excluded and PRIVATE in fact.text for fact in dossier.facts)
+
+    labels = {hub.label for hub in dossier.hubs}
+    assert "Pecan Street" not in labels, (
+        f"a hub evidenced only by an excluded fact survived into the dossier: {labels}"
+    )
+    assert "Quarrystone Labs" in labels, (
+        "the guard is too wide: a hub with surviving evidence was dropped too"
+    )
+    assert trace.hubs_dropped_unsupported == ["city:pecan-street"]
