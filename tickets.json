@@ -1711,6 +1711,111 @@
       "defect": "The T-077 field vocabulary is HAND-AUTHORED and lives in code rather than configuration, and the lane that wrote it saw the roster first. It kept the list generic and refused anything a DESIGN Decision 3 stop hub covers, and every assignment still requires document attestation \u2014 but the field layer's measured yield is partly a measurement of that list. It should move to configuration, which the lane did not own. Related honest limit the lane stated: the mechanical guard proves the phrase is IN the person's document; it cannot prove the phrase is PREDICATED OF the person. The prompt carries that half, and it appears to hold (Emmett Shear's documents say 'venture capital firm Y Combinator' and he did NOT get the field hub), but it is the model's judgement rather than a check.",
       "finding_id": "3b1bdfc80f1a4df1846ea7366be33eeb29db34ea6e5c8da85ee905f2fe9b12cf",
       "reproduction": "Read the vocabulary constant in extract.py. Reported by the CONNECT lane as its own principal caveat."
+    },
+    {
+      "id": "T-086",
+      "title": "R11's home_or_property and family cues are ANCHORED TO PRONOUNS, and this corpus writes every fact with a PROPER NAME, so the two categories the corpus actually violates are precisely the two its own house style defeats. The home cue is `\\b(?:they|he|she)\\s+(?:live|lives|lived)\\s+in\\b`; family cues are possessives (their wife, his son). Measured: '...lives in Boulder, Colorado' is withheld, 'Brad Feld lives in Boulder, Colorado and Homer, Alaska' is KEPT \u2014 and keep is FINAL, because apply_taste sends only `unsure` facts to the classifier, so the documented fail-closed path is bypassed entirely. Health/legal/wealth/political are NOUN-anchored (cancer, divorce, net worth, registered Democrat) and survive the rename, which is the control proving the defect is the cue SPELLING rather than proper nouns generally. LIVE ON THE SHIPPED, DEPLOYED CORPUS: 8 displayable facts hit R11 shapes, including 'Brad Feld lives in Boulder, Colorado and Homer, Alaska' (mints city:boulder-colorado and city:homer-alaska, both rendered on /graph and /corpus right now, and it is the 4th opener-hook candidate \u2014 one model choice from being spoken aloud), 'Brad Feld owns homes in Aspen, Tucson, Boulder, and Basalt', 'Brad Feld is friends with Phil Weiser and Michael Bennet' (a formal gubernatorial endorsement \u2014 R11 political AND relationships \u2014 minting person: hubs for a state governor nominee and a sitting US Senator), 'resigned due to the birth of his 9 month old son', and 'Co-founded Canva with boyfriend Cliff Obrecht' (whose MARRIAGE to the same man IS correctly excluded as family in the same file). Fix: anchor the cues on the SUBJECT rather than on pronouns \u2014 the person's own name is in PersonRef and every fact is about them by construction.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/taste.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "CRITICAL",
+      "location": "src/arrival/taste.py",
+      "defect": "R11's home_or_property and family cues are ANCHORED TO PRONOUNS, and this corpus writes every fact with a PROPER NAME, so the two categories the corpus actually violates are precisely the two its own house style defeats. The home cue is `\\b(?:they|he|she)\\s+(?:live|lives|lived)\\s+in\\b`; family cues are possessives (their wife, his son). Measured: '...lives in Boulder, Colorado' is withheld, 'Brad Feld lives in Boulder, Colorado and Homer, Alaska' is KEPT \u2014 and keep is FINAL, because apply_taste sends only `unsure` facts to the classifier, so the documented fail-closed path is bypassed entirely. Health/legal/wealth/political are NOUN-anchored (cancer, divorce, net worth, registered Democrat) and survive the rename, which is the control proving the defect is the cue SPELLING rather than proper nouns generally. LIVE ON THE SHIPPED, DEPLOYED CORPUS: 8 displayable facts hit R11 shapes, including 'Brad Feld lives in Boulder, Colorado and Homer, Alaska' (mints city:boulder-colorado and city:homer-alaska, both rendered on /graph and /corpus right now, and it is the 4th opener-hook candidate \u2014 one model choice from being spoken aloud), 'Brad Feld owns homes in Aspen, Tucson, Boulder, and Basalt', 'Brad Feld is friends with Phil Weiser and Michael Bennet' (a formal gubernatorial endorsement \u2014 R11 political AND relationships \u2014 minting person: hubs for a state governor nominee and a sitting US Senator), 'resigned due to the birth of his 9 month old son', and 'Co-founded Canva with boyfriend Cliff Obrecht' (whose MARRIAGE to the same man IS correctly excluded as family in the same file). Fix: anchor the cues on the SUBJECT rather than on pronouns \u2014 the person's own name is in PersonRef and every fact is about them by construction.",
+      "finding_id": "540cd4143cb2824f97d9802071a1b786e00219f4f45b1d2e8e34a6a64994c6f9",
+      "reproduction": "tests/test_tadv_r11_named_subject_bypass.py, 16 passing + 8 strict xfails. Rename any pronoun-form R11 sentence to use a proper name and rule_verdict flips from exclude to keep."
+    },
+    {
+      "id": "T-087",
+      "title": "A TASTE-EXCLUDED FACT'S HUB LABEL IS READ ALOUD. The known finding was that hub labels are unfiltered; what nobody had named is that the label reaches `graph._why`, and _why's output is R18 SPOKEN material a host reads to a member's face. Reproduced with two members carrying a fact excluded with exclusion_reason='home_or_property' naming the street they live on: the fact TEXT is correctly suppressed everywhere, and the Meet row says 'Both rooted in Ravensworth Hill.' The same label also renders in the R10 data-reasoning table, in /graph's shared-hub sentence, and on /corpus. taste.is_displayable gates FACTS; nothing gates LABELS, and the exclusion reason is sitting on the fact while the system publishes the label anyway. Fix: hubs pass a taste gate, or hub minting consults the R11 categories.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/graph.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "CRITICAL",
+      "location": "src/arrival/graph.py",
+      "defect": "A TASTE-EXCLUDED FACT'S HUB LABEL IS READ ALOUD. The known finding was that hub labels are unfiltered; what nobody had named is that the label reaches `graph._why`, and _why's output is R18 SPOKEN material a host reads to a member's face. Reproduced with two members carrying a fact excluded with exclusion_reason='home_or_property' naming the street they live on: the fact TEXT is correctly suppressed everywhere, and the Meet row says 'Both rooted in Ravensworth Hill.' The same label also renders in the R10 data-reasoning table, in /graph's shared-hub sentence, and on /corpus. taste.is_displayable gates FACTS; nothing gates LABELS, and the exclusion reason is sitting on the fact while the system publishes the label anyway. Fix: hubs pass a taste gate, or hub minting consults the R11 categories.",
+      "finding_id": "721b6db9257eb8d3bfb5950d5a1296c9808d3e1e826230c7dcd0db0e8bb7f61c",
+      "reproduction": "tests/test_tadv_r11_hub_label_bypass.py \u2014 2 passing, 4 strict xfails covering the spoken why, the reasoning table, /graph and /corpus."
+    },
+    {
+      "id": "T-088",
+      "title": "`Provenance.quote` is screened by NOTHING. apply_taste_rules is rule_verdict(fact.text) \u2014 text only \u2014 while digest.html renders provenance.quote verbatim under every Lately bullet, under 'Not on the first page', and for every entry in 'Why we know this'. Reproduced end to end: a clean, keep-verdicted, displayable fact ('Ann One published a guide to engineering management.') carrying the quote 'The psychiatrist treating Ann One told the podcast she was treated for depression in 2019.' puts that sentence on the host-facing digest TWICE. rule_verdict returns exclude/health for it the instant it is actually asked. Not exercised by the current corpus; a tripwire now exists.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/taste.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/taste.py",
+      "defect": "`Provenance.quote` is screened by NOTHING. apply_taste_rules is rule_verdict(fact.text) \u2014 text only \u2014 while digest.html renders provenance.quote verbatim under every Lately bullet, under 'Not on the first page', and for every entry in 'Why we know this'. Reproduced end to end: a clean, keep-verdicted, displayable fact ('Ann One published a guide to engineering management.') carrying the quote 'The psychiatrist treating Ann One told the podcast she was treated for depression in 2019.' puts that sentence on the host-facing digest TWICE. rule_verdict returns exclude/health for it the instant it is actually asked. Not exercised by the current corpus; a tripwire now exists.",
+      "finding_id": "fa3dd67df124b5d6a6d966191093816bccded8af01326d0fc979120ed5e12c7d",
+      "reproduction": "tests/test_tadv_r11_unscreened_quote.py \u2014 3 passing, 1 strict xfail."
+    },
+    {
+      "id": "T-089",
+      "title": "THREE FACTS ARE A DIFFERENT LIVING PERSON'S BIOGRAPHY. Facts 7f2dea69b927032d-f0/f1/f2 come from a LinkedIn post by Sharmeen Browarek Chapp, CPO at Midjourney, which is present on Emmett Shear's page only as 'Emmett Shear liked this.' Result: 'Emmett Shear worked at Stripe' (he never did), 'Emmett Shear is involved with Midjourney' (self-funded, no outside investors), and a claimed background in electrical and systems engineering (he has a Yale CS BS, 2005). TWO OF THESE MINT EMPLOYER HUBS \u2014 company:stripe and company:midjourney \u2014 that would match him to strangers over jobs he never held. The extraction attributed a liked post's content to the liker. Other confirmed errors on real people: hunter-walk's RENDERED OPENER says Jobs met Wozniak at the Homebrew Computer Club (they met in 1971; the club's first meeting was March 1975); brad-feld is NCWIT Board Chair EMERITUS not chair, and his marathon count contradicts itself within one file; steve-huffman names a Reddit CTO who moved to Senior Technical Fellow in April 2026; sarah-tavel's roster blurb says 'general partner, Benchmark' when she became a Venture Partner in April 2025, and it renders on both / and her digest \u2014 while her own announcement was retrieved, scored match:yes at 0.95, and landed in `rejected`.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "data/dossiers/emmett-shear.json"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "data/dossiers/emmett-shear.json",
+      "defect": "THREE FACTS ARE A DIFFERENT LIVING PERSON'S BIOGRAPHY. Facts 7f2dea69b927032d-f0/f1/f2 come from a LinkedIn post by Sharmeen Browarek Chapp, CPO at Midjourney, which is present on Emmett Shear's page only as 'Emmett Shear liked this.' Result: 'Emmett Shear worked at Stripe' (he never did), 'Emmett Shear is involved with Midjourney' (self-funded, no outside investors), and a claimed background in electrical and systems engineering (he has a Yale CS BS, 2005). TWO OF THESE MINT EMPLOYER HUBS \u2014 company:stripe and company:midjourney \u2014 that would match him to strangers over jobs he never held. The extraction attributed a liked post's content to the liker. Other confirmed errors on real people: hunter-walk's RENDERED OPENER says Jobs met Wozniak at the Homebrew Computer Club (they met in 1971; the club's first meeting was March 1975); brad-feld is NCWIT Board Chair EMERITUS not chair, and his marathon count contradicts itself within one file; steve-huffman names a Reddit CTO who moved to Senior Technical Fellow in April 2026; sarah-tavel's roster blurb says 'general partner, Benchmark' when she became a Venture Partner in April 2025, and it renders on both / and her digest \u2014 while her own announcement was retrieved, scored match:yes at 0.95, and landed in `rejected`.",
+      "finding_id": "2b4516e5352561e36fa422e0e6de42991745f7e6fe3046662cc1f1591bbfa00e",
+      "reproduction": "Read data/dossiers/emmett-shear.json facts 7f2dea69b927032d-f0/f1/f2 against the cited LinkedIn URL. Verified in-repo that all three are is_displayable()==True."
+    },
+    {
+      "id": "T-090",
+      "title": "TOTAL OUTAGE from a malformed env var. DEBUG_VIEWS set to '', '2', '0.0', or a value with a trailing space ('False ') CRASHES THE SERVICE AT IMPORT, because app = create_app() is module-level. Setting an env var to empty \u2014 or pasting a value with a trailing space into the Render dashboard \u2014 is a full outage rather than a disabled route. The service is deployed and this is a live operational hazard.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/app.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/web/app.py",
+      "defect": "TOTAL OUTAGE from a malformed env var. DEBUG_VIEWS set to '', '2', '0.0', or a value with a trailing space ('False ') CRASHES THE SERVICE AT IMPORT, because app = create_app() is module-level. Setting an env var to empty \u2014 or pasting a value with a trailing space into the Render dashboard \u2014 is a full outage rather than a disabled route. The service is deployed and this is a live operational hazard.",
+      "finding_id": "59d8e8b39e6ac376f9dc2fa6aa4644c2311536be181f1c5413432435f569e9e6",
+      "reproduction": "DEBUG_VIEWS='' uv run python -c 'import arrival.web.app'. Reported by the adversarial lane."
+    },
+    {
+      "id": "T-091",
+      "title": "THE SPOKEN LINES READ BADLY, measured across all ten real people. `who_line_for` packs facts greedily to a 30-word cap and never asks whether the next fact ADDS anything: Steve Huffman's Who line spends eleven of thirty words restating the previous sentence and names him four times. Melanie Perkins's says nothing about HER \u2014 it recites Canva's valuation and user count to the founder's face, and is ~35% stale. Nabeel Qureshi's repeats his Palantir tenure twice and ENDS MID-SENTENCE WITH NO FULL STOP, as does his opener. Fred Wilson's names him four times and ends on a sentence about the firm rather than the man; his opener is headless ('Ask about this: Has been in the tech sector for forty years.'). Vacuous openers are shipping: 'Ask about this: Steve Huffman is also known by his Reddit username spez.' `is_speakable` checks none of this \u2014 no terminal-punctuation clause, no redundancy clause. Separately: 'Lately' is showing 2012-2014 items (Fred Wilson's only Lately bullet is a 2014 speaking slot), and recency:1.0 'tied to current work' is attached to defunct entities including company:hipmunk, shut in 2020.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/digest.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/digest.py",
+      "defect": "THE SPOKEN LINES READ BADLY, measured across all ten real people. `who_line_for` packs facts greedily to a 30-word cap and never asks whether the next fact ADDS anything: Steve Huffman's Who line spends eleven of thirty words restating the previous sentence and names him four times. Melanie Perkins's says nothing about HER \u2014 it recites Canva's valuation and user count to the founder's face, and is ~35% stale. Nabeel Qureshi's repeats his Palantir tenure twice and ENDS MID-SENTENCE WITH NO FULL STOP, as does his opener. Fred Wilson's names him four times and ends on a sentence about the firm rather than the man; his opener is headless ('Ask about this: Has been in the tech sector for forty years.'). Vacuous openers are shipping: 'Ask about this: Steve Huffman is also known by his Reddit username spez.' `is_speakable` checks none of this \u2014 no terminal-punctuation clause, no redundancy clause. Separately: 'Lately' is showing 2012-2014 items (Fred Wilson's only Lately bullet is a 2014 speaking slot), and recency:1.0 'tied to current work' is attached to defunct entities including company:hipmunk, shut in 2020.",
+      "finding_id": "0e4e052855030ab5b8d71dd300eb62b8a9de24266625d4867d3bedf6720f38e0",
+      "reproduction": "tests/test_tadv_r18_spoken_lines.py \u2014 3 passing, 3 strict xfails. Read all ten who_lines and openers from data/dossiers/."
+    },
+    {
+      "id": "T-092",
+      "title": "THE DEMO'S WORST MOMENT: with all ten in the building, FIVE MEMBERS GET AN IDENTICAL, EMPTY MEET SECTION \u2014 Brad Feld, Emmett Shear, Eric Ries and others, alphabetical tie-break at score 0, each reading 'Nothing in common on the record yet.' Four consecutive arrivals produce a byte-identical empty Meet. R8 is scoped to 'nobody else is present', so this is spec-legal and no test was written \u2014 it is a product failure rather than a defect. Related: 'Both connected to A16Z.' scores 50 for Fred Wilson and Emmett Shear and is the TOP match for both, when Wilson is a USV partner whose only a16z link is that a friend runs their crypto fund. Reading that sentence to those two men is the worst line in the demo.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/digest.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/digest.py",
+      "defect": "THE DEMO'S WORST MOMENT: with all ten in the building, FIVE MEMBERS GET AN IDENTICAL, EMPTY MEET SECTION \u2014 Brad Feld, Emmett Shear, Eric Ries and others, alphabetical tie-break at score 0, each reading 'Nothing in common on the record yet.' Four consecutive arrivals produce a byte-identical empty Meet. R8 is scoped to 'nobody else is present', so this is spec-legal and no test was written \u2014 it is a product failure rather than a defect. Related: 'Both connected to A16Z.' scores 50 for Fred Wilson and Emmett Shear and is the TOP match for both, when Wilson is a USV partner whose only a16z link is that a friend runs their crypto fund. Reading that sentence to those two men is the worst line in the demo.",
+      "finding_id": "050ad72c03881d87a39fcd02da0f2d0a3efd3c503c2324a34a0b83dac004d9d1",
+      "reproduction": "Arrive all ten and read each digest's Meet section. Reported by the adversarial lane."
     }
   ],
   "cut_list": [
