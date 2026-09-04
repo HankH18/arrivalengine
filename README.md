@@ -23,9 +23,12 @@ uv run uvicorn arrival.web.app:app --reload
 
 ## Tests
 
-The suite is offline by construction. `tests/conftest.py` raises
+The suite is offline by construction. `tests/harness.py` raises
 `RuntimeError("network disabled in tests")` at three layers, installed in `pytest_configure`
-so it predates collection and every fixture scope:
+so it predates collection and every fixture scope. The hooks live in `harness.py` and are
+re-exported by the **rootdir** `conftest.py`, because a conftest under `tests/` is loaded
+only when a named path leads into `tests/` — `pytest src/` skipped the whole block, silently,
+and C7 is a promise about the suite rather than about one directory:
 
 | layer | why it is separate |
 |---|---|
