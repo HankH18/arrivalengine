@@ -25,7 +25,7 @@
 <p>Accepted documents: {% for doc in resolution.accepted_doc_ids %}<code>{{ doc }}</code> {% else %}<span class="absent">none</span>{% endfor %}</p>
 
 <h2>Rejected candidate documents</h2>
-{% if resolution.rejected %}
+{% if rejected_rows %}
 <table class="rejected">
   <tr>
     <th scope="col">Document</th>
@@ -34,16 +34,25 @@
     <th scope="col">Decided by</th>
     <th scope="col">Evidence</th>
   </tr>
-  {% for verdict in resolution.rejected %}
+  {% for row in rejected_rows %}
   <tr>
-    <td><code>{{ verdict.doc_id }}</code></td>
-    <td>{{ verdict.match }}</td>
-    <td>{{ verdict.confidence }}</td>
-    <td>{{ verdict.disambiguator }}</td>
-    <td class="quote">&ldquo;{{ verdict.evidence }}&rdquo;</td>
+    <td><code>{{ row.verdict.doc_id }}</code></td>
+    <td>{{ row.verdict.match }}</td>
+    <td>{{ row.verdict.confidence }}</td>
+    <td class="attribute">
+      {%+ if row.attribute %}<strong>{{ row.attribute }}</strong>{% if row.also %} + {{ row.also|join(", ") }}{% endif %}{% else %}<span class="absent">no attribute corroborated</span>{% endif %}<br>
+      {%+ if row.verdict.disambiguator %}<span class="claimed{% if row.disputed %} disputed{% endif %}">model said &ldquo;{{ row.verdict.disambiguator }}&rdquo;{% if row.disputed %} &mdash; not taken{% endif %}</span>{% else %}<span class="claimed absent">the model named no attribute</span>{% endif +%}
+    </td>
+    <td class="quote">&ldquo;{{ row.verdict.evidence }}&rdquo;</td>
   </tr>
   {% endfor %}
 </table>
+<p class="quote">&ldquo;Decided by&rdquo; is the attribute the resolver actually counted:
+<code>resolve.verdict_attribute</code> asks the evidence span which of this person&rsquo;s own
+details it names, and falls back to the model&rsquo;s label only when the span names none. The
+label is printed under it because it is free to the model while the span is checked against
+the document &mdash; so where the two disagree, marked &ldquo;not taken&rdquo;, that gap is
+the refusal to guess, and it is invisible if only one of them is shown.</p>
 {% else %}
 <p class="absent">No candidate document was rejected for this person.</p>
 {% endif %}

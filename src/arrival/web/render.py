@@ -21,6 +21,18 @@ and its own data model disagree. The visible consequence is that a Meet row can 
 higher citation number than a Lately bullet below it; footnote numbering in a document
 whose sections are read out of order does the same thing, and it is the honest half of the
 trade.
+
+**`/debug` asks `resolve` what a verdict turned on; it does not read the label.** The
+rejected-candidates table used to print `verdict.disambiguator` straight out of the
+contract, which is the model's own free-text word — the word T-031 spent two tickets
+refusing to let decide anything, because a label is free to the model while an evidence
+span is checked against the document. `_rejected_row` calls `resolve.verdict_attribute`
+and `resolve.verdict_attributes` here, in the view model, rather than from the template:
+the rule for what a verdict corroborates belongs to the resolver, and a Jinja template
+reaching into `arrival.resolve` would put that rule in the layer whose job is to be
+declarative. The raw label is still rendered beside the resolved attribute, because on the
+one page that exists to explain the system's reasoning, the two disagreeing IS the
+reasoning — see `_rejected_row`.
 """
 
 from __future__ import annotations
@@ -32,8 +44,9 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from arrival.contracts import Digest, Dossier, Fact, Match
+from arrival.contracts import Digest, Dossier, Fact, Match, PersonRef, Verdict
 from arrival.digest import OPENER_TEMPLATE, opener_hook_candidates, who_line_for
+from arrival.resolve import attribute_family, verdict_attribute, verdict_attributes
 from arrival.taste import CONFIDENCE_FLOOR, DISPLAYABLE_KINDS, is_displayable
 
 __all__ = [
@@ -371,6 +384,35 @@ def withholding_reason(fact: Fact) -> str | None:
     return None
 
 
+def _rejected_row(person: PersonRef, verdict: Verdict) -> dict[str, Any]:
+    """One row of `/debug`'s rejected-candidates table: what counted, and what was claimed.
+
+    `resolve.verdict_attribute` is the headline because the column asks a singular question
+    ("decided by") and that function is the resolver's own one-word answer to it: it asks
+    the EVIDENCE SPAN which of the person's own details it names, and consults
+    `verdict.disambiguator` only when the span names none. `verdict_attributes` supplies
+    `also`, the attributes the one-word summary has to drop — a span quoting the employer
+    AND the city corroborates two, and two is the number Decision 4's second arm counts, so
+    on an unresolved person (where `Resolution.rejected` holds EVERY verdict) the set is the
+    arithmetic the operator is actually auditing.
+
+    `disputed` compares the resolved attribute against `attribute_family(disambiguator)`
+    rather than against the raw label, so pure spelling — `company` for `employer` — is not
+    reported as a disagreement. What is left is the case worth a marker: the resolver did
+    not take the model's word, either because the span named a different detail or because
+    the label was off-contract and got bucketed.
+    """
+    attributes = sorted(verdict_attributes(person, verdict))
+    attribute = verdict_attribute(person, verdict)
+    return {
+        "verdict": verdict,
+        "attribute": attribute,
+        "attributes": attributes,
+        "also": [name for name in attributes if name != attribute],
+        "disputed": attribute_family(verdict.disambiguator) != attribute,
+    }
+
+
 def debug_view(dossier: Dossier) -> dict[str, Any]:
     """Everything `debug.html` needs: R15's full dossier, withheld material included."""
     rows = [
@@ -383,6 +425,9 @@ def debug_view(dossier: Dossier) -> dict[str, Any]:
         "resolution": dossier.resolution,
         "fact_rows": rows,
         "withheld_rows": [row for row in rows if not row["shown"]],
+        "rejected_rows": [
+            _rejected_row(dossier.person, verdict) for verdict in dossier.resolution.rejected
+        ],
         "hubs": dossier.hubs,
         "confidence_floor": CONFIDENCE_FLOOR,
     }
