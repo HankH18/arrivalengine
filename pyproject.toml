@@ -1,0 +1,72 @@
+[project]
+name = "arrival-engine"
+version = "0.1.0"
+description = "Arrival Engine — staff-facing arrival digests for Arena Hall."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+# SPEC C3 pins the stack: Python 3.12, FastAPI, httpx, Pydantic v2, NetworkX, Jinja2,
+# Anthropic SDK; pytest + ruff. Versions are pinned exactly so every worktree provisions
+# the same tree from the committed uv.lock.
+dependencies = [
+    "anthropic==1.3.0",
+    "fastapi==0.141.1",
+    "httpx==0.28.1",
+    "jinja2==3.1.6",
+    "networkx==3.6.1",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.15.0",
+    "python-multipart==0.0.32",
+    "pyyaml==6.0.3",
+    "uvicorn[standard]==0.52.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "ruff==0.16.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/arrival"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+# No per-file-ignores: they hide real errors (T-0 acceptance 7).
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# --strict-markers turns a MISSPELLED marker into an error instead of a warning. Without
+# it, `pytest.mark.tickets("T-3")` (or `ticket_`) is silently deselected by `--ticket T-3`
+# while the run stays green, so the ticket gate reports "N passed / EXIT=0" for a ticket
+# whose tests never ran.
+addopts = "--strict-markers"
+# src-layout, imported directly rather than through the editable install. This is not
+# belt-and-braces: on macOS `uv venv` marks the whole .venv tree with the UF_HIDDEN file
+# flag, and CPython >= 3.12.6's site.addpackage SKIPS hidden .pth files, so a fresh
+# `uv sync` can leave `import arrival` broken with no error anywhere. See README §Tests.
+pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "ticket(id): attribute a test to a ticket id, e.g. ticket(\"T-0\"); select with --ticket T-0",
+    "network: opt out of the offline-transport block installed by tests/conftest.py",
+    "t0",
+    "t1",
+    "t2",
+    "t3",
+    "t4",
+    "t5",
+    "t6",
+    "t7",
+    "t8",
+    "t9",
+]

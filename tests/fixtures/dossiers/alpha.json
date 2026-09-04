@@ -1,0 +1,191 @@
+{
+  "person": {
+    "person_id": "alpha",
+    "name": "Teodoro Vance",
+    "details": [
+      "CTO of Northgate Labs",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "alpha",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "northgatelabs.example",
+      "github": "tvance-ng"
+    },
+    "accepted_doc_ids": [
+      "230c13c040660d5b",
+      "b1159ac929dac1e6",
+      "ea736f1194b2350e",
+      "90f4360e5d3bbf26",
+      "0739f354798a77b4"
+    ],
+    "rejected": [
+      {
+        "doc_id": "b7414d44cb9d62dd",
+        "match": "no",
+        "confidence": 0.95,
+        "evidence": "Teodoro Vance is a luthier in Corpus Christi who has built guitars for touring bands since 1998.",
+        "disambiguator": "occupation and city conflict with CTO of Northgate Labs, Austin"
+      }
+    ],
+    "confidence": 0.92
+  },
+  "facts": [
+    {
+      "fact_id": "alpha-work",
+      "text": "He is co-founder and chief technology officer of Northgate Labs, an Austin company building evaluation tooling for AI agents.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "230c13c040660d5b",
+        "url": "https://northgatelabs.example/team/teodoro-vance",
+        "source_kind": "self_page",
+        "quote": "Teodoro Vance is the co-founder and chief technology officer of Northgate Labs, an Austin company building evaluation tooling for AI agents.",
+        "published_at": "2026-06-14",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.93
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "alpha-recent",
+      "text": "Northgate Labs released an open source evaluation harness for AI agents in July.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "b1159ac929dac1e6",
+        "url": "https://austintechreview.example/2026/07/northgate-labs-eval-harness",
+        "source_kind": "search",
+        "quote": "Northgate Labs released an open source evaluation harness for AI agents this week.",
+        "published_at": "2026-07-02",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.88
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "alpha-hook",
+      "text": "He spent nine months on the scoring rubric before writing a line of the eval runner.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "b1159ac929dac1e6",
+        "url": "https://austintechreview.example/2026/07/northgate-labs-eval-harness",
+        "source_kind": "search",
+        "quote": "the team spent nine months on the scoring rubric before writing a line of the runner",
+        "published_at": "2026-07-02",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "alpha-nonobvious",
+      "text": "For four years he redrew a food co-op's delivery routes by hand on graph paper every Sunday.",
+      "category": "non_obvious",
+      "provenance": {
+        "doc_id": "ea736f1194b2350e",
+        "url": "https://web.archive.org/web/20120418000000/http://rillwater-coop.example/newsletter",
+        "source_kind": "wayback",
+        "quote": "Teodoro Vance, who rebuilt the co-op's delivery routing by hand on graph paper every Sunday for four years",
+        "published_at": "2012-04-18",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.79
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "alpha-interest",
+      "text": "He maintains an open source eval harness and a routing graph library in Python.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "90f4360e5d3bbf26",
+        "url": "https://api.github.example/users/tvance-ng",
+        "source_kind": "github",
+        "quote": "Public repositories: eval-harness (Python, 812 stars), routing-graph (Python, 46 stars)",
+        "published_at": "2026-08-01",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.82
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "alpha-excluded-address",
+      "text": "He owns a house at 1442 Quarrystone Lane in Austin that is being remodeled.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "0739f354798a77b4",
+        "url": "https://travisledger.example/2026/05/quarrystone-lane-remodel",
+        "source_kind": "search",
+        "quote": "The remodel at 1442 Quarrystone Lane was approved by the review board in April.",
+        "published_at": "2026-05-09",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.9
+      },
+      "excluded": true,
+      "exclusion_reason": "home_or_property"
+    },
+    {
+      "fact_id": "alpha-excluded-family",
+      "text": "He is remodeling the house with his wife Delia Moreno-Vance, who is named on the permit.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "0739f354798a77b4",
+        "url": "https://travisledger.example/2026/05/quarrystone-lane-remodel",
+        "source_kind": "search",
+        "quote": "Teodoro Vance and his wife Delia Moreno-Vance, plan a detached studio at the rear of the lot.",
+        "published_at": "2026-05-09",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.9
+      },
+      "excluded": true,
+      "exclusion_reason": "family"
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "alpha-work"
+      ]
+    },
+    {
+      "hub_id": "topic:ai",
+      "label": "AI",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "alpha-work"
+      ]
+    },
+    {
+      "hub_id": "company:northgate-labs",
+      "label": "Northgate Labs",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "alpha-work",
+        "alpha-recent"
+      ]
+    },
+    {
+      "hub_id": "technology:evaluation-harnesses",
+      "label": "Evaluation harnesses",
+      "type": "technology",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "alpha-recent",
+        "alpha-interest"
+      ]
+    }
+  ],
+  "built_at": "2026-08-30T15:30:00Z",
+  "schema_version": 1
+}

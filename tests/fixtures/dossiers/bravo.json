@@ -1,0 +1,130 @@
+{
+  "person": {
+    "person_id": "bravo",
+    "name": "Nadia Ellingsworth",
+    "details": [
+      "Head of ML at Harborline Freight",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "bravo",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "harborline.example"
+    },
+    "accepted_doc_ids": [
+      "97ac5e3105f3d5fc",
+      "99179f4f9b4efd19",
+      "41a77c4901e2b7b6"
+    ],
+    "rejected": [],
+    "confidence": 0.88
+  },
+  "facts": [
+    {
+      "fact_id": "bravo-work",
+      "text": "She leads machine learning at Harborline Freight in Austin, applying AI to dock scheduling.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "97ac5e3105f3d5fc",
+        "url": "https://harborline.example/about/nadia-ellingsworth",
+        "source_kind": "self_page",
+        "quote": "Nadia Ellingsworth leads machine learning at Harborline Freight in Austin, where her team applies AI to dock scheduling.",
+        "published_at": "2026-04-22",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.91
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "bravo-hook",
+      "text": "She relabelled eighteen months of dock data after finding the original labels were wrong.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "99179f4f9b4efd19",
+        "url": "https://hn.algolia.example/items/40123456",
+        "source_kind": "hn",
+        "quote": "we relabelled eighteen months of dock data",
+        "published_at": "2026-03-15",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.86
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "bravo-recent",
+      "text": "She published a paper on label noise in operational scheduling datasets.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "41a77c4901e2b7b6",
+        "url": "https://openalex.example/works/W2026001",
+        "source_kind": "openalex",
+        "quote": "Label noise in operational scheduling datasets.",
+        "published_at": "2024-11-05",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.78
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "bravo-affiliation",
+      "text": "She taught statistics at Rio Verde College before moving into industry.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "97ac5e3105f3d5fc",
+        "url": "https://harborline.example/about/nadia-ellingsworth",
+        "source_kind": "self_page",
+        "quote": "She previously taught statistics at Rio Verde College.",
+        "published_at": "2026-04-22",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bravo-work"
+      ]
+    },
+    {
+      "hub_id": "topic:ai",
+      "label": "AI",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bravo-work"
+      ]
+    },
+    {
+      "hub_id": "company:harborline-freight",
+      "label": "Harborline Freight",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bravo-work"
+      ]
+    },
+    {
+      "hub_id": "school:rio-verde-college",
+      "label": "Rio Verde College",
+      "type": "school",
+      "recency": 0.3,
+      "evidence_fact_ids": [
+        "bravo-affiliation"
+      ]
+    }
+  ],
+  "built_at": "2026-08-30T15:30:00Z",
+  "schema_version": 1
+}
