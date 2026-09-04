@@ -1107,3 +1107,72 @@ cases:
     rule_layer: deterministic
     provenance: same_author_as_filter
     rationale: "R11 forbids political donations. A ballot-measure contribution is one, and the sentence contains neither political, nor donation, nor party, nor campaign -- only a verb and an object that together mean it."
+
+  # =========================================================================
+  # AXIS C — GUARDS ON THE SUBJECT-MATTER TEST ITSELF (T-069 sibling sweep)
+  # -------------------------------------------------------------------------
+  # The rule that lets "their children's-media studio" through is the same rule
+  # that would let "their daughter's company" through, and the rule that lets
+  # "to track court records" through is the same one that would let "tracked
+  # their court records" through. Every mechanism that neutralises a cue is a
+  # mechanism somebody can widen later, and a widening that opens an R11 leak
+  # must break a test rather than a member's trust.
+  #
+  # These six sentences were measured LEAKING against the first version of that
+  # mechanism, in a sweep written after the fix and aimed at it. They are here
+  # so the next person to add a head noun or a verb finds out immediately.
+  # =========================================================================
+
+  - id: axis-guard-daughters-company
+    text: "Their daughter's company raised a seed round from Marram Ventures."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "A relative's business is still a named relative under R11. A possessive is not the same thing as an attributive modifier: in 'children's-media studio' the phrase names a genre, and here it names the member's daughter, who owns the company."
+
+  - id: axis-guard-spouses-firm
+    text: "Their spouse's firm handles the company's audits."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "The professional detail belongs to the spouse, exactly as in family-spouse-gala-host, and a professional noun standing after the possessive does not turn the spouse into a business unit."
+
+  - id: axis-guard-psychiatrists-practice
+    text: "Their psychiatrist's practice is two streets from the office."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Naming the member's psychiatrist is medical information about the member whatever else the sentence goes on to say about the clinician's premises."
+
+  - id: axis-guard-salary-data-breach
+    text: "Their salary data was leaked in the breach last March."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 names compensation outright. This sits beside axis-keep-comp-benchmarking-note below on purpose: the word after 'salary' is the whole difference, and a generic one like 'data' must not be enough to turn a member's pay into a product."
+
+  - id: axis-keep-comp-benchmarking-note
+    text: "Their salary transparency research is used by two hundred firms."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Salary transparency is a subject somebody publishes on, not a figure about the member. The pair with axis-guard-salary-data-breach is the point: one word apart, opposite rulings, and neither is decidable from the word 'salary'."
+
+  - id: axis-guard-tracked-their-court-records
+    text: "A reporter tracked their court records back to 2011."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Reads like axis-keep-court-records-product and is its opposite. There the records belong to a product's users; here the possessive makes them the member's, and a records search by a reporter is the disclosure principle's exclude side."

@@ -190,9 +190,16 @@ _HEAD_NOUN = (
     r"courses?|seminars?|conferences?|summits?|programmes?|programs?|initiatives?|"
     r"institutes?|associations?|societ(?:y|ies)|contractors?|consultants?|"
     r"consultanc(?:y|ies)|advisers?|advisors?|analysts?|officials?|suppliers?|vendors?|"
-    r"customers?|clients?|carriers?|insurers?|insurance|underwriting|analytics|research|"
+    r"customers?|clients?|carriers?|insurers?|insurance|underwriting|analytics|"
+    r"nonprofits?|"
     r"engineering|operations|logistics|imaging|processing|benchmarking|scheduling|"
-    r"mediation|planning|management|monitoring|screening|data|pipelines?|workflows?|"
+    r"mediation|planning|management|monitoring|screening|pipelines?|workflows?|"
+    # Work CONCEPTS. `salary transparency`, `pay parity`, `compensation survey` are
+    # what a writer covers; `salary data` and `divorce settlement data` are what a
+    # breach leaks. So `data` is deliberately NOT here -- it is generic enough to
+    # neutralise the member's own compensation, which the sibling sweep measured.
+    r"transparency|parity|surveys?|indexes|methodolog(?:y|ies)|taxonom(?:y|ies)|"
+    r"reporting|governance|literacy|reform|"
     r"roadmaps?|standards?|protocols?|apis?|sdks?|factor(?:y|ies)|plants?|lines?|"
     r"portfolios?|sectors?|industr(?:y|ies)|markets?|media|law)"
 )
@@ -220,25 +227,34 @@ _PRODUCT_VERBS = (
     r"index|indexes|indexed|indexing|parse|parses|parsed|parsing|"
     r"monitor|monitors|monitored|monitoring|analyse|analyses|analysed|analysing|"
     r"analyze|analyzes|analyzed|analyzing|underwrite|underwrites|underwritten|underwriting|"
-    r"price|prices|priced|pricing|licence|license|licences|licenses|licensed|licensing|"
-    r"benchmark|benchmarks|benchmarked|benchmarking|serve|serves|served|serving|"
+    r"licence|license|licences|licenses|licensed|licensing|"
+    r"benchmark|benchmarks|benchmarked|benchmarking|"
     r"engineer|engineers|engineered|prototype|prototypes|prototyped|"
     r"integrate|integrates|integrated|streamline|streamlines|streamlined|"
     r"digitise|digitize|digitised|digitized)"
 )
 
-#: The tail of an attributive phrase: possessive/hyphen glue, then at most two modifier
-#: words, then a head noun. Anchored at the end of the cue's own match.
+#: The tail of an attributive phrase: hyphen glue, then at most two modifier words, then
+#: a head noun. Anchored at the end of the cue's own match.
+#:
+#: A POSSESSIVE is only glue inside a hyphenated compound ("children's-media studio").
+#: A free-standing ``'s`` means the cue is the POSSESSOR, not a modifier, and accepting it
+#: leaked six sentences in the sibling sweep: "their daughter's company", "their
+#: psychiatrist's practice", "their spouse's firm" were all neutralised into keeps.
 _ATTRIBUTIVE_TAIL = _rx(
-    r"^(?:['’]s|['’]|-)*[\s-]*"
+    r"^(?:['’]s?-|-)*[\s-]*"
     r"((?:[A-Za-z][\w'’]*[\s-]+){0,2})"
     rf"{_HEAD_NOUN}\b"
 )
 
 #: A product verb sitting immediately before the cue, optionally across one determiner or
 #: preposition ("to track court records", "underwrites property records data").
+#:
+#: A POSSESSIVE PRONOUN in that gap is excluded: it re-anchors the object to the member.
+#: "to track court records" is a product; "tracked THEIR court records" is a dossier, and
+#: allowing `their` here neutralised both in the same breath.
 _PRODUCT_VERB_TAIL = _rx(
-    rf"\b{_PRODUCT_VERBS}\b(?:\s+(?:a|an|the|its|their|our|to|for|of|on|in))?[\s-]*$"
+    rf"\b{_PRODUCT_VERBS}\b(?:\s+(?:a|an|the|to|for|of|on|in))?[\s-]*$"
 )
 
 
@@ -363,7 +379,9 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
             r"\blife\s+support\b|"
             r"\b(?:residential\s+)?rehab(?:ilitation)?\s+"
             r"(?:clinics?|centres?|centers?|facilit(?:y|ies)|programmes?|programs?)\b|"
-            r"\bin\s+rehab\b|\bresidential\s+rehab\b"
+            r"\bin\s+rehab\b|\bresidential\s+rehab\b|"
+            r"\bventilators?\b|\bhospices?\b|\bpalliative\b|\bintensive\s+care\s+unit\b|"
+            r"\bin\s+a\s+coma\b"
         ),
     ),
     "family": (
@@ -427,7 +445,12 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
             r"\bin\s+police\s+custody\b|"
             r"\bpolice\s+(?:stopped|arrested|detained|questioned|cautioned|booked)\b|"
             r"\b(?:stopped|detained|questioned)\s+by\s+police\b|"
-            r"\bpaternity\s+(?:suits?|tests?|cases?|claims?|actions?|disputes?)\b"
+            r"\bpaternity\s+(?:suits?|tests?|cases?|claims?|actions?|disputes?)\b|"
+            r"\bon\s+bail\b|\bbailed\s+on\b|\breleased\s+on\s+bail\b|"
+            r"\bbail\s+(?:hearings?|bonds?|conditions)\b|\barraign\w+\b|\bremanded\b|"
+            r"\bcharges?\s+of\b|"
+            r"\b(?:aggravated\s+)?(?:assault|manslaughter|homicide|embezzlement|perjury|"
+            r"arson|burglary|extortion)\b"
         ),
         _rx(r"\b(?:protective|restraining)\s+order\b"),
         _rx(r"\b(?:sued|suing)\s+(?:them|him|her)\b|\bthey\s+(?:were|was)\s+sued\b"),
@@ -436,14 +459,15 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         _rx(r"\blives?\s+at\b|\bresides?\s+(?:at|in)\b|\bwhere\s+they\s+(?:live|sleep)\b"),
         _rx(
             r"\bproperty\s+records?\b|\bland\s+registry\b|\btitle\s+deed\b|\bdeeds?\s+"
-            r"(?:show|list|record)\b|\bmortgages?\b|\btax\s+assessor\b"
+            r"(?:show|list|record|for)\b|\bon\s+the\s+deed\b|"
+            r"\bmortgages?\b|\btax\s+assessor\b|\bevict(?:ed|ion)\b"
         ),
         _rx(rf"\b(?:their|his|her)\s+(?:[\w'’-]+\s+){{0,2}}{_DWELLING}\b"),
         # The BUYER must be the person. "Their company purchased a warehouse estate" is a
         # commercial acquisition and was a measured over-block; the subject principle is
         # what separates it from "they bought the house on Halberd Row".
         _rx(
-            r"\b(?:they|he|she)\s+(?:[\w'’-]+\s+){0,3}(?:bought|buying|purchased|owns?)\b"
+            r"\b(?:they|he|she)\s+(?:[\w'’-]+\s+){0,3}(?:bought|buying|purchased|owns?|built)\b"
             rf"[^.]{{0,40}}?\b{_DWELLING}\b"
         ),
         # The same fact with the words the other way round: "the farmhouse they purchased".
@@ -472,6 +496,11 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         _rx(
             r"\b(?:their|his|her)\s+(?:[\w'’-]+\s+){0,2}"
             r"(?:salary|salaries|compensation|pay|paycheck|earnings|bonus|wages?|income)\b"
+            # A board COMMITTEE on compensation is corporate governance, not the
+            # member's pay. `committee` cannot be a general head noun -- as one it
+            # neutralised "a congressional campaign committee" -- so the exception is
+            # spelled out here, where it can only reach the wealth reading.
+            r"(?!\s+committees?\b)"
         ),
         # `equity`, `shares` and `portfolio` are NOT here in their bare possessive form.
         # "They advise founders on how to structure their equity", "their portfolio
@@ -524,7 +553,8 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         # R11 says "affiliations" as well as "donations", and party OFFICE is the plainest
         # affiliation there is.
         _rx(
-            r"\bprecinct\s+captains?\b|\bward\s+chairs?\b|\bvoter\s+(?:rolls?|files?)\b|"
+            r"\bprecinct\s+captains?\b|\bward\s+chairs?\b|"
+            r"\bvoter\s+(?:rolls?|files?|records?)\b|\bparty\s+committees?\b|"
             r"\bparty\s+(?:official|activist|delegate|member)s?\b|"
             r"\bdonor\s+to\b[^.]{0,50}?\b(?:campaigns?|candidates?|committees?|party)\b"
         ),

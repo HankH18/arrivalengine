@@ -409,6 +409,7 @@ def test_the_corpus_covers_professional_facts_whose_subject_matter_is_an_r11_cat
     # Each must actually carry the forbidden vocabulary, or it is not testing the axis.
     r11_words = (
         "cancer", "medical", "mortgage", "equity", "portfolio", "divorce", "children",
+        "salary",
         "sister", "registered independent", "charged with", "court records", "estate",
     )
     toothless = [
@@ -427,7 +428,13 @@ def test_the_corpus_covers_excludes_that_do_not_name_their_own_category() -> Non
     "divorce", the salary case says "salary". A corpus made only of those grades a
     dictionary, and every sentence below was DISPLAYED by the filter before T-069.
     """
-    axis = [c for c in CASES if c["id"].startswith("axis-") and c["expect"] == "exclude"]
+    axis = [
+        c
+        for c in CASES
+        if c["id"].startswith("axis-")
+        and not c["id"].startswith("axis-guard-")
+        and c["expect"] == "exclude"
+    ]
     assert len(axis) >= 8, f"the unnamed-category axis has only {len(axis)} cases"
 
     #: The words that would make an exclude self-announcing, per category.
@@ -453,4 +460,37 @@ def test_the_corpus_covers_excludes_that_do_not_name_their_own_category() -> Non
     assert len(categories) >= 5, (
         f"the unnamed-category axis reaches only {sorted(categories)}; a hole in one "
         "category is a hole in the product"
+    )
+
+
+def test_the_corpus_guards_the_subject_matter_test_against_being_widened() -> None:
+    """T-069 sibling sweep. Every neutralising mechanism is one somebody can widen.
+
+    The rule that lets "their children's-media studio" through is the rule that would let
+    "their daughter's company" through; the rule that lets "to track court records" through
+    is the one that would let "tracked their court records" through. All six sentences
+    below were measured LEAKING against the first version of that mechanism, in a sweep
+    written after the fix and aimed at it. They are the reason a later widening breaks a
+    test instead of a member's trust.
+    """
+    guards = [c for c in CASES if c["id"].startswith("axis-guard-")]
+    assert len(guards) >= 5, f"only {len(guards)} guard cases; the mechanism is unprotected"
+
+    excludes = [c for c in guards if c["expect"] == "exclude"]
+    assert len(excludes) >= 5, "a guard case that is not an exclude guards nothing"
+
+    # Each guard must be settled by the RULE layer. A guard that merely defers proves
+    # nothing: a widened mechanism would turn it into a keep and the corpus would agree,
+    # because `unsure` and `keep` are the same answer once a cooperative classifier speaks.
+    deferred = [c["id"] for c in guards if c["rule_layer"] != "deterministic"]
+    assert not deferred, (
+        f"guard cases must be deterministic or they do not guard the rule layer: {deferred}"
+    )
+
+    # The minimal pair. One word apart, opposite rulings, and the corpus must carry both
+    # or the trade-off it records is invisible.
+    ids = {c["id"] for c in CASES}
+    assert {"axis-guard-salary-data-breach", "axis-keep-comp-benchmarking-note"} <= ids, (
+        "the salary minimal pair is what records where this filter draws an undecidable "
+        "line; removing either half hides the trade-off rather than resolving it"
     )
