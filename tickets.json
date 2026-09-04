@@ -1276,6 +1276,21 @@
       "defect": "OWNER-SUPPLIED WORK, not a defect: the 'Arena Hall' design guide is complete and approved by the owner, and the frontend must be restyled to it. The guide ships arena-hall.css (a drop-in replacement for base.html's <style> block, ~330 lines), six rendered preview pages, and screenshots. The previews use exactly the markup the templates already emit \u2014 <main>, <footer class=\"exclusion-policy\"> as a direct child of main, the six section ids, .meet-list, .lately-list, .sources, .roster, .present, .who-line, .why, .opener, .lede, .quote, .absent, .cite, .score, and the /debug tables \u2014 so this is a stylesheet swap, not a restructure. Two things the guide leaves to implementation: a Google Fonts <link> for Cormorant Garamond and Inter (the app mounts no StaticFiles, so self-hosting is unavailable and the CSS's own header says to use the link or fall back to the local stacks), and rules for the ul.evidence / li.evidence-item / span.attribution markup that T-040 added AFTER the guide was authored.",
       "finding_id": "0f4ddbf36aa1790874dbabc6398992f531b952580fd8ac5d27979960a14ed1d6",
       "reproduction": "Guide extracted at scratchpad/styleguide/. Owner instruction: 'The style guide that I mentioned is complete. You can find it all in the attached zip file. Please implement it.'"
+    },
+    {
+      "id": "T-057",
+      "title": "The operator view renders `verdict.disambiguator` RAW \u2014 the model's own free-text word \u2014 on the one surface that exists to explain WHY a verdict was accepted. That is precisely the value T-031 and T-047 spent two tickets refusing to let decide anything: resolve.verdict_attribute(person, verdict) asks the EVIDENCE SPAN which of the person's details it names, and is the answer the operator should be shown. Consequence beyond the display: verdict_attribute has NO product caller and reports TESTS ONLY, and two docstrings in resolve.py claiming /debug reads attribute_family/verdict_attribute were FALSE before anyone touched them (corrected in resolve.py by the T-047 lane; the template is outside its ownership). Fix: render resolve.verdict_attribute(person, verdict), which also gives the accessor its product call site.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/templates/debug.html"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/web/templates/debug.html:42",
+      "defect": "The operator view renders `verdict.disambiguator` RAW \u2014 the model's own free-text word \u2014 on the one surface that exists to explain WHY a verdict was accepted. That is precisely the value T-031 and T-047 spent two tickets refusing to let decide anything: resolve.verdict_attribute(person, verdict) asks the EVIDENCE SPAN which of the person's details it names, and is the answer the operator should be shown. Consequence beyond the display: verdict_attribute has NO product caller and reports TESTS ONLY, and two docstrings in resolve.py claiming /debug reads attribute_family/verdict_attribute were FALSE before anyone touched them (corrected in resolve.py by the T-047 lane; the template is outside its ownership). Fix: render resolve.verdict_attribute(person, verdict), which also gives the accessor its product call site.",
+      "finding_id": "133994edfb70a45bcb6ea863b8ca0a2ecaa753c34714efd4a3918501bb1d4d53",
+      "reproduction": "Read web/templates/debug.html:42 against resolve.verdict_attribute. Reported by the FIX-RESOLVE2 lane, which refused to manufacture a call site for an accessor whose real consumer was rendering the wrong value."
     }
   ],
   "cut_list": [

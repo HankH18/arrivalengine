@@ -6,6 +6,9 @@ branch that modifies anything there is vetoed by `check-branch` before a human r
 
 ## Changelog
 - **2026-09-03, epoch 0** — first version, written before the T-1..T-5 build wave.
+- **2026-09-04, cycle 5** — sabotage recipe corrected: `PYTHONPATH` loses to pytest's
+  own `pythonpath = ["src"]`, so a sabotage of a copied tree silently measured the
+  worktree. Use `-o pythonpath=<copy>/src` and prove the path from inside `pytest_configure`.
 - **2026-09-04, cycle 5** — added standing ruling 0: check your test diff against
   `git merge-base main HEAD`, never against `main`, which moves under a concurrent lane.
 
@@ -215,12 +218,25 @@ Never trust the installer's exit code.
   primary checkout, so a tree copied to scratch and run with that venv imported the REAL
   modules — the run reported "30 passed" with every resolved path under the primary
   checkout, having sabotaged one tree and measured another, and the sabotage read as NOT
-  CAUGHT. Run the copy with `PYTHONPATH=<copy>/src`, name the interpreter explicitly
-  rather than letting `python` resolve off PATH (a bare `python` on this box finds an
-  unrelated Anaconda install), and then, before believing ANY sabotage result, print the
-  resolved path of the module you sabotaged and assert it sits inside the copy,
-  canonicalizing both sides. **The positive control does NOT cover this** — a witness can
-  fire perfectly in the real module while your copy sits untouched.
+  CAUGHT. Name the interpreter explicitly rather than letting `python` resolve off PATH
+  (a bare `python` on this box finds an unrelated Anaconda install), and then, before
+  believing ANY sabotage result, print the resolved path of the module you sabotaged and
+  assert it sits inside the copy, canonicalizing both sides. **The positive control does
+  NOT cover this** — a witness can fire perfectly in the real module while your copy sits
+  untouched.
+
+  **`PYTHONPATH=<copy>/src` IS NOT ENOUGH IN THIS REPO, AND IT FAILS IN THE REASSURING
+  DIRECTION.** `pyproject.toml:56` sets `pythonpath = ["src"]` under
+  `[tool.pytest.ini_options]`, and pytest's `pythonpath` plugin inserts `<rootdir>/src` at
+  `sys.path[0]` — AHEAD of `PYTHONPATH`. So pytest imports the WORKTREE while a separate
+  `python -c` proof, which never loads that plugin, correctly reports the copy. The proof
+  and the measurement look at different trees. Measured by the T-047 lane: five sabotage
+  variants all reported "28 passed", including one that disabled a function outright,
+  while its path assertion passed. **The recipe that works: pass
+  `-o pythonpath=<copy>/src` to pytest AND assert the module's resolved path from inside
+  a `pytest_configure` hook in a plugin, so the proof runs in the process that does the
+  measuring.** A sabotage run in which NOTHING goes red is not evidence that your tests
+  are weak — check which tree pytest imported before you believe it.
 - **A TEST YOU WRITE MAY NOT GRADE AGAINST A FILE YOU OWN.** Whatever an assertion
   compares against — a fixture, a golden file, a snapshot, a recorded response, the source
   text of a module — must be something you CANNOT write: orchestrator-owned, or frozen
