@@ -134,15 +134,39 @@ def test_an_acronym_two_names_could_expand_to_is_refused_rather_than_assigned():
 
 
 def test_a_short_name_that_is_not_written_as_an_acronym_is_never_folded():
-    """The orthography is the evidence. "Only" is not an abbreviation of anything."""
+    """The orthography is the evidence, and it has to be the ONLY thing standing here.
+
+    "Ada" really is the initials of "Applied Data Analytics" — same letters, same type,
+    exactly one claimant, so every other condition of the fold is satisfied. The one thing
+    that says these are two companies rather than one is that "Ada" is written as a name and
+    not as an abbreviation.
+    """
     dossiers = [
-        _dossier("a", _hub("company:only", "Only", "company")),
-        _dossier("b", _hub("company:oakhurst-nautical-logistics",
-                           "Oakhurst Nautical Logistics", "company")),
+        _dossier("a", _hub("company:ada", "Ada", "company")),
+        _dossier("b", _hub("company:applied-data-analytics",
+                           "Applied Data Analytics", "company")),
         *_filler(5),
     ]
     graph = build_graph(dossiers)
     assert not _shared(graph, "a", "b"), "an ordinary short name was folded into an expansion"
+
+
+def test_a_two_letter_abbreviation_is_never_folded():
+    """Where the rule stops being about one organisation and starts being a coincidence.
+
+    "BA" is Bank of America, British Airways and a Bachelor of Arts, and a wrong fold does
+    not merely connect one pair: it pools two entities' labels, types and evidence for every
+    person in the graph. Three letters is where the abbreviations that actually appear in
+    dossiers live — MIT, USV, IBM, NYU — and two is where the collisions do.
+    """
+    dossiers = [
+        _dossier("a", _hub("company:ba", "BA", "company")),
+        _dossier("b", _hub("company:bank-of-america", "Bank of America", "company")),
+        *_filler(5),
+    ]
+    graph = build_graph(dossiers)
+    assert not _shared(graph, "a", "b"), "a two-letter abbreviation was expanded on a guess"
+    assert match(graph, "a", ["b"])[0].score == 0
 
 
 def test_an_acronym_is_not_folded_across_hub_types():
