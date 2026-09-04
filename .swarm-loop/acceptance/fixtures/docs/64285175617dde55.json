@@ -1,0 +1,9 @@
+{
+  "doc_id": "64285175617dde55",
+  "source_kind": "openalex",
+  "url": "https://example.org/openalex/works/W2201194",
+  "title": "Latency budgets as a design constraint in developer tooling",
+  "text": "Work record W2201194. Title: Latency budgets as a design constraint in developer tooling. Authors: R. Okonkwo, P. Adeyemi-Strand. Venue: Proceedings of the Workshop on Practical Developer Experience, 2025.\n\nAbstract. We report on three years of instrumenting a command line tool used by roughly forty thousand engineers and argue that a latency budget, published and enforced in continuous integration, changes design decisions earlier than any profiling exercise. We describe the budget, the failures it caught, and two cases where it was wrong.\n\nDeposited 4 November 2025. Open access. No conflicts declared.",
+  "published_at": "2025-11-04",
+  "fetched_at": "2026-02-20T14:35:00+00:00"
+}

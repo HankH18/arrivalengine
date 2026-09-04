@@ -1,0 +1,120 @@
+{
+  "person": {
+    "person_id": "jem-arrowood",
+    "name": "Jem Arrowood",
+    "details": [
+      "head of growth, Tallow Harbor",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "jem-arrowood",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "tallowharbor.example.com"
+    },
+    "accepted_doc_ids": [
+      "50957dd279c64c59",
+      "137675365d8ea470"
+    ],
+    "rejected": [],
+    "confidence": 0.89
+  },
+  "facts": [
+    {
+      "fact_id": "jem-arrowood-f01",
+      "text": "Runs growth at Tallow Harbor, which sells a build cache to engineering teams.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "50957dd279c64c59",
+        "url": "https://example.com/jem-arrowood/now",
+        "source_kind": "self_page",
+        "quote": "I run growth at Tallow Harbor, a company that sells a build cache",
+        "published_at": "2026-01-19",
+        "retrieved_at": "2026-02-20T15:38:00+00:00",
+        "confidence": 0.91
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "jem-arrowood-f02",
+      "text": "Spent six years working in developer-tools go-to-market before joining Tallow Harbor.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "50957dd279c64c59",
+        "url": "https://example.com/jem-arrowood/now",
+        "source_kind": "self_page",
+        "quote": "I spent six years doing developer-tools go-to-market at two companies",
+        "published_at": "2026-01-19",
+        "retrieved_at": "2026-02-20T15:38:00+00:00",
+        "confidence": 0.86
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "jem-arrowood-f03",
+      "text": "Works from Austin on a team distributed across five time zones.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "50957dd279c64c59",
+        "url": "https://example.com/jem-arrowood/now",
+        "source_kind": "self_page",
+        "quote": "I am in Austin. The company is distributed across five time zones",
+        "published_at": "2026-01-19",
+        "retrieved_at": "2026-02-20T15:38:00+00:00",
+        "confidence": 0.83
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "jem-arrowood-f04",
+      "text": "Replaced the Tallow Harbor trial with a non-expiring usage allowance and published the numbers.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "137675365d8ea470",
+        "url": "https://example.org/tradepress/2026/tallow-harbor-trial-rewrite",
+        "source_kind": "search",
+        "quote": "The company has replaced a fourteen-day trial with a usage allowance that does not expire",
+        "published_at": "2026-01-22",
+        "retrieved_at": "2026-02-20T15:45:00+00:00",
+        "confidence": 0.87
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "jem-arrowood-f03"
+      ]
+    },
+    {
+      "hub_id": "topic:remote-work",
+      "label": "Remote work",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "jem-arrowood-f03"
+      ]
+    },
+    {
+      "hub_id": "topic:developer-tools-gtm",
+      "label": "Developer-tools go-to-market",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "jem-arrowood-f02"
+      ]
+    }
+  ],
+  "built_at": "2026-02-21T08:30:00+00:00",
+  "schema_version": 1
+}

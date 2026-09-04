@@ -1,0 +1,88 @@
+{
+  "case_id": "two-independent-attributes",
+  "person": {
+    "person_id": "bram-teasdale",
+    "name": "Bram Teasdale",
+    "details": [
+      "Director of logistics engineering at Copperline Freight",
+      "Portland"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "887e0f13011b0885",
+      "source_kind": "search",
+      "url": "https://example.com/freight-weekly/2025/routing-rewrite",
+      "title": "Copperline rebuilds its routing stack in the open",
+      "text": "Copperline rebuilds its routing stack in the open\n\nCopperline Freight has spent eighteen months replacing the dispatch system it inherited from an acquisition, and it has done most of that work in public repositories.\n\nWe could not explain our own routing decisions to a customer, which is a bad place to be, said Bram Teasdale, director of logistics engineering at Copperline Freight. So the first thing we shipped was not a better route. It was a page that showed why we chose the route we chose.\n\nThe rewrite has not been uniformly popular internally. Dispatchers who had memorised the quirks of the old system lost a decade of accumulated intuition overnight, and the company now runs a weekly session where dispatchers can argue with the model's output in front of the engineers who wrote it.\n\nTeasdale said the team publishes its routing heuristics because carriers keep asking for them, and because a heuristic nobody can inspect tends to rot quietly.",
+      "published_at": "2025-03-19",
+      "fetched_at": "2026-02-11T10:02:00+00:00"
+    },
+    {
+      "doc_id": "b676ffeb8e07314c",
+      "source_kind": "podcast",
+      "url": "https://example.org/thehaulpodcast/episodes/117",
+      "title": "The Haul, episode 117: arguing with the router",
+      "text": "The Haul, episode 117: arguing with the router\n\nOur guest this week is Bram Teasdale, who joins us from Portland to talk about what happens when a routing system is asked to show its work.\n\nIn this episode: why the explain-this-route button changed which routes dispatchers trusted; what the team got wrong about driver preferences in the first six months; and why a heuristic that is merely accurate is not good enough if nobody can argue with it.\n\nBram has lived in Portland for eleven years and still insists that the hardest routing problem in the country is the last two miles of any bridge city.\n\nRecorded in front of a small audience at a logistics meetup. A transcript is on the episode page. Our theme music is by a listener who asked not to be credited.",
+      "published_at": "2025-06-04",
+      "fetched_at": "2026-02-11T10:02:26+00:00"
+    },
+    {
+      "doc_id": "f2cff1c95ba97394",
+      "source_kind": "hn",
+      "url": "https://example.com/forum/threads/open-routing-heuristics",
+      "title": "Copperline published their routing heuristics",
+      "text": "Copperline published their routing heuristics\n\nReply: This is more honest than most of what gets published in this space. The document admits the model is worse than a good dispatcher on short urban routes.\n\nReply: A Teasdale wrote a similar document at a previous employer, or I am confusing two people with the same surname. Either way the format is good and more companies should copy it.\n\nReply: The interesting part is the appendix, which lists the cases where the heuristic was overridden by a human and why. That is the part nobody else publishes.\n\nReply: Agreed. Publishing the overrides is the whole point. Everything before the appendix is marketing.",
+      "published_at": "2025-03-21",
+      "fetched_at": "2026-02-11T10:02:51+00:00"
+    },
+    {
+      "doc_id": "3deeba14acf240e6",
+      "source_kind": "wayback",
+      "url": "https://example.org/wayback/2019/copperline-freight/about",
+      "title": "Archived snapshot: Copperline Freight - About (2019)",
+      "text": "Archived snapshot: Copperline Freight - About (2019)\n\nCopperline Freight is a regional carrier operating out of four terminals in the Pacific Northwest. We move freight for manufacturers who need a schedule they can plan around rather than the cheapest possible rate.\n\nLeadership: the about page in this snapshot lists a chief executive, a chief financial officer and an operations director. It does not list an engineering leader, and the engineering team is not mentioned anywhere on the page.\n\nCareers: we are hiring dispatchers in Portland, Tacoma and Boise.\n\nThis snapshot was captured before the routing rewrite began and is retained only because later versions of the page redirect to a marketing site with no leadership section at all.",
+      "published_at": "2019-08-02",
+      "fetched_at": "2026-02-11T10:03:17+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "887e0f13011b0885",
+      "match": "yes",
+      "confidence": 0.88,
+      "evidence": "said Bram Teasdale, director of logistics engineering at Copperline Freight",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "b676ffeb8e07314c",
+      "match": "yes",
+      "confidence": 0.81,
+      "evidence": "Bram Teasdale, who joins us from Portland",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "f2cff1c95ba97394",
+      "match": "unsure",
+      "confidence": 0.38,
+      "evidence": "A Teasdale wrote a similar document at a previous employer, or I am confusing two people with the same surname",
+      "disambiguator": "role"
+    },
+    {
+      "doc_id": "3deeba14acf240e6",
+      "match": "unsure",
+      "confidence": 0.29,
+      "evidence": "It does not list an engineering leader, and the engineering team is not mentioned anywhere on the page.",
+      "disambiguator": "employer"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "887e0f13011b0885",
+      "b676ffeb8e07314c"
+    ],
+    "strong_keys_present": [],
+    "note": "No strong key exists anywhere in this corpus: there is no wikidata, github or edgar document, and no document url sits on a domain derivable from the person's details (every url is on example.com/example.org), so no company_domain key can be taken either. Resolution therefore has to come from DESIGN Decision 4's second arm: two `yes` verdicts citing DIFFERENT disambiguators, here `employer` and `city`. The two `unsure` verdicts corroborate nothing and must not be accepted, so accepted_doc_ids holds exactly the two `yes` documents, listed in document order. strong_keys_present is empty and Resolution.strong_keys must stay empty."
+  }
+}

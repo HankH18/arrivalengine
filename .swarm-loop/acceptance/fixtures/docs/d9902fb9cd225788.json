@@ -1,0 +1,9 @@
+{
+  "doc_id": "d9902fb9cd225788",
+  "source_kind": "wayback",
+  "url": "https://web.example.org/web/20170614/quarrystonelabs.example.com/status",
+  "title": "Quarrystone Labs status (archived capture, 14 June 2017)",
+  "text": "Archived capture, 14 June 2017. Quarrystone Labs status.\n\nAll systems operational. This page lists every incident we have had since we started publishing it, with a start time, an end time, and a paragraph written by whoever was on call.\n\nQuarrystone Labs shipped a public status page in 2017, which at the time was unusual for a company of eleven people with no enterprise customers to answer to.\n\nIncident log. 3 April 2017: API latency above budget for forty minutes, caused by a migration run during business hours. 22 May 2017: complete outage of eighteen minutes, caused by us.\n\nWe will keep this page up even on the days it makes us look bad.",
+  "published_at": "2017-06-14",
+  "fetched_at": "2026-02-20T14:42:00+00:00"
+}

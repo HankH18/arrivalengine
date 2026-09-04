@@ -1,0 +1,9 @@
+{
+  "doc_id": "9011fe302dab10ba",
+  "source_kind": "github",
+  "url": "https://example.com/github/quarrystone/cli",
+  "title": "quarrystone/cli",
+  "text": "quarrystone/cli - the command line interface for the Quarrystone platform.\n\nMaintained by runa-okonkwo, who reviews most of the pull requests that land here and writes the release notes by hand.\n\nRecent releases. 4.2.0 added a --dry-run flag to every destructive subcommand after a long thread about how easy it was to delete the wrong environment. 4.1.0 rewrote the error messages so that each one names the file it is complaining about.\n\nContributing: open an issue before a large pull request. The maintainers are in Austin and reply on weekdays.\n\nOn 27 May 2025 the maintainers published a migration guide for the 4.0 release and froze the 3.x branch to security fixes only.",
+  "published_at": "2025-05-27",
+  "fetched_at": "2026-02-20T14:07:00+00:00"
+}

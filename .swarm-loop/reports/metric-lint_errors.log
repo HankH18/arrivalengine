@@ -1,0 +1,147 @@
+4 diagnostic(s)
+
+exit=1
+--- stdout ---
+[
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 2,
+      "row": 37
+    },
+    "filename": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine/tests/test_t0_conformance.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\n\nimport pytest\nfrom doubles import (\n    ConnectorDouble,\n    LLMDouble,\n    assert_conforms,\n    conforms,\n    protocol_members,\n    protocol_mismatches,\n)\nfrom pydantic import BaseModel\n\nfrom arrival.contracts import Connector, LLMClient, PersonRef, RawDoc\n\n",
+          "end_location": {
+            "column": 1,
+            "row": 39
+          },
+          "location": {
+            "column": 1,
+            "row": 24
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 24
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "name": "unsorted-imports",
+    "noqa_row": 24,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 37,
+      "row": 59
+    },
+    "filename": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine/tests/test_t0_contract_fields.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\n\nimport inspect\nimport typing\nfrom datetime import date, datetime\nfrom typing import Any, Literal\n\nimport pytest\nfrom doubles import protocol_members\nfrom pydantic import BaseModel\n\nimport arrival.contracts as contracts\nfrom arrival.contracts import (\n    Budget,\n    BuildReport,\n    Connector,\n    Digest,\n    Dossier,\n    ExclusionReason,\n    Fact,\n    FactCategory,\n    Hub,\n    HubContribution,\n    HubType,\n    LLMClient,\n    Match,\n    PersonRef,\n    Provenance,\n    RawDoc,\n    Resolution,\n    SourceKind,\n    Verdict,\n)\n\n",
+          "end_location": {
+            "column": 1,
+            "row": 61
+          },
+          "location": {
+            "column": 1,
+            "row": 27
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 27
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "name": "unsorted-imports",
+    "noqa_row": 27,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 56,
+      "row": 17
+    },
+    "filename": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine/tests/test_t0_doubles.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\n\nimport asyncio\nimport os\nimport subprocess\nimport sys\nimport time\nfrom datetime import UTC, datetime\nfrom pathlib import Path\n\nimport pytest\nfrom doubles import ConnectorDouble, LLMCall, LLMDouble\nfrom pydantic import BaseModel\n\nfrom arrival.contracts import Connector, LLMClient, LLMError, PersonRef, RawDoc, Verdict\n\n",
+          "end_location": {
+            "column": 1,
+            "row": 19
+          },
+          "location": {
+            "column": 1,
+            "row": 3
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 3
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "name": "unsorted-imports",
+    "noqa_row": 3,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  },
+  {
+    "cell": null,
+    "code": "I001",
+    "end_location": {
+      "column": 69,
+      "row": 35
+    },
+    "filename": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine/tests/test_t0_offline.py",
+    "fix": {
+      "applicability": "safe",
+      "edits": [
+        {
+          "content": "from __future__ import annotations\n\nimport socket\nimport subprocess\nimport sys\nimport urllib.error\nimport urllib.request\nfrom pathlib import Path\n\nimport anthropic\nimport httpx\nimport httpx2\nimport pytest\nfrom conftest import NETWORK_DISABLED_MESSAGE, network_block_targets\n\n",
+          "end_location": {
+            "column": 1,
+            "row": 37
+          },
+          "location": {
+            "column": 1,
+            "row": 21
+          }
+        }
+      ],
+      "message": "Organize imports"
+    },
+    "location": {
+      "column": 1,
+      "row": 21
+    },
+    "message": "Import block is un-sorted or un-formatted",
+    "name": "unsorted-imports",
+    "noqa_row": 21,
+    "severity": "error",
+    "url": "https://docs.astral.sh/ruff/rules/unsorted-imports"
+  }
+]
+--- stderr ---

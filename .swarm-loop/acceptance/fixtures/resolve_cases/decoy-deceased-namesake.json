@@ -1,0 +1,104 @@
+{
+  "case_id": "decoy-deceased-namesake",
+  "person": {
+    "person_id": "idris-kavanagh",
+    "name": "Idris Kavanagh",
+    "details": [
+      "Staff researcher at Harrowgate Systems",
+      "Austin"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "ca86c8d8e0280113",
+      "source_kind": "self_page",
+      "url": "https://example.com/harrowgate-systems/research/team",
+      "title": "Harrowgate Systems - Research team",
+      "text": "Harrowgate Systems - Research team\n\nOur research group is six people. We publish what we can, we open-source the tools nobody will pay for, and we try not to write papers about problems we have not actually had.\n\nIdris Kavanagh is a staff researcher at Harrowgate Systems, where he works on freight routing, container scheduling and the unglamorous business of making a solver explain itself. Before joining us in 2019 he spent seven years writing about logistics for a trade publisher, which is why he is the only person here who can be trusted with a paragraph.\n\nHe runs our reading group on scheduling literature, which meets in the Austin office on Thursdays and is open to anyone in the company.\n\nThe rest of the group works on storage, on driver-facing tooling, and on the simulation harness we use to test schedule changes before they reach a terminal.",
+      "published_at": "2025-01-27",
+      "fetched_at": "2026-02-11T11:20:00+00:00"
+    },
+    {
+      "doc_id": "9f5be1c613c6d00c",
+      "source_kind": "search",
+      "url": "https://example.org/relay-conf-2025/speakers/idris-kavanagh",
+      "title": "Relay Conference 2025 - speaker: Idris Kavanagh",
+      "text": "Relay Conference 2025 - speaker: Idris Kavanagh\n\nIdris Kavanagh joined us from Austin, where he has lived since 2016, to give the closing talk on why scheduling systems fail quietly.\n\nTalk abstract: a scheduler that is wrong loudly gets fixed in a week. A scheduler that is wrong quietly gets trusted for a year and then blamed for something else. This talk is about the second kind, drawn from three years of routing work inside a mid-sized carrier's software group.\n\nSpeaker note: Idris asked us not to print a job title on the badge, on the grounds that nobody at a logistics conference has ever been helped by one.\n\nRecording: the closing talk was recorded and will be posted once the organisers finish captioning it. Slides are already linked from the schedule page.",
+      "published_at": "2025-09-11",
+      "fetched_at": "2026-02-11T11:20:24+00:00"
+    },
+    {
+      "doc_id": "4363ab4db7a51ae6",
+      "source_kind": "wikidata",
+      "url": "https://example.org/wikidata/Q4471820",
+      "title": "Idris Kavanagh (Q4471820) - item mirror",
+      "text": "Idris Kavanagh (Q4471820)\n\nItem mirror. Instance of: human. Occupation: marine archaeologist, author, university teacher. Employer: Ostlerhaus Institute. Work location: Halifax, Nova Scotia. Date of birth: 9 February 1948. Date of death: 4 November 2017.\n\nNotable works: The Cold Cargo, a popular history of container freight published in 1996; Salvage Rights, published in 2004; and a posthumous collection of essays on port labour.\n\nAwards: the Ostlerhaus Institute teaching medal, twice.\n\nArchives at: a maritime library in Austin, Texas, which acquired his working papers and correspondence in 2019 and has digitised roughly a third of them.\n\nDescribed by source: two obituaries and a university memorial page. The item has been stable since 2020 apart from the addition of the archive statement.",
+      "published_at": null,
+      "fetched_at": "2026-02-11T11:20:48+00:00"
+    },
+    {
+      "doc_id": "e8c81fcabba7b0f3",
+      "source_kind": "wikipedia",
+      "url": "https://example.org/wikipedia/Idris_Kavanagh_author",
+      "title": "Idris Kavanagh (author) - encyclopedia mirror",
+      "text": "Idris Kavanagh (author) - encyclopedia mirror\n\nIdris Kavanagh (9 February 1948 to 4 November 2017) was a Canadian marine archaeologist and author, best known for The Cold Cargo, a 1996 history of container freight written for a general readership.\n\nKavanagh taught at the Ostlerhaus Institute in Halifax for twenty-nine years and never lived outside Nova Scotia. He directed three survey seasons on wrecks in the approaches to the harbour and wrote regularly for the maritime press.\n\nHis writing on freight scheduling in the 1970s is still cited by historians of containerisation, and a chapter of The Cold Cargo is assigned in several logistics courses. His working papers were bought in 2019 by a maritime library in Austin, Texas.\n\nHe died in Halifax in November 2017 after a short illness. A memorial lecture in his name has been held annually since 2018.",
+      "published_at": "2024-06-30",
+      "fetched_at": "2026-02-11T11:21:09+00:00"
+    },
+    {
+      "doc_id": "66024d822958d78d",
+      "source_kind": "search",
+      "url": "https://example.com/tallow-row-books/authors/idris-kavanagh",
+      "title": "Tallow Row Books - Idris Kavanagh",
+      "text": "Tallow Row Books - Idris Kavanagh\n\nIdris Kavanagh was for many years a professor at the Ostlerhaus Institute in Halifax, and he died there in November 2017. We published four of his books and we keep all of them in print.\n\nReaders still write to us about the chapter on freight scheduling in The Cold Cargo, usually to argue with it. He would have enjoyed that; he answered every letter he was sent, at length, in handwriting his editors found challenging.\n\nHis last manuscript, an account of the inland container terminals of central Texas, was unfinished at his death and sits with the rest of his papers in the Austin library that bought them.\n\nThe memorial lecture is organised by the Institute, not by us. Enquiries about the estate should go to the Institute's archivist.",
+      "published_at": "2023-02-14",
+      "fetched_at": "2026-02-11T11:21:33+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "ca86c8d8e0280113",
+      "match": "yes",
+      "confidence": 0.74,
+      "evidence": "Idris Kavanagh is a staff researcher at Harrowgate Systems",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "9f5be1c613c6d00c",
+      "match": "yes",
+      "confidence": 0.69,
+      "evidence": "Idris Kavanagh joined us from Austin, where he has lived since 2016",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "4363ab4db7a51ae6",
+      "match": "no",
+      "confidence": 0.96,
+      "evidence": "Employer: Ostlerhaus Institute. Work location: Halifax, Nova Scotia.",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "e8c81fcabba7b0f3",
+      "match": "no",
+      "confidence": 0.94,
+      "evidence": "Kavanagh taught at the Ostlerhaus Institute in Halifax for twenty-nine years and never lived outside Nova Scotia.",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "66024d822958d78d",
+      "match": "no",
+      "confidence": 0.91,
+      "evidence": "Idris Kavanagh was for many years a professor at the Ostlerhaus Institute in Halifax, and he died there in November 2017.",
+      "disambiguator": "employer"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "ca86c8d8e0280113",
+      "9f5be1c613c6d00c"
+    ],
+    "strong_keys_present": [],
+    "note": "The fictional analogue of SPEC Q1. Two different people share the full name Idris Kavanagh: the target, a living staff researcher at Harrowgate Systems in Austin, and a decoy, a marine-archaeology author who taught at the Ostlerhaus Institute in Halifax and died in 2017. Three of the five documents are about the decoy and each is a trap for a name-match resolver: the name matches exactly, the subject matter overlaps (container freight, freight scheduling), and two of them even mention Austin, Texas -- the decoy's papers are archived there and his last manuscript was about central-Texas terminals. The ONLY thing that separates them is negative evidence, so all three decoy verdicts are `no` with evidence asserting a conflicting employer and city. Per DESIGN Decision 4 a single contradiction VETOES that document outright; confidences are never averaged against the matching name, and note that the decoy verdicts (0.96/0.94/0.91) are all more confident than the two target verdicts (0.74/0.69), so any implementation that pools or averages verdict confidence lands on the wrong person. The three vetoed documents must appear in Resolution.rejected and must not appear in accepted_doc_ids. Second trap: the corpus's only Wikidata item, Q4471820, belongs to the DECOY. Decision 4 admits a QID as a strong key only when it is matched on name AND detail; this item matches the name and contradicts every detail, so no wikidata_qid strong key may be taken and strong_keys_present is empty. Resolution comes from the second arm instead: two surviving `yes` verdicts citing different disambiguators (employer, city)."
+  }
+}

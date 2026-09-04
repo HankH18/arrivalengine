@@ -1,0 +1,37 @@
+{
+  "person": {
+    "person_id": "vex-tarrow",
+    "name": "Vex Tarrow",
+    "details": [
+      "photographer or software engineer, unclear",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "vex-tarrow",
+    "status": "unresolved",
+    "strong_keys": {},
+    "accepted_doc_ids": [],
+    "rejected": [
+      {
+        "doc_id": "4583e496f241803c",
+        "match": "unsure",
+        "confidence": 0.35,
+        "evidence": "Tarrow, who has shown in Austin twice before, said the intersection was chosen because it was the one visible from a job they no longer have",
+        "disambiguator": "city"
+      },
+      {
+        "doc_id": "22b557df95a72095",
+        "match": "unsure",
+        "confidence": 0.2,
+        "evidence": "The profile has no name, no company, no location and no linked website",
+        "disambiguator": "handle"
+      }
+    ],
+    "confidence": 0.28
+  },
+  "facts": [],
+  "hubs": [],
+  "built_at": "2026-02-21T08:30:00+00:00",
+  "schema_version": 1
+}

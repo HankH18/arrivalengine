@@ -1,0 +1,153 @@
+{
+  "person": {
+    "person_id": "mira-hollowell",
+    "name": "Mira Hollowell",
+    "details": [
+      "chief operating officer, Lantern Freight",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "mira-hollowell",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "lanternfreight.example.com"
+    },
+    "accepted_doc_ids": [
+      "d07ba24408f2aa13",
+      "b46212cb0a5a8c0c",
+      "ca6310f83f9a9387"
+    ],
+    "rejected": [],
+    "confidence": 0.91
+  },
+  "facts": [
+    {
+      "fact_id": "mira-hollowell-f01",
+      "text": "Chief operating officer of Lantern Freight, running its operations since 2018.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "d07ba24408f2aa13",
+        "url": "https://example.com/lantern-freight/team/mira-hollowell",
+        "source_kind": "self_page",
+        "quote": "Mira Hollowell is the chief operating officer of Lantern Freight, where she has run operations since 2018",
+        "published_at": "2025-11-20",
+        "retrieved_at": "2026-02-20T15:52:00+00:00",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "mira-hollowell-f02",
+      "text": "One of three officers named in the Lantern Freight company filings.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "b46212cb0a5a8c0c",
+        "url": "https://example.org/tradepress/2025/lantern-freight-dispatch-rules",
+        "source_kind": "search",
+        "quote": "Hollowell has been with Lantern Freight since 2018 and is one of three officers named in the company filings",
+        "published_at": "2025-09-30",
+        "retrieved_at": "2026-02-20T15:59:00+00:00",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "mira-hollowell-f03",
+      "text": "Lives in Austin and leads an operations team that has worked remotely since 2020.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "d07ba24408f2aa13",
+        "url": "https://example.com/lantern-freight/team/mira-hollowell",
+        "source_kind": "self_page",
+        "quote": "Mira lives in Austin and the operations team has worked remotely since 2020",
+        "published_at": "2025-11-20",
+        "retrieved_at": "2026-02-20T15:52:00+00:00",
+        "confidence": 0.82
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "mira-hollowell-f04",
+      "text": "Published the scoring rules Lantern Freight uses to assign loads to its drivers.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "b46212cb0a5a8c0c",
+        "url": "https://example.org/tradepress/2025/lantern-freight-dispatch-rules",
+        "source_kind": "search",
+        "quote": "Lantern Freight opened its dispatch rules to its own drivers this autumn",
+        "published_at": "2025-09-30",
+        "retrieved_at": "2026-02-20T15:59:00+00:00",
+        "confidence": 0.84
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "mira-hollowell-f05",
+      "text": "Took four months away from work in 2022 while recovering from a back injury.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "ca6310f83f9a9387",
+        "url": "https://example.org/city-monthly/2024/the-dispatcher",
+        "source_kind": "search",
+        "quote": "Hollowell took four months away from the company in 2022 while she recovered from a back injury",
+        "published_at": "2024-04-16",
+        "retrieved_at": "2026-02-20T16:06:00+00:00",
+        "confidence": 0.86
+      },
+      "excluded": true,
+      "exclusion_reason": "health"
+    },
+    {
+      "fact_id": "mira-hollowell-f06",
+      "text": "Holds a reported stake in Lantern Freight of just under nine per cent.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "ca6310f83f9a9387",
+        "url": "https://example.org/city-monthly/2024/the-dispatcher",
+        "source_kind": "search",
+        "quote": "Her stake in Lantern Freight is reported at just under nine per cent",
+        "published_at": "2024-04-16",
+        "retrieved_at": "2026-02-20T16:06:00+00:00",
+        "confidence": 0.84
+      },
+      "excluded": true,
+      "exclusion_reason": "wealth"
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "mira-hollowell-f03"
+      ]
+    },
+    {
+      "hub_id": "topic:remote-work",
+      "label": "Remote work",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "mira-hollowell-f03"
+      ]
+    },
+    {
+      "hub_id": "company:lantern-freight",
+      "label": "Lantern Freight",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "mira-hollowell-f01"
+      ]
+    }
+  ],
+  "built_at": "2026-02-21T08:30:00+00:00",
+  "schema_version": 1
+}

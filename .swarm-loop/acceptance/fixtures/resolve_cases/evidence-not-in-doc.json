@@ -1,0 +1,85 @@
+{
+  "case_id": "evidence-not-in-doc",
+  "person": {
+    "person_id": "perrin-halloway",
+    "name": "Perrin Halloway",
+    "details": [
+      "Editorial director at Marrowfield Press",
+      "Wellington"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "521cc6e581e5306a",
+      "source_kind": "self_page",
+      "url": "https://example.com/marrowfield-press/about/masthead",
+      "title": "Marrowfield Press - Masthead",
+      "text": "Marrowfield Press - Masthead\n\nMarrowfield Press publishes twelve books a year and has never published thirteen, which our accountant considers a strategy and our printers consider a personality.\n\nPerrin Halloway is the editorial director at Marrowfield Press and has held the post since 2020. She acquires roughly half the list herself and edits about a third of it, which is more than an editorial director should do and less than she would like.\n\nAlso on the masthead: a managing editor, two commissioning editors, a production manager who has been here longer than the company has had an office, and a publicist who works three days a week.\n\nSubmissions are read in the order they arrive. We answer every one, eventually. The reading period closes in December and reopens in February.",
+      "published_at": "2025-02-03",
+      "fetched_at": "2026-02-11T13:55:00+00:00"
+    },
+    {
+      "doc_id": "c7fdcb8af47aaf0d",
+      "source_kind": "search",
+      "url": "https://example.org/bookseller-notes/2024/small-press-interview",
+      "title": "A small press that stayed small on purpose",
+      "text": "A small press that stayed small on purpose\n\nThe interview took place in a room above a bookshop, with the traffic left in because the recorder could not be persuaded otherwise.\n\nHalloway is careful about the word curation, which she says has been ruined by people selling furniture. What the press does instead, she argues, is refuse things: nine hundred submissions a year, twelve books, and a standing rule that no book is acquired on the strength of a proposal alone.\n\nAsked about the economics, she is blunt. The press survives on backlist, one unexpectedly successful cookery title, and the fact that nobody in the building is paid what they would be paid elsewhere.\n\nShe declined to discuss where she lives or how she came to the job, saying that the only interesting thing about an editor is the list.",
+      "published_at": "2024-10-22",
+      "fetched_at": "2026-02-11T13:55:21+00:00"
+    },
+    {
+      "doc_id": "5317ddaf5b62c431",
+      "source_kind": "hn",
+      "url": "https://example.com/forum/threads/small-press-economics",
+      "title": "How small presses actually make money",
+      "text": "How small presses actually make money\n\nReply: The interview linked upthread is the most honest thing I have read on this. Twelve books a year is not modesty, it is a cash-flow constraint dressed up as taste.\n\nReply: A Halloway edited a book I worked on years ago at a different house. Excellent line editor, brutal about structure. Whether it is the same Halloway I could not tell you.\n\nReply: Backlist is the whole business. Every small press that died in the last decade died because it had no backlist and kept acquiring.\n\nReply: That and distribution. You can survive a bad year. You cannot survive losing your distributor in a bad year.",
+      "published_at": "2024-10-25",
+      "fetched_at": "2026-02-11T13:55:44+00:00"
+    },
+    {
+      "doc_id": "4d17b188adbe669c",
+      "source_kind": "search",
+      "url": "https://example.org/inkwell-prize/2023/judges",
+      "title": "Inkwell Prize 2023 - judging panel",
+      "text": "Inkwell Prize 2023 - judging panel\n\nThe Inkwell Prize for a first work of narrative non-fiction returns for a fourth year, with a longlist of eighteen announced in September and a winner in November.\n\nPerrin Halloway, editorial director of Marrowfield Press, chairs this year's panel. She is joined by a translator, a bookseller from the west coast, and the winner of the 2021 prize, who has said publicly that judging is harder than writing and that she will not do it again.\n\nThe panel reads blind. Publishers submit two titles each and are asked not to lobby, an instruction the administrators describe as aspirational.\n\nThe prize is funded by a bequest and pays the winner enough to take four months off from other work, which the founder considered the only prize worth giving.",
+      "published_at": "2023-08-14",
+      "fetched_at": "2026-02-11T13:56:05+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "521cc6e581e5306a",
+      "match": "yes",
+      "confidence": 0.86,
+      "evidence": "Perrin Halloway is the editorial director at Marrowfield Press and has held the post since 2020.",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "c7fdcb8af47aaf0d",
+      "match": "yes",
+      "confidence": 0.83,
+      "evidence": "Halloway has run the press from Wellington since 2019 and says the city's reading culture is why she stayed.",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "5317ddaf5b62c431",
+      "match": "unsure",
+      "confidence": 0.4,
+      "evidence": "A Halloway edited a book I worked on years ago at a different house.",
+      "disambiguator": "role"
+    },
+    {
+      "doc_id": "4d17b188adbe669c",
+      "match": "yes",
+      "confidence": 0.79,
+      "evidence": "Perrin Halloway, editorial director of Marrowfield Press, chairs this year's panel.",
+      "disambiguator": "employer"
+    }
+  ],
+  "expect": {
+    "status": "unresolved",
+    "accepted_doc_ids": [],
+    "strong_keys_present": [],
+    "note": "T-2 acceptance 5, made outcome-changing rather than cosmetic. The verdict on the second document is a `yes` on the `city` disambiguator whose evidence -- 'Halloway has run the press from Wellington since 2019 and says the city's reading culture is why she stayed.' -- is NOT a normalize_ws substring of that document's text, nor of any other document here. It is a hallucination of exactly the kind DESIGN Decision 5 exists to catch: the document says the opposite, that she declined to discuss where she lives. That verdict alone must be downgraded to `unsure`; the other three verdicts cite genuine verbatim spans and must survive untouched, so a resolver that discards all evidence rather than only unquoted evidence is equally wrong. After the downgrade two `yes` verdicts remain, but they BOTH cite the `employer` disambiguator, and there is no strong key (no wikidata, github or edgar document and no derivable company domain), so neither arm of DESIGN Decision 4 is satisfied: the answer is `unresolved` with accepted_doc_ids empty (T-2 acceptance 2). Two distinct wrong implementations are caught here. One that skips the substring check sees three `yes` verdicts spanning `employer` and `city`, resolves, and accepts three documents. One that reads the second arm as 'two `yes` verdicts' without requiring the disambiguators to DIFFER resolves even with the check in place, because two employer-cited `yes` verdicts survive it -- they are corroboration of the same attribute, which is not independence."
+  }
+}

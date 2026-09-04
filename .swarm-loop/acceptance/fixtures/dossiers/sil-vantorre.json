@@ -1,0 +1,120 @@
+{
+  "person": {
+    "person_id": "sil-vantorre",
+    "name": "Sil Vantorre",
+    "details": [
+      "partner, Foundry Seed",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "sil-vantorre",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "foundryseed.example.com"
+    },
+    "accepted_doc_ids": [
+      "8e95f057ad101a20",
+      "d3541f5a1b10b96a"
+    ],
+    "rejected": [],
+    "confidence": 0.9
+  },
+  "facts": [
+    {
+      "fact_id": "sil-vantorre-f01",
+      "text": "Invests in developer infrastructure as a partner at Foundry Seed.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "8e95f057ad101a20",
+        "url": "https://example.com/sil-vantorre",
+        "source_kind": "self_page",
+        "quote": "I invest in developer infrastructure at Foundry Seed",
+        "published_at": "2026-01-12",
+        "retrieved_at": "2026-02-20T15:24:00+00:00",
+        "confidence": 0.92
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "sil-vantorre-f02",
+      "text": "Led the Foundry Seed 2019 fund and sits on four of its boards, including Quarrystone Labs.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "8e95f057ad101a20",
+        "url": "https://example.com/sil-vantorre",
+        "source_kind": "self_page",
+        "quote": "I led the Foundry Seed 2019 fund and I still sit on four of its boards, including Quarrystone Labs",
+        "published_at": "2026-01-12",
+        "retrieved_at": "2026-02-20T15:24:00+00:00",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "sil-vantorre-f03",
+      "text": "Lives in Austin and works remotely most weeks.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "8e95f057ad101a20",
+        "url": "https://example.com/sil-vantorre",
+        "source_kind": "self_page",
+        "quote": "I live in Austin and I work remotely most weeks",
+        "published_at": "2026-01-12",
+        "retrieved_at": "2026-02-20T15:24:00+00:00",
+        "confidence": 0.84
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "sil-vantorre-f04",
+      "text": "Published a public retrospective scoring the Foundry Seed 2019 vintage.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "d3541f5a1b10b96a",
+        "url": "https://example.org/tradepress/2025/foundry-seed-vintage-review",
+        "source_kind": "search",
+        "quote": "Foundry Seed has published a retrospective on its 2019 vintage",
+        "published_at": "2025-12-09",
+        "retrieved_at": "2026-02-20T15:31:00+00:00",
+        "confidence": 0.86
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "sil-vantorre-f03"
+      ]
+    },
+    {
+      "hub_id": "topic:remote-work",
+      "label": "Remote work",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "sil-vantorre-f03"
+      ]
+    },
+    {
+      "hub_id": "investor:foundry-seed-2019",
+      "label": "Foundry Seed 2019",
+      "type": "investor",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "sil-vantorre-f02"
+      ]
+    }
+  ],
+  "built_at": "2026-02-21T08:30:00+00:00",
+  "schema_version": 1
+}

@@ -1,0 +1,120 @@
+{
+  "person": {
+    "person_id": "theo-baptiste",
+    "name": "Theo Baptiste",
+    "details": [
+      "director of applied research, Bellhaven Polytechnic",
+      "Austin"
+    ]
+  },
+  "resolution": {
+    "person_id": "theo-baptiste",
+    "status": "resolved",
+    "strong_keys": {
+      "wikidata_qid": "Q900000317"
+    },
+    "accepted_doc_ids": [
+      "bd95ab53aac6c458",
+      "8aca032fc32f4221"
+    ],
+    "rejected": [],
+    "confidence": 0.88
+  },
+  "facts": [
+    {
+      "fact_id": "theo-baptiste-f01",
+      "text": "Directs the applied research group at Bellhaven Polytechnic.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "bd95ab53aac6c458",
+        "url": "https://example.com/bellhaven-polytechnic/people/theo-baptiste",
+        "source_kind": "self_page",
+        "quote": "Theo Baptiste directs the applied research group at Bellhaven Polytechnic",
+        "published_at": "2025-10-01",
+        "retrieved_at": "2026-02-20T16:13:00+00:00",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "theo-baptiste-f02",
+      "text": "Studied at Bellhaven Polytechnic and returned to teach there after eleven years in instrumentation.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "bd95ab53aac6c458",
+        "url": "https://example.com/bellhaven-polytechnic/people/theo-baptiste",
+        "source_kind": "self_page",
+        "quote": "Theo studied at Bellhaven Polytechnic himself and returned to it after eleven years in instrumentation",
+        "published_at": "2025-10-01",
+        "retrieved_at": "2026-02-20T16:13:00+00:00",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "theo-baptiste-f03",
+      "text": "Lives in Austin and runs a research group that has been remote-first since 2021.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "bd95ab53aac6c458",
+        "url": "https://example.com/bellhaven-polytechnic/people/theo-baptiste",
+        "source_kind": "self_page",
+        "quote": "He lives in Austin and the research group has been remote-first since the building closed for renovation in 2021",
+        "published_at": "2025-10-01",
+        "retrieved_at": "2026-02-20T16:13:00+00:00",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "theo-baptiste-f04",
+      "text": "Audited one hundred and forty municipal air sensors and found nineteen had drifted.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "8aca032fc32f4221",
+        "url": "https://example.org/tradepress/2025/bellhaven-sensor-audit",
+        "source_kind": "search",
+        "quote": "tested one hundred and forty municipal air sensors and reported that nineteen of them had drifted far enough to be misleading",
+        "published_at": "2025-06-18",
+        "retrieved_at": "2026-02-20T16:20:00+00:00",
+        "confidence": 0.83
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "theo-baptiste-f03"
+      ]
+    },
+    {
+      "hub_id": "topic:remote-work",
+      "label": "Remote work",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "theo-baptiste-f03"
+      ]
+    },
+    {
+      "hub_id": "school:bellhaven-polytechnic",
+      "label": "Bellhaven Polytechnic",
+      "type": "school",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "theo-baptiste-f02"
+      ]
+    }
+  ],
+  "built_at": "2026-02-21T08:30:00+00:00",
+  "schema_version": 1
+}

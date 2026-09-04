@@ -1,0 +1,73 @@
+{
+  "case_id": "strong-key-wikidata",
+  "person": {
+    "person_id": "ilse-vandermolen",
+    "name": "Ilse Vandermolen",
+    "details": [
+      "Principal engineer at Belmarch Optics",
+      "Rotterdam"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "aa3fcbf1ae789126",
+      "source_kind": "wikidata",
+      "url": "https://example.org/wikidata/Q7314529",
+      "title": "Ilse Vandermolen (Q7314529) - item mirror",
+      "text": "Ilse Vandermolen (Q7314529)\n\nItem mirror. Instance of: human. Occupation: software engineer, optical physicist. Employer: Belmarch Optics. Work location: Rotterdam. Educated at: Vaarwater Polytechnic. Native language: Dutch.\n\nNotable work: Slantwise, an open-source ray-tracing library for lens design, first released in 2016 and still maintained by the same author.\n\nStatements on this item cite three sources: a 2019 interview in a trade newsletter, the programme of the 2024 Optics Forum, and the release notes of Slantwise 2.0. The item carries one alias, I. Vandermolen, and one sitelink, which points at an article about the library rather than about the person.\n\nTwo other items carry the label Ilse Vandermolen: a nineteenth-century still-life painter and a river barge. Neither is a person working in optics, and neither is linked from this item.",
+      "published_at": null,
+      "fetched_at": "2026-02-11T09:14:00+00:00"
+    },
+    {
+      "doc_id": "aa1a6af0bc8be061",
+      "source_kind": "search",
+      "url": "https://example.com/optics-forum-2024/programme",
+      "title": "Optics Forum 2024 - full programme",
+      "text": "Optics Forum 2024 - full programme\n\nThursday, 09:30. Opening remarks from the programme committee.\n\nThursday, 10:00. Ray tracing without tears, a ninety-minute workshop led by Ilse Vandermolen. Attendees should bring a laptop with a recent Python and the Slantwise library installed. The workshop covers lens stacks, tolerancing, and how to keep a simulation honest when the manufacturer's glass data is incomplete.\n\nThursday, 14:00. A panel on procurement for small optics shops, with three speakers from the buying side and one from a coatings vendor.\n\nFriday, 11:00. Lightning talks. The programme committee has not published the speaker list for this session.\n\nThe organisers do not print speaker affiliations in the programme, and photography in the workshop rooms is not permitted.",
+      "published_at": "2024-05-02",
+      "fetched_at": "2026-02-11T09:14:31+00:00"
+    },
+    {
+      "doc_id": "9cae010d812748ab",
+      "source_kind": "hn",
+      "url": "https://example.com/forum/threads/slantwise-2-0-release",
+      "title": "Slantwise 2.0 released",
+      "text": "Slantwise 2.0 released\n\nThe release notes are terse but the changelog is worth reading. The tolerancing rewrite alone is a year of work.\n\nReply: I met the maintainer at a workshop once. Very patient with beginners, and would not be drawn on what the day job was.\n\nReply: The maintainer handle on the tracker is ivandermolen, which is presumably a real name, but the profile has no location, no employer and no linked site, so I would not read anything into it.\n\nReply: Does anyone know whether the lens-stack API is stable now? We have been pinning 1.9 for two years because of the tolerancing change.\n\nReply: It is stable. The deprecation window was announced in the 1.9 notes and nothing has moved since.",
+      "published_at": "2023-11-08",
+      "fetched_at": "2026-02-11T09:15:02+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "aa3fcbf1ae789126",
+      "match": "yes",
+      "confidence": 0.93,
+      "evidence": "Employer: Belmarch Optics. Work location: Rotterdam.",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "aa1a6af0bc8be061",
+      "match": "unsure",
+      "confidence": 0.52,
+      "evidence": "a ninety-minute workshop led by Ilse Vandermolen",
+      "disambiguator": "role"
+    },
+    {
+      "doc_id": "9cae010d812748ab",
+      "match": "unsure",
+      "confidence": 0.44,
+      "evidence": "The maintainer handle on the tracker is ivandermolen",
+      "disambiguator": "handle"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "aa3fcbf1ae789126"
+    ],
+    "strong_keys_present": [
+      "wikidata_qid"
+    ],
+    "note": "The Wikidata item Q7314529 matches on name AND on a detail (employer Belmarch Optics, work location Rotterdam), so it is a strong key under DESIGN Decision 4 and resolution does not need a second independent attribute. Exactly one verdict is `yes`; the other two are `unsure` and must NOT be accepted, so accepted_doc_ids holds only the Wikidata document. A resolver that requires two `yes` verdicts unconditionally fails this case, which is the point: the strong key carries it alone. strong_keys must contain the key name `wikidata_qid`; the QID value is left to the implementation to extract from the url, title or text, all three of which carry Q7314529."
+  }
+}

@@ -1,0 +1,30 @@
+# FROZEN ruff configuration for the `lint_errors` metric.
+#
+# Why this file exists rather than reading the project's own [tool.ruff]:
+# `pyproject.toml` is not a protected path, so a worker could add a per-file-ignore or an
+# `exclude` entry and drive the lint metric to zero without touching a single frozen byte
+# and without the change showing up in any test diff. `ruff check --config <this file>`
+# uses this file INSTEAD of any discovered configuration, which closes that.
+#
+# Keep this in sync with the project's own [tool.ruff] (ticket T-0 owns that one). They
+# should agree: the ticket's `verify` runs the project config, the metric runs this one,
+# and a divergence means a lane can go green on its own gate while the scored number
+# disagrees.
+
+line-length = 100
+target-version = "py312"
+
+# No `exclude` and no `extend-exclude`: the metric passes explicit `src tests` paths, so
+# there is nothing to exclude, and an exclude list here would be the same hole this file
+# exists to close.
+
+[lint]
+select = ["E", "F", "I", "UP", "B"]
+
+# Deliberately empty. A per-file-ignores table here is the exact escape hatch the frozen
+# config is meant to deny; if a rule genuinely does not fit this codebase, the fix is to
+# drop it from `select` above at freeze time, in the open, not to carve out a path.
+[lint.per-file-ignores]
+
+[format]
+quote-style = "double"

@@ -1,0 +1,101 @@
+{
+  "case_id": "must-be-unresolved",
+  "person": {
+    "person_id": "wren-adeyemi",
+    "name": "Wren Adeyemi",
+    "details": [
+      "Head of platform at Tinbridge Analytics",
+      "Denver"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "5ce66306ae765811",
+      "source_kind": "search",
+      "url": "https://example.com/dataplatform-quarterly/2025/tinbridge-column-store",
+      "title": "Tinbridge moves its warehouse off the shelf",
+      "text": "Tinbridge moves its warehouse off the shelf\n\nTinbridge Analytics has replaced the columnar store underneath its reporting product with one it wrote itself, a decision the company concedes it would not repeat lightly.\n\nWe did not set out to write a storage engine, said Wren Adeyemi, head of platform at Tinbridge Analytics. We set out to make one query fast, and then the next one, and eighteen months later we owned a storage engine and all of its bugs.\n\nThe rewrite cut the median report load from nine seconds to under one, but the company spent most of a year on correctness work no customer will ever see. Adeyemi said the team's rule was that any bug found by a customer had to be reproduced in the test suite before it was fixed, which slowed the first six months considerably and made the last six months possible.\n\nTinbridge has not open-sourced the engine and says it has no plans to.",
+      "published_at": "2025-04-08",
+      "fetched_at": "2026-02-11T12:40:00+00:00"
+    },
+    {
+      "doc_id": "5ee93f92043e2ef3",
+      "source_kind": "hn",
+      "url": "https://example.com/forum/threads/column-stores-are-not-magic",
+      "title": "Column stores are not magic",
+      "text": "Column stores are not magic\n\nReply: There is a good post from a while back by a Wren Adeyemi about why the vectorised path stops helping once your predicate selectivity drops below a few percent. I cannot find the link now; I think the blog was taken down.\n\nReply: I remember that post. It was the first thing I read that treated the crossover point as a property of the data rather than a property of the engine.\n\nReply: Every vendor benchmark picks a selectivity that flatters their engine. That is the whole trick and it has been the whole trick for fifteen years.\n\nReply: Does anyone have an archived copy? Searching for the title returns three different people writing about the same idea in the same year.",
+      "published_at": "2025-04-10",
+      "fetched_at": "2026-02-11T12:40:22+00:00"
+    },
+    {
+      "doc_id": "ef31b7bf49177ec4",
+      "source_kind": "github",
+      "url": "https://example.com/github/users/wadeyemi",
+      "title": "wadeyemi - profile",
+      "text": "wadeyemi - profile\n\nName: not set. Company: not set. Location: not set. Website: not set. Joined 2014. Followers 118.\n\nPinned repositories: a column-layout benchmark harness last touched in 2021; a small library for reading a proprietary report format; and a fork of a query planner with two commits on top.\n\nRecent public activity: seven commits to the benchmark harness in the last year, all of them dependency bumps, and one issue comment on an unrelated repository.\n\nThe profile has no bio, no linked accounts and no organisation memberships that are publicly visible. Two other accounts on the site use variations of the same handle.",
+      "published_at": null,
+      "fetched_at": "2026-02-11T12:40:45+00:00"
+    },
+    {
+      "doc_id": "dc000fce35d550c5",
+      "source_kind": "search",
+      "url": "https://example.org/denver-data-meetup/2024/november",
+      "title": "Denver Data Meetup - November 2024",
+      "text": "Denver Data Meetup - November 2024\n\nTwenty-eight people came out on a cold Tuesday. Thanks to the office that lent us the room and to whoever brought the good coffee.\n\nLightning talks: a walk-through of a slow query that turned out to be a timezone bug; a short and unusually honest talk on what a data team stopped doing in order to ship anything; and a demo of a notebook tool nobody could get working on the projector.\n\nWren Adeyemi is listed on the sign-in sheet but did not speak. We do not collect affiliations on the sign-in sheet, and the organisers note that at least two regulars share that name, which has confused the mailing-list archive more than once.\n\nNext month we are back in the same room. Bring a laptop if you want to try the notebook tool.",
+      "published_at": "2024-11-19",
+      "fetched_at": "2026-02-11T12:41:08+00:00"
+    },
+    {
+      "doc_id": "89cb2fe715cbeb52",
+      "source_kind": "wayback",
+      "url": "https://example.org/wayback/2022/tinbridge-analytics/team",
+      "title": "Archived snapshot: Tinbridge Analytics - Team (2022)",
+      "text": "Archived snapshot: Tinbridge Analytics - Team (2022)\n\nThis snapshot of the team page lists eleven people by first name only, with photographs that did not survive the archive crawl and job titles that are mostly jokes.\n\nThe engineering section lists a Wren with no surname, described as working on the parts of the product that are only interesting when they break.\n\nThe page was replaced later that year by a version carrying no individual names at all, which the company said at the time was a deliberate choice.\n\nNothing in the snapshot gives a location, and the only contact address is a shared mailbox that no longer accepts mail.",
+      "published_at": "2022-07-05",
+      "fetched_at": "2026-02-11T12:41:30+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "5ce66306ae765811",
+      "match": "yes",
+      "confidence": 0.94,
+      "evidence": "said Wren Adeyemi, head of platform at Tinbridge Analytics",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "5ee93f92043e2ef3",
+      "match": "unsure",
+      "confidence": 0.72,
+      "evidence": "There is a good post from a while back by a Wren Adeyemi about why the vectorised path stops helping",
+      "disambiguator": "role"
+    },
+    {
+      "doc_id": "ef31b7bf49177ec4",
+      "match": "unsure",
+      "confidence": 0.7,
+      "evidence": "The profile has no bio, no linked accounts and no organisation memberships that are publicly visible.",
+      "disambiguator": "handle"
+    },
+    {
+      "doc_id": "dc000fce35d550c5",
+      "match": "unsure",
+      "confidence": 0.61,
+      "evidence": "the organisers note that at least two regulars share that name",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "89cb2fe715cbeb52",
+      "match": "unsure",
+      "confidence": 0.55,
+      "evidence": "The engineering section lists a Wren with no surname",
+      "disambiguator": "employer"
+    }
+  ],
+  "expect": {
+    "status": "unresolved",
+    "accepted_doc_ids": [],
+    "strong_keys_present": [],
+    "note": "R2 in one case: one strong identifier OR two independent corroborating attributes, otherwise refuse to guess. Here there is exactly ONE `yes` verdict and no strong key, so neither arm of DESIGN Decision 4 is satisfied and the answer is `unresolved` with accepted_doc_ids empty (T-2 acceptance 2) and no stored facts. The case is built to be tempting rather than obvious. First, the single `yes` is the most confident verdict in the case (0.94), so a resolver keyed on maximum or mean confidence resolves it. Second, the four `unsure` verdicts cite four different disambiguators (role, handle, city, employer) at 0.72, 0.70, 0.61 and 0.55, so a resolver that reads the second arm as 'two verdicts citing different disambiguators that are not `no`', or that promotes an `unsure` above some confidence threshold to a `yes`, resolves it -- lowering the bar by exactly one notch. Third, there is a github document whose handle and repository subject matter both fit, but its Name and Company fields are explicitly not set, so it fails Decision 4's requirement that a GitHub handle be confirmed by profile name AND company; an implementation that accepts a bare handle match takes a strong key it has not earned. strong_keys_present is empty: Resolution.strong_keys must contain nothing. The meetup document independently records that at least two regulars share the name, which is exactly the situation R2 exists for."
+  }
+}

@@ -1,0 +1,356 @@
+{
+  "person": {
+    "person_id": "runa-okonkwo",
+    "name": "Runa Okonkwo",
+    "details": [
+      "co-founder, Quarrystone Labs",
+      "Austin",
+      "runs the platform team"
+    ]
+  },
+  "resolution": {
+    "person_id": "runa-okonkwo",
+    "status": "resolved",
+    "strong_keys": {
+      "github": "runa-okonkwo",
+      "company_domain": "quarrystonelabs.example.com"
+    },
+    "accepted_doc_ids": [
+      "35b4e2600c8a6ea6",
+      "9011fe302dab10ba",
+      "4fa82f5ab51b8b02",
+      "5d952930adb32fe7",
+      "92b1d32390d8795f",
+      "64285175617dde55",
+      "d9902fb9cd225788",
+      "de86db5a839147e2",
+      "babaa3f0a06e9dfe",
+      "cf0c86082dfcc081",
+      "31173fc736e73821"
+    ],
+    "rejected": [
+      {
+        "doc_id": "e4ba96415536ce5f",
+        "match": "no",
+        "confidence": 0.95,
+        "evidence": "This Okonkwo has no connection to the software industry and has never lived in Texas",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.94
+  },
+  "facts": [
+    {
+      "fact_id": "runa-okonkwo-f01",
+      "text": "Co-founded Quarrystone Labs in 2016 and runs its platform team.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "35b4e2600c8a6ea6",
+        "url": "https://example.com/runa-okonkwo/about",
+        "source_kind": "self_page",
+        "quote": "I co-founded Quarrystone Labs in 2016 and I run the platform team there",
+        "published_at": "2026-01-05",
+        "retrieved_at": "2026-02-20T14:00:00+00:00",
+        "confidence": 0.93
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f02",
+      "text": "Maintains the Quarrystone command line tool and reviews most of the pull requests that land in it.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9011fe302dab10ba",
+        "url": "https://example.com/github/quarrystone/cli",
+        "source_kind": "github",
+        "quote": "Maintained by runa-okonkwo, who reviews most of the pull requests that land here",
+        "published_at": "2025-05-27",
+        "retrieved_at": "2026-02-20T14:07:00+00:00",
+        "confidence": 0.88
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f03",
+      "text": "Argues that developer-tools pricing should be published in full on a public page.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "4fa82f5ab51b8b02",
+        "url": "https://example.org/podcasts/harbor-lines/episode-88",
+        "source_kind": "podcast",
+        "quote": "developer-tools pricing should be published in full on a public page",
+        "published_at": "2025-10-14",
+        "retrieved_at": "2026-02-20T14:14:00+00:00",
+        "confidence": 0.91
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f04",
+      "text": "Keeps a running list of the worst error messages they have shipped.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "5d952930adb32fe7",
+        "url": "https://example.org/hn/item?id=41220885",
+        "source_kind": "hn",
+        "quote": "I keep a running list of the worst error messages I have shipped",
+        "published_at": "2025-08-19",
+        "retrieved_at": "2026-02-20T14:21:00+00:00",
+        "confidence": 0.78
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f05",
+      "text": "Opened the Quarrystone platform team roadmap to customers as a public page.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "92b1d32390d8795f",
+        "url": "https://example.org/tradepress/2026/quarrystone-platform-roadmap",
+        "source_kind": "search",
+        "quote": "Quarrystone Labs opened its platform team roadmap to customers this month",
+        "published_at": "2026-02-11",
+        "retrieved_at": "2026-02-20T14:28:00+00:00",
+        "confidence": 0.86
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f06",
+      "text": "Co-authored a workshop paper on latency budgets as a design constraint in developer tooling.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "64285175617dde55",
+        "url": "https://example.org/openalex/works/W2201194",
+        "source_kind": "openalex",
+        "quote": "We report on three years of instrumenting a command line tool used by roughly forty thousand engineers",
+        "published_at": "2025-11-04",
+        "retrieved_at": "2026-02-20T14:35:00+00:00",
+        "confidence": 0.84
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f07",
+      "text": "Described how the Quarrystone team writes error messages in pairs, one for the person and one for the log.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "5d952930adb32fe7",
+        "url": "https://example.org/hn/item?id=41220885",
+        "source_kind": "hn",
+        "quote": "runa_ok posted a short comment describing how the Quarrystone team writes error messages in pairs",
+        "published_at": "2025-08-19",
+        "retrieved_at": "2026-02-20T14:21:00+00:00",
+        "confidence": 0.82
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f08",
+      "text": "Published a migration guide for the Quarrystone command line tool 4.0 release.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9011fe302dab10ba",
+        "url": "https://example.com/github/quarrystone/cli",
+        "source_kind": "github",
+        "quote": "On 27 May 2025 the maintainers published a migration guide for the 4.0 release",
+        "published_at": "2025-05-27",
+        "retrieved_at": "2026-02-20T14:07:00+00:00",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f09",
+      "text": "Quarrystone Labs shipped a public status page in 2017, years before comparable companies did.",
+      "category": "non_obvious",
+      "provenance": {
+        "doc_id": "d9902fb9cd225788",
+        "url": "https://web.example.org/web/20170614/quarrystonelabs.example.com/status",
+        "source_kind": "wayback",
+        "quote": "Quarrystone Labs shipped a public status page in 2017, which at the time was unusual for a company of eleven people",
+        "published_at": "2017-06-14",
+        "retrieved_at": "2026-02-20T14:42:00+00:00",
+        "confidence": 0.87
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f10",
+      "text": "Quarrystone Labs took its first outside investment from Foundry Seed in 2019.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "35b4e2600c8a6ea6",
+        "url": "https://example.com/runa-okonkwo/about",
+        "source_kind": "self_page",
+        "quote": "Quarrystone Labs raised its first outside money from Foundry Seed in 2019",
+        "published_at": "2026-01-05",
+        "retrieved_at": "2026-02-20T14:00:00+00:00",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f11",
+      "text": "Has spent the last four years working on developer-tools go-to-market.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "92b1d32390d8795f",
+        "url": "https://example.org/tradepress/2026/quarrystone-platform-roadmap",
+        "source_kind": "search",
+        "quote": "Okonkwo has spent most of the last four years on developer-tools go-to-market",
+        "published_at": "2026-02-11",
+        "retrieved_at": "2026-02-20T14:28:00+00:00",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f12",
+      "text": "Okonkwo and their spouse Delia Moreno-Vance keep a workshop of half-finished furniture.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "de86db5a839147e2",
+        "url": "https://example.org/city-monthly/2025/the-platform-builder",
+        "source_kind": "search",
+        "quote": "Okonkwo and their spouse Delia Moreno-Vance keep a small workshop of half-finished furniture",
+        "published_at": "2025-03-08",
+        "retrieved_at": "2026-02-20T14:49:00+00:00",
+        "confidence": 0.9
+      },
+      "excluded": true,
+      "exclusion_reason": "family"
+    },
+    {
+      "fact_id": "runa-okonkwo-f13",
+      "text": "A renovation permit records a home address at 1442 Quarrystone Lane.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "babaa3f0a06e9dfe",
+        "url": "https://example.org/bouldin-ledger/2024/quarterly-renovation-permits",
+        "source_kind": "search",
+        "quote": "A permit for a rear workshop conversion was issued for 1442 Quarrystone Lane",
+        "published_at": "2024-10-02",
+        "retrieved_at": "2026-02-20T14:56:00+00:00",
+        "confidence": 0.88
+      },
+      "excluded": true,
+      "exclusion_reason": "home_or_property"
+    },
+    {
+      "fact_id": "runa-okonkwo-f14",
+      "text": "A harbour forum thread carries a low-confidence claim about ferry schedules that quotes Okonkwo.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "cf0c86082dfcc081",
+        "url": "https://example.org/harbor-notes/2025/ferry-timetable-thread",
+        "source_kind": "search",
+        "quote": "We have marked this entry as a low-confidence claim about ferry schedules",
+        "published_at": "2025-07-21",
+        "retrieved_at": "2026-02-20T15:03:00+00:00",
+        "confidence": 0.55
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f15",
+      "text": "Named on a contribution recorded in a filing submitted by the Central Texas Software Guild treasurer.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "31173fc736e73821",
+        "url": "https://example.org/fec/filings/C00-4471902",
+        "source_kind": "fec",
+        "quote": "It shows a contribution recorded in a filing submitted by the treasurer of the Central Texas Software Guild",
+        "published_at": "2022-01-31",
+        "retrieved_at": "2026-02-20T15:10:00+00:00",
+        "confidence": 0.92
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f16",
+      "text": "Has lived in Austin since 2014.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "35b4e2600c8a6ea6",
+        "url": "https://example.com/runa-okonkwo/about",
+        "source_kind": "self_page",
+        "quote": "I have lived in Austin since 2014",
+        "published_at": "2026-01-05",
+        "retrieved_at": "2026-02-20T14:00:00+00:00",
+        "confidence": 0.82
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "runa-okonkwo-f17",
+      "text": "Has run Quarrystone Labs as a remote-first company since its first week.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "35b4e2600c8a6ea6",
+        "url": "https://example.com/runa-okonkwo/about",
+        "source_kind": "self_page",
+        "quote": "The company has been remote-first from its first week",
+        "published_at": "2026-01-05",
+        "retrieved_at": "2026-02-20T14:00:00+00:00",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:austin",
+      "label": "Austin",
+      "type": "city",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "runa-okonkwo-f16"
+      ]
+    },
+    {
+      "hub_id": "topic:remote-work",
+      "label": "Remote work",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "runa-okonkwo-f17"
+      ]
+    },
+    {
+      "hub_id": "investor:foundry-seed-2019",
+      "label": "Foundry Seed 2019",
+      "type": "investor",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "runa-okonkwo-f10"
+      ]
+    },
+    {
+      "hub_id": "topic:developer-tools-gtm",
+      "label": "Developer-tools go-to-market",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "runa-okonkwo-f11"
+      ]
+    }
+  ],
+  "built_at": "2026-02-21T08:30:00+00:00",
+  "schema_version": 1
+}

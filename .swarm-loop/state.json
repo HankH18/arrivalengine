@@ -1,0 +1,23 @@
+{
+  "project": "arrival-engine",
+  "max_cycles": 34,
+  "audit_loops": 3,
+  "audit_loops_completed": 0,
+  "clean_audit": false,
+  "current_cycle": 0,
+  "autonomy": "approve-cycle-1",
+  "push_remote": "when-clean",
+  "stall_limit": 3,
+  "stall_count": 0,
+  "goal_stall_limit": 3,
+  "goal_stall_count": 0,
+  "head_history": [],
+  "worktree_root": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-worktrees",
+  "created": "2026-09-03T19:45:00",
+  "protected_paths": [
+    ".swarm-loop/acceptance",
+    ".swarm-loop/goals.json"
+  ],
+  "ticket_graph": "tickets.json",
+  "scratch_root": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-scratch"
+}

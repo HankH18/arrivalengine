@@ -1,0 +1,9 @@
+{
+  "doc_id": "5d952930adb32fe7",
+  "source_kind": "hn",
+  "url": "https://example.org/hn/item?id=41220885",
+  "title": "Ask HN: what is the worst error message you have shipped?",
+  "text": "Ask HN: what is the worst error message you have shipped?\n\nruna_ok: I keep a running list of the worst error messages I have shipped, and the current leader is the string operation completed printed after a failure, which survived in production for eleven months.\n\nThe thread is long. Several people argue that the fix is to make every error carry the file name; several others argue that the fix is to stop writing errors that one machine wrote for another machine.\n\nPosted 19 August 2025. On the same day runa_ok posted a short comment describing how the Quarrystone team writes error messages in pairs, one for the person and one for the log.",
+  "published_at": "2025-08-19",
+  "fetched_at": "2026-02-20T14:21:00+00:00"
+}

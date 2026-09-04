@@ -1,0 +1,642 @@
+# approved_by: <pending owner approval at the swarm-loop plan checkpoint>
+#
+# ============================================================================
+# THE FROZEN TASTE CORPUS  --  external ground truth for SPEC S3 / R11-R14
+# ============================================================================
+#
+# This file is the answer key for the "seen vs dossiered" line. It is owned by the
+# acceptance harness and by no ticket: T-4 is GRADED against it and cannot write it.
+# T-4 ships its own tests/fixtures/taste_cases.yaml; that one is the ticket's fixture
+# and the human-approval artifact. This one is the grader.
+#
+# ---------------------------------------------------------------------------
+# HOW TO READ A CASE
+# ---------------------------------------------------------------------------
+#   id          Stable, human-readable. Never renumber; the owner review notes at the
+#               bottom of this file cite these ids.
+#   text        The fact sentence exactly as an extractor would emit it (<= 200 chars,
+#               one sentence, matching contracts.Fact.text).
+#   category    The human annotator's label for the SUBJECT MATTER. One of the six R11
+#               categories -- home_or_property, family, health, legal, wealth, political
+#               -- or `keep` for a professional fact that must be displayed.
+#   expect      `exclude` or `keep`. This is the graded outcome: after apply_taste(),
+#               fact.excluded MUST equal (expect == "exclude").
+#   reason      The value contracts.ExclusionReason must carry when the case is excluded,
+#               i.e. what fact.exclusion_reason has to equal. `null` for every keep case,
+#               because a kept Fact has exclusion_reason None. NOTE this is the machine
+#               enum, not prose; the prose lives in `rationale` on every single case.
+#   rule_layer  Which stage of DESIGN Decision 6 must decide the case.
+#                 deterministic -- apply_taste_rules() alone must land on `expect`
+#                                  WITHOUT calling the LLM. The sentence carries an
+#                                  unambiguous surface marker (a street address, a named
+#                                  relative, a diagnosis, a court filing, a personal
+#                                  dollar figure, a campaign contribution -- or, on the
+#                                  keep side, a dominant professional marker such as
+#                                  "Series B", "keynoted", "amicus brief", "board of").
+#                 llm           -- the rule layer must mark the fact unsure and hand it
+#                                  to the LLM stage, because the ruling turns on WHO the
+#                                  sentence is about (person vs. company) or on HOW the
+#                                  information became public -- neither of which is
+#                                  visible to a keyword.
+#   llm_returns Present only when rule_layer is `llm`. The verdict the scripted LLM
+#               double returns for this case: a category slug, `keep`, or `unsure`.
+#               It exists so the frozen test can script the double deterministically
+#               instead of guessing.
+#   fail_closed Present, and true, only on the cases that prove DESIGN Decision 6's
+#               fail-closed rule: the LLM answers `unsure`, both stages are now spent,
+#               and the fact is excluded anyway with reason `low_confidence`.
+#   rationale   One sentence, in plain language, saying WHY this ruling is right. This
+#               is the field a human owner reads. Every case has one.
+#
+# ---------------------------------------------------------------------------
+# THE TWO PRINCIPLES THAT DECIDE EVERY HARD CASE HERE
+# ---------------------------------------------------------------------------
+#   1. SUBJECT. R11 protects the PERSON. A commercial event that happens to a company --
+#      a funding round, an acquisition, a trademark settlement -- is a business fact
+#      about an organisation, and a filter that kills it because it contains a money word
+#      or the word "settled" destroys the product while looking careful. Where the
+#      sentence is about the person's own money, own court record, own health, own home,
+#      own family or own politics, it is excluded no matter how professional the framing.
+#
+#   2. DISCLOSURE. Health and personal history are excluded when the person did not put
+#      them in public themselves. Something the person published, on the record, on a
+#      professional platform, framed as professional material, is theirs to have said --
+#      repeating it back is hospitality, not surveillance. Compare excl-health-05 (a
+#      colleague reveals someone's depression to a reporter -> exclude) with
+#      keep-tricky-burnout-podcast (the person tells the story themselves on their own
+#      podcast episode, as a management lesson -> keep). The axis is who disclosed it and
+#      where, never the topic word.
+#
+# Every person and company named below is fictional. No name from data/roster.yaml
+# appears here, and no real individual is described.
+# ============================================================================
+
+cases:
+
+  # =========================================================================
+  # R11 CATEGORY 1 -- HOME / PROPERTY ADDRESSES AND PROPERTY RECORDS
+  # =========================================================================
+
+  - id: excl-home-01
+    text: "Lives at 3120 Willowmere Court in the Bouldin Creek neighbourhood."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: deterministic
+    rationale: "A street address is the plainest form of the thing R11 forbids; a host reading a digest aloud never needs to know where someone sleeps."
+
+  - id: excl-home-02
+    text: "Calder County property records list them as the buyer of a bungalow on Pecan Hollow Road last spring."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: deterministic
+    rationale: "A property record is public but it is still a record of where the person lives, and R11 names property records explicitly."
+
+  - id: excl-home-03
+    text: "Their home above Ravensworth Hill has a detached studio out back where they take most of their calls."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: deterministic
+    rationale: "Describing the layout of someone's house is surveillance dressed up as colour, even though the sentence ends on something work-related."
+
+  - id: excl-home-04
+    text: "They finally closed on the place on Tannery Row after a nine-month escrow."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: llm
+    llm_returns: home_or_property
+    rationale: "Carries no address word at all -- closing and escrow only mean a home purchase if you understand the sentence, which is exactly why this one belongs to the LLM stage."
+
+  - id: excl-home-05
+    text: "A real-estate listing photograph shows the interior of their apartment on Marchbanks Street."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: deterministic
+    rationale: "The information being public on a listing site does not make it appropriate for a host to have; it is still where the person lives and what their rooms look like."
+
+  # =========================================================================
+  # R11 CATEGORY 2 -- FAMILY MEMBERS, RELATIONSHIPS, CHILDREN
+  # =========================================================================
+
+  - id: excl-family-01
+    text: "Their eldest daughter started at a bilingual primary school this autumn."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    rationale: "A child is never a conversation opener a club hands its staff, and R11 names children directly."
+
+  - id: excl-family-02
+    text: "They have been married to a landscape architect named Corin Aldaz since 2011."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    rationale: "A spouse is a relationship, not a professional fact, and naming the spouse pulls a second uninvolved person into the dossier."
+
+  - id: excl-family-03
+    text: "Their brother runs a bicycle repair shop two blocks from the office."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    rationale: "A sibling's business is a family fact wearing a professional coat; the subject of the sentence is a relative, not the member."
+
+  - id: excl-family-04
+    text: "They rearranged the whole product roadmap around a school pickup window."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: llm
+    llm_returns: family
+    rationale: "Never says child, spouse or family, yet its only content is that the person has a kid to collect -- a keyword layer cannot see that, so the LLM stage must."
+
+  - id: excl-family-05
+    text: "Their mother emigrated from Porto and lives with them now."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    rationale: "A parent's history and living arrangements are family information about two people, neither of whom asked to be in the digest."
+
+  # =========================================================================
+  # R11 CATEGORY 3 -- HEALTH / MEDICAL
+  # =========================================================================
+
+  - id: excl-health-01
+    text: "They were diagnosed with type 1 diabetes at nineteen."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    rationale: "A diagnosis is the core of the health exclusion; a host who mentions it has told the member the club keeps a medical file on them."
+
+  - id: excl-health-02
+    text: "They spent three weeks in hospital last winter recovering from pneumonia."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    rationale: "A hospitalisation is medical history, and the fact that it can be found in a news item does not make it the club's to repeat."
+
+  - id: excl-health-03
+    text: "They take a daily medication for a thyroid condition."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    rationale: "Medication is medical information about the person and has no professional reading whatsoever."
+
+  - id: excl-health-04
+    text: "They are back at full strength after taking most of last year off for something they have never talked about publicly."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: llm
+    llm_returns: health
+    rationale: "The sentence contains no medical word but says outright that the person kept the reason private, which is precisely the signal to withhold it."
+
+  - id: excl-health-05
+    text: "A colleague told a reporter they had been struggling with depression during the acquisition."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    rationale: "Someone else disclosed this, not the person -- the mirror image of keep-tricky-burnout-podcast, and the case that fixes the disclosure principle in place."
+
+  # =========================================================================
+  # R11 CATEGORY 4 -- LITIGATION, CRIMINAL, DIVORCE OR COURT RECORDS
+  # (about the PERSON -- see Principle 1; company legal events are keeps)
+  # =========================================================================
+
+  - id: excl-legal-01
+    text: "They were named as a defendant in a wrongful-termination suit filed by a former assistant."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    rationale: "The person is personally the defendant, which is exactly the litigation record R11 forbids surfacing."
+
+  - id: excl-legal-02
+    text: "Court records show a divorce filed in Calder County in 2019."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    rationale: "R11 names divorce and court records in the same breath; this is both."
+
+  - id: excl-legal-03
+    text: "They pleaded no contest to a misdemeanour charge in 2008."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    rationale: "A criminal record about the person is excluded regardless of age or severity; the club is not in the background-check business."
+
+  - id: excl-legal-04
+    text: "A petition for a protective order naming them was dismissed the following month."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    rationale: "A court filing about the person stays excluded even when it went nowhere -- an outcome does not convert a court record into a professional fact."
+
+  - id: excl-legal-05
+    text: "Their exit from Kettleback Systems was resolved through a confidential arbitration."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: llm
+    llm_returns: legal
+    rationale: "No courtroom word appears, but the person is personally the party to a legal proceeding that was deliberately kept confidential; distinguishing this from keep-tricky-trademark-settled is a judgment about who the party is, so it goes to the LLM."
+
+  # =========================================================================
+  # R11 CATEGORY 5 -- NET WORTH, COMPENSATION OR WEALTH FIGURES
+  # (about the PERSON -- company funding and deal facts are keeps)
+  # =========================================================================
+
+  - id: excl-wealth-01
+    text: "Their net worth is estimated at forty million dollars."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: deterministic
+    rationale: "Net worth is named in R11 and is the single fastest way to make a member feel priced rather than welcomed."
+
+  - id: excl-wealth-02
+    text: "Their base salary as chief executive was reported at nine hundred thousand dollars a year."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: deterministic
+    rationale: "Compensation is excluded even when a filing makes it public, because the figure attaches to the person rather than to the business."
+
+  - id: excl-wealth-03
+    text: "A filing shows they hold 1.8 million vested shares, worth roughly twenty-two million at the last mark."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: deterministic
+    rationale: "A personal equity position valued in dollars is a net-worth statement with extra steps."
+
+  - id: excl-wealth-04
+    text: "They walked away from the acquisition set up well enough that they will never need to work again."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: llm
+    llm_returns: wealth
+    rationale: "Carries no figure and no money keyword, yet its entire content is an assertion about how rich the person is -- the LLM stage has to catch what the pattern layer cannot."
+
+  - id: excl-wealth-05
+    text: "They personally cleared eleven million dollars when Marlingate was acquired."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: deterministic
+    rationale: "The word personally is what decides it: the acquisition is a company fact, but the proceeds to this individual are personal wealth."
+
+  # =========================================================================
+  # R11 CATEGORY 6 -- POLITICAL DONATIONS OR AFFILIATIONS
+  # =========================================================================
+
+  - id: excl-political-01
+    text: "Federal filings list a donation to a congressional campaign in 2022."
+    category: political
+    expect: exclude
+    reason: political
+    rule_layer: deterministic
+    rationale: "A campaign contribution is named in R11, and the source kind that carries it is never displayable either, so it fails twice over."
+
+  - id: excl-political-02
+    text: "They are a registered member of a political party and vote in its primaries."
+    category: political
+    expect: exclude
+    reason: political
+    rule_layer: deterministic
+    rationale: "Party affiliation is exactly the category R11 protects, and it is the one most likely to make a lobby conversation go wrong."
+
+  - id: excl-political-03
+    text: "They gave the maximum allowable contribution to a mayoral candidate last cycle."
+    category: political
+    expect: exclude
+    reason: political
+    rule_layer: deterministic
+    rationale: "A donation to a candidate is political whether the office is local or federal."
+
+  - id: excl-political-04
+    text: "They hosted a fundraiser at the office for a candidate they have backed for years."
+    category: political
+    expect: exclude
+    reason: political
+    rule_layer: llm
+    llm_returns: political
+    rationale: "A fundraiser can be charitable or political and the word alone does not say which; here the object is a candidate, which the LLM stage can read and a keyword cannot."
+
+  - id: excl-political-05
+    text: "A political action committee lists them among its individual donors."
+    category: political
+    expect: exclude
+    reason: political
+    rule_layer: deterministic
+    rationale: "Being named on a PAC donor list is a political affiliation and a donation at once."
+
+  # =========================================================================
+  # FAIL-CLOSED -- both stages spent, still unsure, therefore excluded
+  # (DESIGN Decision 6: anything unsure after rules and LLM is withheld)
+  # =========================================================================
+
+  - id: failclosed-01
+    text: "A profile notes they were away from the company for six months in 2021 and does not say why."
+    category: health
+    expect: exclude
+    reason: low_confidence
+    rule_layer: llm
+    llm_returns: unsure
+    fail_closed: true
+    rationale: "This is a sabbatical or it is a medical or family leave and nothing in the sentence decides which; when the system cannot tell, the right answer is to say nothing, so it is excluded with low_confidence rather than guessed into either bucket."
+
+  - id: failclosed-02
+    text: "Two people sharing their surname appear on Sable Creek Software's original incorporation filing."
+    category: family
+    expect: exclude
+    reason: low_confidence
+    rule_layer: llm
+    llm_returns: unsure
+    fail_closed: true
+    rationale: "A shared surname on a filing is either a family business or a coincidence, and a host repeating an unverified relative claim to a member is the worst possible outcome, so the unsure verdict must fail closed."
+
+  # =========================================================================
+  # MUST-KEEP -- THE TRICKY SEVEN
+  # Each is phrased so a naive keyword layer would exclude it. Getting these
+  # wrong is what a safe-looking filter that kills the product looks like.
+  # =========================================================================
+
+  - id: keep-tricky-series-b
+    text: "Their company Quarrystone Labs raised a Series B led by Ninebark Ventures."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A funding round is money that went into a company, not money the person owns; a filter that reads raised and Series B as personal wealth would delete most of what a founder actually wants to be asked about."
+
+  - id: keep-tricky-hospital-board
+    text: "They sit on the board of a children's hospital foundation."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "The words children and hospital are both here and neither is doing the work the naive reading assumes -- this is a publicly listed board seat and a civic cause, which is family information about nobody and medical information about nobody."
+
+  - id: keep-tricky-sxsw-keynote
+    text: "They keynoted SXSW on how small teams ship infrastructure."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A keynote is a person standing on a stage on purpose; if the system cannot surface that, it cannot surface anything."
+
+  - id: keep-tricky-amicus-brief
+    text: "They co-authored an amicus brief on the scope of software patents."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "This is professional legal writing the person published, not a court record about the person -- the litigation exclusion is about being a party, not about ever having written a legal document."
+
+  - id: keep-tricky-trademark-settled
+    text: "Their company settled a trademark dispute with a rival logistics startup last year."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: llm
+    llm_returns: keep
+    rationale: "RULED KEEP: the party to this dispute is the corporation, and a routine commercial trademark settlement reported in the trade press is a business event a founder discusses openly -- R11 shields the person's own litigation, criminal and court records, which this is not. Contrast excl-legal-05, where the person is personally the party and the proceeding was confidential."
+
+  - id: keep-tricky-patent-donation
+    text: "They donated a patent to the public domain rather than licensing it."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "The word donated is the whole trap -- R11 excludes political donations, and this is a gift of intellectual property, which is one of the most flattering professional facts a digest could carry."
+
+  - id: keep-tricky-burnout-podcast
+    text: "They spoke on a podcast about recovering from burnout and how it changed the way they run teams."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: llm
+    llm_returns: keep
+    rationale: "RULED KEEP: the person published this themselves, on a public professional platform, framed as a lesson about running teams -- the health exclusion protects what a person did not choose to make public, and a host asking about someone's own podcast episode is repeating them, not exposing them. Contrast excl-health-05, where a third party disclosed a mental-health struggle the person never discussed."
+
+  # =========================================================================
+  # MUST-KEEP -- ORDINARY PROFESSIONAL FACTS
+  # The material the digest exists to carry. Several are deliberate near-misses
+  # for the wealth, legal, political and home filters.
+  # =========================================================================
+
+  - id: keep-prof-current-work
+    text: "They lead the developer-platform team at Quarrystone Labs."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "Current role and employer is the first line of the digest and the least surprising keep in the corpus."
+
+  - id: keep-prof-open-source
+    text: "They maintain an open-source parser library with about nine thousand stars."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "Public code under their own name, with a number that is a popularity count rather than a dollar figure."
+
+  - id: keep-prof-newsletter
+    text: "They write a weekly newsletter about developer-tools go-to-market."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "Self-published professional writing is the cleanest source the system has and the easiest thing to ask someone about."
+
+  - id: keep-prof-conference-talk
+    text: "They gave a conference talk on migrating a monolith to event streams."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A recorded talk is public professional material the person chose to deliver."
+
+  - id: keep-prof-paper
+    text: "They co-authored a paper on graph sparsification with two collaborators at Ninebark Analytics."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "Authorship and named collaborators are professional affiliations, and collaborators are a legitimate fact category in the contract."
+
+  - id: keep-prof-board-seat
+    text: "They joined the board of Alderwick Instruments in March."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A corporate board seat is a professional affiliation and one of the strongest shared hubs the matcher has."
+
+  - id: keep-prof-angel-investing
+    text: "They were an early angel investor in three logistics startups."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "This describes what the person invests in, not what they are worth; a filter that treats the word investor as a wealth signal would blind the engine to half the room."
+
+  - id: keep-prof-990-officer
+    text: "A nonprofit's public 990 lists them as a board officer."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A 990 is a filing full of money, but the fact taken from it here is an unpaid civic role, which is an affiliation and carries no figure about the person."
+
+  - id: keep-prof-education
+    text: "They studied civil engineering before moving into software."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "Education is a professional background fact and a school hub the matcher can use, with nothing personal attached."
+
+  - id: keep-prof-podcast-host
+    text: "They host a monthly podcast interviewing supply-chain operators."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "Hosting a show is ongoing public professional output and an obvious invitation to ask about a recent guest."
+
+  - id: keep-prof-award
+    text: "They won an industry award for open-source infrastructure work."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A professional award is public recognition the person accepted in public."
+
+  - id: keep-prof-hiring
+    text: "They are hiring a first design engineer for the platform team."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A current hiring priority is recent professional activity and the most useful thing a host can raise with someone standing in a lobby."
+
+  - id: keep-prof-acquisition-terms
+    text: "Their startup was acquired by Copperhead Grid in a deal whose terms the companies did not disclose."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: llm
+    llm_returns: keep
+    rationale: "An acquisition is a company milestone, and this one names no figure at all; whether acquired and deal signal personal wealth depends on whose money is being described, which is the judgment the LLM stage exists for."
+
+  - id: keep-prof-second-office
+    text: "They opened the company's second office in Lisbon and spend part of the year there."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: llm
+    llm_returns: keep
+    rationale: "A company office and a work travel pattern are professional facts, but the sentence reads close enough to a residence that only a stage which understands the subject can tell an office from a home."
+
+  - id: keep-prof-city-council-testimony
+    text: "They testified at a city council hearing about permitting rules for small manufacturing."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: llm
+    llm_returns: keep
+    rationale: "Testifying on an industry regulation is on-the-record professional advocacy about their own business; R11 excludes political donations and party affiliation, and speaking at a public hearing is neither."
+
+  - id: keep-prof-standards-group
+    text: "They chair a working group drafting an interoperability standard for freight telemetry."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    rationale: "A named standards role is a professional affiliation and a rare shared hub, which is exactly the material the Meet section is built out of."
+
+# ============================================================================
+# OWNER REVIEW NOTES  --  read these four before approving
+# ============================================================================
+#
+# These are the cases where a thoughtful person could reasonably rule the other way.
+# Everything else in this file is, I believe, uncontroversial. If you disagree with any
+# of the four, change THIS file before the freeze -- after the freeze the
+# implementation is graded on agreeing with whatever is written here, and a wrong
+# ruling frozen now is a wrong goal for the whole run.
+#
+# 1. keep-tricky-burnout-podcast  --  "spoke on a podcast about recovering from burnout"
+#    RULED: KEEP.
+#    The case against: burnout is health, R11 says the system shall NEVER display
+#    health information, and "never" does not have a self-disclosure clause. A host who
+#    raises it in a lobby could land badly no matter who said it first.
+#    Why I ruled keep anyway: the person recorded a podcast episode about it themselves
+#    and framed it as a lesson about how they run teams. The exclusion exists so the club
+#    does not surface what a member did not choose to make public; treating a member's
+#    own published professional material as forbidden because of its topic is the
+#    "looks safe, kills the product" failure the brief warns about. The boundary is held
+#    in place by excl-health-05, its deliberate mirror: a colleague telling a reporter
+#    about someone's depression is excluded, same topic, opposite discloser.
+#    If you rule the other way: flip this case to expect exclude / reason health, and
+#    say so, because the two cases together are what teach the filter the principle.
+#
+# 2. keep-tricky-trademark-settled  --  "their company settled a trademark dispute"
+#    RULED: KEEP.
+#    The case against: "settled a dispute" is litigation-shaped language, and a host
+#    raising a lawsuit of any kind is a bad look for a hospitality product.
+#    Why I ruled keep: the party is the corporation. A trademark settlement between two
+#    companies is a commercial event covered in the trade press, of the same species as a
+#    funding round or an acquisition, and founders discuss it freely. R11's litigation
+#    exclusion protects the person's own court record. excl-legal-05 pins the other side
+#    of the line: when the PERSON is the party and the proceeding was confidential, it is
+#    excluded even though it too avoids the word lawsuit.
+#
+# 3. keep-prof-city-council-testimony  --  "testified at a city council hearing"
+#    RULED: KEEP.
+#    The case against: a city council is a political body, and R11 excludes political
+#    affiliations; someone could argue that appearing before one signals a politics.
+#    Why I ruled keep: R11's category is donations and affiliations -- who you give money
+#    to and what side you are on. Professional testimony about permitting rules for your
+#    own industry is advocacy on the public record about your business. If you would
+#    rather the system stay away from anything with a government body in it, flip this
+#    one; it is the case most sensitive to how conservatively you want the line drawn.
+#
+# 4. failclosed-01  --  "away from the company for six months in 2021 and does not say why"
+#    RULED: EXCLUDE, reason low_confidence, via the fail-closed path.
+#    The case against: a six-month gap is, on its face, a career fact, and excluding it
+#    looks like the filter being squeamish about a sabbatical.
+#    Why I ruled fail-closed: the sentence's only content is an unexplained absence. It
+#    is a sabbatical or it is a medical or family leave, and the system genuinely cannot
+#    tell. The fail-closed rule exists for exactly this shape, and its category is
+#    recorded as health only as the annotator's best guess -- the graded reason is
+#    low_confidence, because the classifier never established a category. Note that this
+#    means `reason` and `category` deliberately disagree on the two fail-closed cases and
+#    only on those two.
+#
+# Two smaller notes, not debatable rulings but worth knowing:
+#   * `reason` is the contracts.ExclusionReason enum (or null on keeps), so it can be
+#     compared to fact.exclusion_reason directly. The prose justification lives in
+#     `rationale`, which every case carries.
+#   * `rule_layer: deterministic` is a hard requirement on the rule layer, not a hint:
+#     it means apply_taste_rules alone must reach the expected outcome with no LLM call.
+#     Seven of the twelve deterministic keeps are near-misses for a keyword filter
+#     (Series B, children's hospital, amicus brief, donated a patent, angel investor,
+#     990 officer, keynote), so passing them requires real exemptions rather than a
+#     word list.
+# ============================================================================
