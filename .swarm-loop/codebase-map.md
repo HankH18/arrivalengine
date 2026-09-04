@@ -1,8 +1,14 @@
 # Arrival Engine — codebase map
 
-State: **T-0 (scaffold) + T-0b (remediation) built and merged. T-1…T-9 unbuilt** — their
-modules do not exist. Whole project suite: `248 passed`. Frozen acceptance: 120 collected,
-only the 12 `t0` guard tests green.
+State (re-measured 2026-09-04, cycle 5): **every ticket T-0 through T-9 is built and
+merged**, plus the bug tickets minted from them. Every module named below EXISTS — do not
+read this map as a plan for work still to do. Whole project suite: `1095 passed, 3 skipped`.
+Frozen acceptance: **122 collected, 100.0 pass rate, ruff 0**.
+
+> This header was stale for several cycles — it still said T-1…T-9 were unbuilt and the
+> suite was 248 — and a lane caught it reading the map as ground truth mid-task. If you are
+> a worker and this block disagrees with what `uv run pytest -q` prints in your worktree,
+> **believe your worktree** and say so in your report's SHARED-DOC-OBSERVATIONS.
 
 ## 1. What it is
 

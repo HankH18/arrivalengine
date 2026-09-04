@@ -1021,6 +1021,36 @@
       "defect": "A <title> anywhere in an XML document is routed to RawDoc.title and excluded from the extracted text, so an Atom/RSS feed whose entries carry only titles extracts to NOTHING and fetch_text returns None. This is correct for HTML \u2014 a quote must not be citable to a tab label \u2014 and arguably wrong for a feed, which is a source kind the connectors fetch. Pre-existing; behaviour unchanged by T-025/T-026, and it cost the FIX-HTTP lane one bad fixture before the cause was understood.",
       "finding_id": "4f813926a24cee88fb9325a99b761e20f637c7c4e87712a1ab44fbd20ee27b72",
       "reproduction": "Fetch an Atom feed whose entries have titles and no content bodies; fetch_text returns None. Reported by the FIX-HTTP lane, which declined to fix it as a taste call on another ticket's surface."
+    },
+    {
+      "id": "T-040",
+      "title": "The 'Why we know this' list renders one <li> per DOCUMENT but fills it with `source.quote` and `source.confidence`, which are per-FACT values on Provenance. On runa-okonkwo, document 35b4e2600c8a6ea6 backs four shown facts with four different quotes and confidences (0.93/0.90/0.82/0.80) competing for one slot, so three of them ALWAYS display a quote that does not support the claim above them \u2014 whichever rule picks the winner. T-033 removed the order-dependence (the winner is now the strongest evidence rather than whichever section reached the document first) but could not remove this. Meet rows are worst hit because the template renders no inline quote for them at all, only `why` + [n]. render.py:127 additionally presents `confidence` as a property of the document. NOT BLOCKED BY THE FREEZE \u2014 verified: the only frozen constraint is test_t7_digest.py:516 `len(source_ids) == len(set(source_ids))` (dedupe by doc_id), and NO frozen test asserts the source list shows exactly one quote. The fix keeps one <li> per document and lists inside it EVERY displayable quote from that document attributed to the fact it supports, with confidence moving alongside its own quote; render.py already receives `dossier`, so no contract change and no frozen amendment is needed.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/templates/digest.html"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/web/templates/digest.html:127",
+      "defect": "The 'Why we know this' list renders one <li> per DOCUMENT but fills it with `source.quote` and `source.confidence`, which are per-FACT values on Provenance. On runa-okonkwo, document 35b4e2600c8a6ea6 backs four shown facts with four different quotes and confidences (0.93/0.90/0.82/0.80) competing for one slot, so three of them ALWAYS display a quote that does not support the claim above them \u2014 whichever rule picks the winner. T-033 removed the order-dependence (the winner is now the strongest evidence rather than whichever section reached the document first) but could not remove this. Meet rows are worst hit because the template renders no inline quote for them at all, only `why` + [n]. render.py:127 additionally presents `confidence` as a property of the document. NOT BLOCKED BY THE FREEZE \u2014 verified: the only frozen constraint is test_t7_digest.py:516 `len(source_ids) == len(set(source_ids))` (dedupe by doc_id), and NO frozen test asserts the source list shows exactly one quote. The fix keeps one <li> per document and lists inside it EVERY displayable quote from that document attributed to the fact it supports, with confidence moving alongside its own quote; render.py already receives `dossier`, so no contract change and no frozen amendment is needed.",
+      "finding_id": "e95d827ff87810dde5b74cf56d725444246b84539b671ad3590225c13a1e9e03",
+      "reproduction": "Build the runa-okonkwo digest and read the Meet row 'Both backed by Foundry Seed 2019' against its citation [1], which displays a quote about co-founding Quarrystone Labs. Reported and traced end-to-end by the FIX-DIGEST lane, which could not fix it inside its own ownership."
+    },
+    {
+      "id": "T-041",
+      "title": "`_why` emits 'Both deep in Developer-tools go-to-market.' \u2014 the hub label is stored capitalised, so a capitalised compound lands mid-sentence on a line R18 exists to keep the host from stumbling over. Not a rule violation; it is the exact shape that forced the hyphenated-word calibration in T-029's verb detector, and a taste pass on spoken lines would want the label lower-cased inside a sentence.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/graph.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/graph.py:482",
+      "defect": "`_why` emits 'Both deep in Developer-tools go-to-market.' \u2014 the hub label is stored capitalised, so a capitalised compound lands mid-sentence on a line R18 exists to keep the host from stumbling over. Not a rule violation; it is the exact shape that forced the hyphenated-word calibration in T-029's verb detector, and a taste pass on spoken lines would want the label lower-cased inside a sentence.",
+      "finding_id": "2a3693ea3c7e627cceba1c78336ee52db3fa91d86eee66e79e07a94a78bd7def",
+      "reproduction": "Read graph.py:482 and the rendered Meet rows. Reported by the FIX-DIGEST lane."
     }
   ],
   "cut_list": [
