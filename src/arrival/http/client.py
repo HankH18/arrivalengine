@@ -453,6 +453,29 @@ def _extract(record: HttpRecord) -> tuple[str, str]:
     return clip(record.body.strip()), ""
 
 
+def _drop_surrogates(text: str) -> str:
+    """Remove lone surrogates, which are decode debris and cannot survive anywhere.
+
+    A lone surrogate has no UTF-8 form, so a string carrying one cannot be JSON-encoded,
+    cannot be written to the cache (`write_record` refuses it and the miss is tested), and
+    cannot be rendered — starlette encodes strict. `RawDoc.text` is a constrained string as
+    of T-054, so pydantic refuses it outright and `fetch_text` raised a ValidationError at
+    the caller connectors actually use.
+
+    Dropping the whole document was the alternative and it is worse: the surrogate is one
+    character of decode debris in an otherwise good page, and T-044's encoding work is
+    built on exactly this judgement — a text document read imperfectly is still a text
+    document. So the debris goes and the page survives, lossily and visibly.
+
+    `errors="surrogatepass"` is deliberately NOT used here, unlike `util.doc_id`: there the
+    goal is a stable key for a url we must not lose, here the goal is a string that every
+    downstream consumer can actually encode.
+    """
+    if not text:
+        return text
+    return text.encode("utf-8", errors="ignore").decode("utf-8", errors="ignore")
+
+
 async def fetch_text(
     url: str,
     *,
@@ -481,6 +504,7 @@ async def fetch_text(
         return None
 
     text, extracted_title = _extract(record)
+    text, extracted_title = _drop_surrogates(text), _drop_surrogates(extracted_title)
     if not text.strip():
         log.warning("no extractable text at %s", record.url)
         return None

@@ -86,7 +86,15 @@ def make_dossier(person_id: str, name: str, hubs: list[Hub]) -> Dossier:
 
 
 def make_hub(hub_id: str, label: str, hub_type: str, recency: float = 1.0) -> Hub:
-    return Hub(hub_id=hub_id, label=label, type=hub_type, recency=recency)
+    """Build a Hub, BYPASSING validation, so a test can inject an illegal value.
+
+    `model_construct`, not `Hub(...)`: T-054 put `ge=0, le=1` on `Hub.recency`, and
+    `test_score_stays_in_range_when_a_hub_carries_an_out_of_range_recency` exists precisely
+    to prove `graph` clamps a recency the contract now refuses. Constructing normally would
+    make that test fail at its own setup and prove nothing about the clamp. Every caller
+    passing a legal recency is unaffected.
+    """
+    return Hub.model_construct(hub_id=hub_id, label=label, type=hub_type, recency=recency)
 
 
 def filler(count: int, *, prefix: str = "f") -> list[Dossier]:

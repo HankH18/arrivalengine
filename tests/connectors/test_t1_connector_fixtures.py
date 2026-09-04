@@ -45,6 +45,11 @@ S3 = (
 
 COOKIE_BANNER = "We use cookies to improve your experience."
 
+#: PROVIDENCE RIVER CONSERVANCY, whose 990 the propublica recording carries deliberately —
+#: its own `note` says the row "is what a CITY-name query returns, and the subject is NOT on
+#: its board". Spelled once here because two checks below now depend on it (T-062).
+CONSERVANCY_EIN = "50912344"
+
 
 def _connector(kind, settings):
     found = [c for c in all_connectors(settings) if getattr(c, "kind", None) == kind]
@@ -313,13 +318,52 @@ def test_propublica_says_plainly_whether_the_member_is_on_the_board(monkeypatch,
         "not be carried into a document a host reads"
     )
 
-    # The other org came back only because the member's CITY was used as a search term.
-    # Recorded deliberately: this is what a city-name query returns, and the member is not
-    # on its board. See BUGS-OBSERVED -- the connector emits it anyway.
-    conservancy = next((d for d in docs if d.url.endswith("/50912344")), None)
-    if conservancy is not None:
-        assert "Marisol Quennebeck is listed as" not in conservancy.text, (
-            "an organisation the member has no role in must never claim that they do"
+    # --- T-062: this block used to be `if conservancy is not None:` and NEVER RAN. ------
+    #
+    # WHY THE OLD ASSERTION WAS WRONG INDEPENDENTLY OF ANY CHANGE MADE FOR T-062. It was
+    # written in fc4d343, when `organisation_queries` still sent every affiliation term and
+    # so asked `q=Providence`; the recording answers that query and the 990 behind it, the
+    # branch executed, and it guarded the weaker rule "if we emit the conservancy at all, it
+    # must at least not claim she has a role there". Thirty minutes later 36f89e3
+    # ("fix(T-018): a charity near the member is not a charity she is part of") added
+    # `_is_an_address` to that function, and propublica.py's own docstring replaced the rule
+    # the branch guarded with a STRONGER one: "She is emitted only if the 990 names her. No
+    # match on the officer list means no document -- NOT a document that merely declines to
+    # claim she is on the board." So the branch encodes a contract the product deliberately
+    # no longer offers, and since T-018 it also cannot execute: measured at that commit's
+    # descendant, `organisation_queries` returns ['Marisol Quennebeck', 'Thornfield Loom'],
+    # the connector makes 3 of the recording's 5 requests, and `conservancy` is None. A
+    # correct product change orphaned the recording and silently disabled the assertion.
+    #
+    # It is replaced by the current, stronger rule, asserted unconditionally, plus a
+    # positive control so that "absent" is a decision the CONNECTOR made and not a property
+    # of a fixture that stopped offering the row.
+    recording = load("propublica")
+    offered = [
+        response["url"]
+        for response in recording.responses
+        if CONSERVANCY_EIN in response.get("url", "")
+    ]
+    assert offered, (
+        f"the recording no longer carries the ein {CONSERVANCY_EIN} row (PROVIDENCE RIVER "
+        "CONSERVANCY, per its own note), so the absence asserted below would be a property "
+        "of the fixture rather than of the connector"
+    )
+
+    conservancy = next((d for d in docs if d.url.endswith(f"/{CONSERVANCY_EIN}")), None)
+    assert conservancy is None, (
+        "the connector emitted a document for an organisation whose 990 roster does not "
+        "name the member. propublica.py's rule is 'no match on the officer list means no "
+        f"document': {conservancy.text[:200] if conservancy else ''!r}"
+    )
+
+    # ...and the clause the dead branch was guarding, stated over every document that IS
+    # emitted, so it executes whatever the connector decides to ask for. `archive` above is
+    # the positive control that `docs` is not empty.
+    for doc in docs:
+        assert "Marisol Quennebeck" in doc.text, (
+            f"{doc.url} carries no mention of the member, so it is an organisation that "
+            "merely exists near her being presented as a document about her"
         )
 
 

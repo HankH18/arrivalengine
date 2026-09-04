@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from arrival.config import Settings, get_settings
+from arrival.config import ENV_FILE, Settings, SettingsError, env_file_path, get_settings
 
 pytestmark = pytest.mark.ticket("T-0")
 
@@ -105,3 +109,169 @@ def test_unknown_env_vars_are_ignored(clean_env, monkeypatch: pytest.MonkeyPatch
     """A stray var in the operator's shell must not crash boot."""
     monkeypatch.setenv("SOME_UNRELATED_THING", "x")
     assert Settings(_env_file=None) is not None
+
+
+# --- T-065: a `.env` that cannot be decoded ---------------------------------
+#
+# THE DEFECT, measured before the fix.  `env_file_encoding="utf-8"` is STRICT, so a `.env`
+# holding one latin-1 byte -- an accented character in a contact address is enough -- made
+# `Settings()` raise a bare `UnicodeDecodeError` four frames inside `python-dotenv`,
+# naming no path, with no handler anywhere in this process:
+#
+#     File ".../dotenv/parser.py", line 73, in __init__
+#       self.string = stream.read().removeprefix("﻿")
+#     UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in position 17
+#
+# `arrival.web.app` ends with `app = create_app()`, so config is read at IMPORT and this
+# is the FIRST thing the process does. `uvicorn arrival.web.app:app` died with that
+# traceback on a host where the traceback is the only diagnosis anyone gets.
+#
+# These grade against the CPython exception hierarchy and pydantic's own error type --
+# never against anything in `arrival.config`.
+
+BAD_ENV_BYTES = "CONTACT_EMAIL=caf\xe9@example.com\n".encode("latin-1")
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture
+def in_tmp_cwd(clean_env, tmp_path, monkeypatch: pytest.MonkeyPatch):
+    """A working directory of our own, because `env_file=".env"` resolves against the CWD.
+
+    That relativity is the point of the ticket and not an accident: it is why the error
+    has to name an absolute path.
+    """
+    monkeypatch.chdir(tmp_path)
+    get_settings.cache_clear()
+    yield tmp_path
+    get_settings.cache_clear()
+
+
+def test_a_unicode_decode_error_is_a_value_error_and_not_an_os_error():
+    """The answer key for the whole ticket, straight out of CPython.
+
+    `except OSError` -- the shape every other file-reading guard in this repo started
+    with -- cannot catch this, and `except ValueError` can. Nothing about `arrival` is
+    consulted here; if this ever fails, the language changed.
+    """
+    assert issubclass(UnicodeDecodeError, ValueError)
+    assert not issubclass(UnicodeDecodeError, OSError)
+
+
+def test_settings_error_stays_catchable_as_a_value_error():
+    """A CROSS-MODULE CONTRACT, and the reason this assertion exists rather than being
+    obvious: `research.py`'s CLI turns an unreadable `.env` into exit 2 with
+    `except ValueError` around `get_settings()`, because the error it was written against
+    was `UnicodeDecodeError`. Naming the error must NARROW that type, never leave it.
+
+    Making `SettingsError` a `RuntimeError` -- the shape `DossierLoadError` uses -- was
+    tried and silently downgraded that CLI to exit 1 with a traceback at the operator.
+    `tests/research/test_t059_roster_encoding.py` catches it; this says why.
+    """
+    assert issubclass(SettingsError, ValueError)
+    assert not issubclass(SettingsError, UnicodeDecodeError), (
+        "a caller must be able to tell 'we diagnosed this' from 'the codec did'"
+    )
+
+
+def test_a_non_utf8_env_file_raises_a_named_error_naming_the_path(in_tmp_cwd):
+    """The headline. What comes out must say WHICH file and be catchable by name."""
+    (in_tmp_cwd / ENV_FILE).write_bytes(BAD_ENV_BYTES)
+
+    with pytest.raises(SettingsError) as excinfo:
+        get_settings()
+
+    message = str(excinfo.value)
+    assert str(in_tmp_cwd / ENV_FILE) in message, (
+        "the error does not name the file that could not be read, which is the entire "
+        f"reason it exists -- `.env` is CWD-relative, so the path is not guessable: {message}"
+    )
+    assert isinstance(excinfo.value.__cause__, UnicodeDecodeError), (
+        "the original decode error must survive as __cause__; a diagnosis that discards "
+        "the byte offset is worse than the traceback it replaced"
+    )
+    assert not isinstance(excinfo.value, UnicodeDecodeError), (
+        "still the raw dotenv error, merely re-raised"
+    )
+
+
+def test_the_path_the_error_names_is_absolute(in_tmp_cwd):
+    """A relative `.env` in a traceback tells an operator nothing about which one it was."""
+    (in_tmp_cwd / ENV_FILE).write_bytes(BAD_ENV_BYTES)
+
+    with pytest.raises(SettingsError) as excinfo:
+        get_settings()
+
+    named = Path(str(excinfo.value).split(":", 1)[0])
+    assert named.is_absolute(), f"the error named a relative path: {named}"
+    assert env_file_path().is_absolute()
+
+
+def test_a_readable_env_file_is_still_read(in_tmp_cwd):
+    """POSITIVE CONTROL. A guard that made every `.env` unreadable would pass the tests
+    above and break the product; this is the assertion that says the door still opens."""
+    (in_tmp_cwd / ENV_FILE).write_text(
+        "CONTACT_EMAIL=host@arenahall.example\n", encoding="utf-8"
+    )
+
+    settings = get_settings()
+
+    assert settings.contact_email == "host@arenahall.example"
+    assert settings.user_agent == "ArrivalEngine/0.1 (+host@arenahall.example)"
+
+
+def test_no_env_file_at_all_is_not_an_error(in_tmp_cwd):
+    """The ordinary deployment: no `.env`, everything from the real environment."""
+    assert not (in_tmp_cwd / ENV_FILE).exists()
+    assert get_settings().contact_email == "arrival-engine@example.com"
+
+
+def test_a_bad_field_value_still_raises_pydantic_s_own_error(in_tmp_cwd):
+    """`ValidationError` subclasses `ValueError`, so a careless `except ValueError` would
+    have swallowed it into a vaguer message. It already names the field and the value,
+    which is strictly better than anything this module could say about it."""
+    (in_tmp_cwd / ENV_FILE).write_text("DEBUG_VIEWS=notabool\n", encoding="utf-8")
+
+    with pytest.raises(ValidationError) as excinfo:
+        get_settings()
+
+    assert "debug_views" in str(excinfo.value).lower()
+    assert not isinstance(excinfo.value, SettingsError)
+
+
+def test_booting_the_web_app_over_a_bad_env_gives_the_diagnosis_not_a_decode_error(
+    tmp_path,
+):
+    """The blast radius, out of process because `arrival.config` is already imported here.
+
+    This is literally what `uvicorn arrival.web.app:app` does on Render: `app =
+    create_app()` at module scope reads config at import. Before the fix the terminating
+    line was `UnicodeDecodeError` out of `dotenv/parser.py`. The import failing at all is
+    correct -- an unreadable config is not something to boot past -- and is not what this
+    asserts; WHICH exception reaches the operator is.
+    """
+    (tmp_path / ENV_FILE).write_bytes(BAD_ENV_BYTES)
+
+    env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
+    env.pop("PYTHONPATH", None)
+    result = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        [
+            sys.executable,
+            "-c",
+            f"import sys; sys.path.insert(0, {str(ROOT / 'src')!r}); import arrival.web.app",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=tmp_path,
+        timeout=120,
+    )
+
+    assert result.returncode != 0, f"a `.env` that cannot be read must not boot:\n{result.stdout}"
+    stderr = result.stderr
+    assert "SettingsError" in stderr, f"boot failed without the diagnosis:\n{stderr}"
+    assert str(tmp_path / ENV_FILE) in stderr, f"the failure did not name the file:\n{stderr}"
+    final_line = stderr.strip().splitlines()[-1]
+    assert not final_line.startswith("UnicodeDecodeError"), (
+        f"the raw dotenv error is still what reaches the operator:\n{stderr}"
+    )

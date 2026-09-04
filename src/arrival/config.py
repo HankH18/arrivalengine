@@ -13,9 +13,51 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-__all__ = ["Settings", "get_settings"]
+__all__ = ["ENV_FILE", "Settings", "SettingsError", "env_file_path", "get_settings"]
+
+#: The environment file every `Settings()` reads, RELATIVE to the process working
+#: directory — which is the opposite of `dossier_dir`'s anchoring below, deliberately and
+#: with a cost worth knowing about.
+#:
+#: `dossier_dir` resolves against `__file__` (see `_repo_root`) so the app finds the same
+#: committed corpus whatever directory it was started from. `.env` cannot work that way:
+#: an operator's secrets are a property of the DEPLOYMENT, not of the checkout, and
+#: `pydantic-settings` looks a relative `env_file` up from the CWD. So `uvicorn
+#: arrival.web.app:app` started from a subdirectory silently reads NO `.env` while the
+#: same command from the repo root reads one, and neither says so.
+#:
+#: That asymmetry is why `SettingsError` names an absolute path: "could not be read" is
+#: useless without saying which file, precisely because which file is not obvious.
+ENV_FILE = ".env"
+
+
+def env_file_path() -> Path:
+    """The absolute path `ENV_FILE` resolves to for THIS process, right now.
+
+    Computed at call time rather than cached: it is a function of the working directory,
+    which a process may change. Used only to name the file in a `SettingsError`, so it is
+    correct for a file that does not exist.
+    """
+    return Path.cwd() / ENV_FILE
+
+
+class SettingsError(ValueError):
+    """The environment file exists but cannot be read. The message names the path.
+
+    A `ValueError` ON PURPOSE, and not the `RuntimeError` that `web/store.py`'s
+    `DossierLoadError` uses. The exception this replaces is `UnicodeDecodeError`, which
+    IS a `ValueError`, and callers outside this module already guard on that fact --
+    `research.py`'s CLI wraps `get_settings()` in `except ValueError` to turn an
+    unreadable `.env` into exit 2 with a sentence instead of a traceback. Subclassing
+    `ValueError` therefore NARROWS the raised type (raw decode error -> named error
+    carrying the path) without changing which handlers catch it, so every existing guard
+    keeps working and nothing outside this file has to be touched. Widening it to
+    `RuntimeError` was tried first and silently downgraded that CLI to exit 1; the
+    measured failure was `tests/research/test_t059_roster_encoding.py`.
+    """
 
 
 def _repo_root() -> Path:
@@ -38,7 +80,7 @@ class Settings(BaseSettings):
     """Runtime configuration. Secrets default to None so the app boots without them."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=ENV_FILE,  # relative to the CWD on purpose; see ENV_FILE above
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
@@ -94,5 +136,37 @@ def get_settings() -> Settings:
 
     Cached, so `.env` is read once. Tests that change the environment must call
     `get_settings.cache_clear()` first.
+
+    Raises `SettingsError`, naming the file, when `.env` cannot be read (T-065).
+
+    WHY THIS GUARD EXISTS, and why HERE.  `env_file_encoding="utf-8"` is strict, so a
+    `.env` saved as latin-1 — one accented character in a contact address is enough —
+    makes `python-dotenv` raise a bare `UnicodeDecodeError` from four frames inside a
+    third-party package, naming no path. Nothing in this process caught it, and this is
+    the FIRST thing the process does: `arrival.web.app` ends with `app = create_app()`,
+    so config is read at IMPORT. `uvicorn arrival.web.app:app` therefore died with a raw
+    dotenv traceback rather than a named error saying which file, on a host where the
+    only diagnosis anyone gets is that traceback. Reproduced by execution.
+
+    This is the same ruling `web/store.py` already applies to a dossier
+    (`DossierLoadError`) and `research.py` to a roster: a file we cannot read fails
+    loudly, with its path. What changes is only WHICH exception comes out.
+
+    `get_settings` rather than `Settings.__init__`: the direct constructor is how tests
+    and callers build a settings object with explicit values (`Settings(_env_file=None)`),
+    and it should keep pydantic's own errors. This is the process-wide entry point, and
+    the one an operator's traceback comes out of.
     """
-    return Settings()
+    try:
+        return Settings()
+    except ValidationError:
+        # Deliberately NOT wrapped, and it must be caught first because pydantic's
+        # ValidationError subclasses ValueError. It already IS the diagnosis this guard
+        # exists to supply — it names the offending field and what was wrong with its
+        # value — so wrapping it would replace a good message with a vaguer one.
+        raise
+    except (OSError, ValueError) as exc:
+        # ValueError is the encoding failure: UnicodeDecodeError subclasses UnicodeError
+        # subclasses ValueError, and is NOT an OSError. OSError is the I/O failure — a
+        # `.env` that is a directory, or one whose permissions deny a read.
+        raise SettingsError(f"{env_file_path()}: could not be read ({exc})") from exc
