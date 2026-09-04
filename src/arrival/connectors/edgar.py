@@ -22,6 +22,7 @@ from __future__ import annotations
 from typing import Any
 
 from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import identifies
 from arrival.contracts import PersonRef, RawDoc
 
 __all__ = ["EdgarConnector"]
@@ -63,11 +64,48 @@ class EdgarConnector(BaseConnector):
         hits = self._hits(payload)
 
         docs: list[RawDoc] = []
-        for hit in hits[:budget]:
+        for hit in hits:
+            if len(docs) >= budget:
+                break
+            if not self._names_the_person(person, hit):
+                continue
             doc = self._document(hit)
             if doc is not None:
                 docs.append(doc)
         return docs
+
+    @staticmethod
+    def _names_the_person(person: PersonRef, hit: dict[str, Any]) -> bool:
+        """Is this filing about the member, or merely returned by a search for her name?
+
+        `display_names` is EDGAR's own answer to "who is this filing about" — the filer
+        and every reporting person on it — and this connector was already rendering it
+        into the document title and never once comparing it to `details`. Two ways that
+        goes wrong, and the recorded fixture contains one of each:
+
+        * A **company-only filing**: `display_names == ["Thornfield Loom Inc. (CIK ...)"]`,
+          no person on it at all, emitted as a document *about a person* and cited to
+          sec.gov. The corpus has shipped that document since the connector was written.
+        * A **same-name stranger's** Form 4. EDGAR full-text search is not fielded, so the
+          quoted phrase in `q` narrows the words, never the person; every Marisol
+          Quennebeck who has ever been an officer of anything comes back together.
+
+        The affiliation is checked HERE rather than added to `q` on purpose. Narrowing the
+        remote query would drop a filing that names her without naming the company —
+        exactly the "not on the first page" filing this connector exists for — and EDGAR's
+        ranking is not observable from here, while `display_names` is.
+        """
+        source = hit.get("_source")
+        source = source if isinstance(source, dict) else hit
+        names = source.get("display_names")
+        names = [str(name) for name in names] if isinstance(names, list) else []
+        description = str(source.get("file_description") or "")
+        return identifies(
+            person,
+            names=names,
+            prose=[description],
+            context=[*names, description],
+        )
 
     @staticmethod
     def _hits(payload: Any) -> list[dict[str, Any]]:

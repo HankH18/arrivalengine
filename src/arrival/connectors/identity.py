@@ -37,11 +37,12 @@ import re
 from collections.abc import Callable, Iterable, Sequence
 from urllib.parse import urlsplit
 
-from arrival.connectors.base import affiliations, hosts_in
+from arrival.connectors.base import affiliations, hosts_in, urls_in
 from arrival.contracts import PersonRef
 from arrival.util import normalize_ws
 
 __all__ = [
+    "SHARED_HOSTS",
     "US_STATES",
     "best_affiliation",
     "carries_name",
@@ -50,6 +51,7 @@ __all__ = [
     "corroboration",
     "identifies",
     "is_an_address",
+    "is_shared_host",
     "mentions_name",
     "on_own_host",
     "own_hosts",
@@ -78,6 +80,24 @@ US_STATES = frozenset(
         "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms",
         "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "ny", "oh", "ok", "or", "pa",
         "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy",
+    }
+)
+
+#: Domains where a URL names a PAGE and never a person. A roster line pointing at one of
+#: these is a link to one profile among millions on the same host, so anything that keys
+#: on the HOST alone — a wayback `{host}/*` enumeration, an "is this their own site?"
+#: check — silently widens from the member to the whole platform. Deliberately a small,
+#: legible list of the platforms a club roster actually contains rather than an attempt at
+#: a public-suffix database: an unlisted platform costs one over-broad query, and the path
+#: check below still applies wherever the roster gave a path.
+SHARED_HOSTS = frozenset(
+    {
+        "about.me", "angel.co", "behance.net", "blogspot.com", "bsky.app",
+        "crunchbase.com", "dribbble.com", "facebook.com", "gitlab.com", "github.com",
+        "github.io", "instagram.com", "linkedin.com", "medium.com", "mastodon.social",
+        "notion.site", "patreon.com", "reddit.com", "sites.google.com", "soundcloud.com",
+        "stackoverflow.com", "substack.com", "threads.net", "tumblr.com", "twitter.com",
+        "vimeo.com", "wordpress.com", "x.com", "youtube.com",
     }
 )
 
@@ -169,16 +189,52 @@ def own_hosts(person: PersonRef) -> list[str]:
     return hosts_in(person.details)
 
 
+def is_shared_host(host: str) -> bool:
+    """True when this domain is a PLATFORM many people publish under, not one person's.
+
+    `thornfieldloom.example.com` belongs to one member; `linkedin.com` belongs to nine
+    hundred million.  A roster line reading `https://www.linkedin.com/in/marisol-...`
+    identifies a PAGE, and treating it as identifying a HOST turns "her own site" into
+    "everybody's site" — which is how a wayback query for `{host}/*` enumerates strangers'
+    captures, and how any host check accepts a stranger's profile on the same platform.
+    """
+    host = (host or "").lower().rstrip(".").removeprefix("www.")
+    if not host:
+        return False
+    return any(host == shared or host.endswith(f".{shared}") for shared in SHARED_HOSTS)
+
+
 def on_own_host(url: str, person: PersonRef) -> bool:
-    """True when `url` sits on a domain the roster supplied for this person.
+    """True when `url` sits inside the WEB SPACE the roster gave for this person.
 
     The strongest identifier this system has short of a QID, and the only one that needs
-    no corroboration: the club wrote the domain down next to the member's name.
+    no corroboration: the club wrote the address down next to the member's name.
+
+    "Web space", not "domain", is the whole subtlety.  On a domain the member owns, the
+    roster's URL vouches for every path.  On a shared platform it vouches for exactly the
+    path it names and its descendants — `linkedin.com/in/marisol-quennebeck/*` is hers,
+    `linkedin.com/in/anybody-else` is a stranger, and they differ only below the host.
     """
     if not url:
         return False
-    host = (urlsplit(url).hostname or "").lower()
-    return bool(host) and host in own_hosts(person)
+    target = urlsplit(url)
+    host = (target.hostname or "").lower()
+    if not host:
+        return False
+    for declared in urls_in(person.details):
+        source = urlsplit(declared)
+        if (source.hostname or "").lower() != host:
+            continue
+        if not is_shared_host(host):
+            return True
+        prefix = source.path.rstrip("/")
+        if not prefix:
+            # The roster named a shared platform's ROOT and nothing more. That names no
+            # one, so it vouches for no one.
+            continue
+        if target.path == prefix or target.path.startswith(prefix + "/"):
+            return True
+    return False
 
 
 def corroboration(haystack: str, terms: Sequence[str]) -> int:

@@ -41,7 +41,7 @@ from __future__ import annotations
 from typing import Any
 
 from arrival.connectors.base import BaseConnector, affiliations, text_block
-from arrival.connectors.identity import US_STATES, carries_name, is_an_address
+from arrival.connectors.identity import US_STATES, carries_name, identifies, is_an_address
 from arrival.contracts import PersonRef, RawDoc
 from arrival.util import normalize_ws
 
@@ -154,6 +154,19 @@ class ProPublicaConnector(BaseConnector):
             return None
 
         place = ", ".join(part for part in (row.get("city"), row.get("state")) if part)
+
+        # A 990 roster line naming her is necessary and NOT sufficient. "Marisol Quennebeck,
+        # Chair" appears on the boards of every organisation any Marisol Quennebeck has ever
+        # sat on, and this connector reaches those boards by searching her NAME — so the
+        # organisation itself has to be one the roster recognises, by where it is or by what
+        # it is called. Otherwise a stranger's board seat becomes the member's, cited to a
+        # real IRS filing.
+        if not identifies(
+            person,
+            names=named,
+            context=[str(row.get("name") or ""), place, str(row.get("ntee_code") or "")],
+        ):
+            return None
 
         return self.doc(
             ORG_PAGE.format(ein=ein),

@@ -18,8 +18,10 @@ archived prose rather than a description of a capture that exists.
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import urlsplit
 
-from arrival.connectors.base import BaseConnector, hosts_in, parse_date
+from arrival.connectors.base import BaseConnector, parse_date, urls_in
+from arrival.connectors.identity import is_shared_host, on_own_host
 from arrival.contracts import PersonRef, RawDoc
 
 __all__ = ["WaybackConnector"]
@@ -31,28 +33,62 @@ REPLAY = "https://web.archive.org/web/{timestamp}/{url}"
 _DEFAULT_FIELDS = ["urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"]
 
 
+def _cdx_patterns(person: PersonRef) -> list[str]:
+    """The CDX url patterns to enumerate, one per URL the roster gave.
+
+    THE WEAKNESS THIS CLOSES. The connector was anchored on a HOST from `details` and then
+    asked CDX for `{host}/*`. On a domain the member owns that is exactly right — every
+    path under it is theirs. On `linkedin.com`, `medium.com` or `substack.com` it
+    enumerates every capture the archive holds of nine hundred million other people's
+    profiles, and the connector then fetches and cites strangers' pages under the
+    member's name. The roster line `https://www.linkedin.com/in/marisol-quennebeck` names
+    a PAGE; only on a private domain does it also name a host.
+
+    So a shared platform is anchored on the PATH the roster actually gave, and a domain of
+    the member's own keeps the whole-host enumeration it had.
+    """
+    patterns: list[str] = []
+    for url in urls_in(person.details):
+        parts = urlsplit(url)
+        host = (parts.hostname or "").lower()
+        if not host:
+            continue
+        if is_shared_host(host):
+            path = parts.path.rstrip("/")
+            if not path:
+                # A bare platform root names nobody, and `linkedin.com/*` is the whole
+                # platform. There is nothing here to enumerate on this person's behalf.
+                continue
+            pattern = f"{host}{path}*"
+        else:
+            pattern = f"{host}/*"
+        if pattern not in patterns:
+            patterns.append(pattern)
+    return patterns
+
+
 class WaybackConnector(BaseConnector):
     """`kind="wayback"` — archived captures of the person's own or their company's site."""
 
     kind = "wayback"
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        hosts = hosts_in(person.details)
-        if not hosts:
+        patterns = _cdx_patterns(person)
+        if not patterns:
             return []
 
         docs: list[RawDoc] = []
-        for host in hosts:
+        for pattern in patterns:
             if len(docs) >= budget:
                 break
-            docs.extend(await self._captures(host, budget - len(docs)))
+            docs.extend(await self._captures(person, pattern, budget - len(docs)))
         return docs
 
-    async def _captures(self, host: str, limit: int) -> list[RawDoc]:
+    async def _captures(self, person: PersonRef, pattern: str, limit: int) -> list[RawDoc]:
         payload = await self.get_json(
             CDX,
             params={
-                "url": f"{host}/*",
+                "url": pattern,
                 "output": "json",
                 "collapse": "urlkey",
                 "filter": "statuscode:200",
@@ -69,6 +105,12 @@ class WaybackConnector(BaseConnector):
             timestamp = row.get("timestamp") or ""
             original = row.get("original") or ""
             if not timestamp or not original:
+                continue
+            # The identity check belongs on the CDX row, not on the archived page. What is
+            # being cited is a capture OF A URL, and whether that url is the member's web
+            # space is knowable before the fetch and not reliably knowable after it: an
+            # archived About page may never spell her name.
+            if not on_own_host(original, person):
                 continue
             doc = await self.get_page(
                 REPLAY.format(timestamp=timestamp, url=original),

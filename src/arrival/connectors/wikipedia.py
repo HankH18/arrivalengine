@@ -32,8 +32,8 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
-from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
-from arrival.connectors.identity import carries_name
+from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import best_affiliation, carries_name, identifies
 from arrival.contracts import PersonRef, RawDoc
 
 __all__ = ["WikipediaConnector"]
@@ -63,7 +63,7 @@ class WikipediaConnector(BaseConnector):
     kind = "wikipedia"
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        affiliation = next(iter(affiliations(person.details)), "")
+        affiliation = best_affiliation(person)
         payload = await self.get_json(
             API,
             params={
@@ -136,7 +136,19 @@ class WikipediaConnector(BaseConnector):
             or payload.get("title")
             or title
         )
+        # The TITLE has to name her and the ARTICLE has to recognise the roster. The title
+        # alone rejects the company's article — which is what this check was added for —
+        # and accepts every same-name stranger who has an article, including the
+        # disambiguated ones ("Marisol Quennebeck (logistics executive)") whose titles are
+        # built to say they are somebody else.
         if not _is_about(landed, person.name):
+            return None
+        if not identifies(
+            person,
+            names=[landed],
+            prose=[extract, str(payload.get("description") or "")],
+            context=[extract, str(payload.get("description") or "")],
+        ):
             return None
 
         url = ""

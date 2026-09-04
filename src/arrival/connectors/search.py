@@ -22,7 +22,8 @@ import re
 from html.parser import HTMLParser
 from urllib.parse import parse_qs, unquote, urlsplit
 
-from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
+from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import best_affiliation, identifies
 from arrival.contracts import PersonRef, RawDoc
 from arrival.http.client import fetch_record
 
@@ -117,74 +118,113 @@ class SearchConnector(BaseConnector):
     kind = "search"
 
     def query_for(self, person: PersonRef) -> str:
-        """Name plus the strongest affiliation. A bare name matches too many people."""
-        affiliation = next(iter(affiliations(person.details)), "")
-        return f"{person.name} {affiliation}".strip()
+        """Name plus the strongest ORGANISATION. A bare name matches too many people.
+
+        `best_affiliation`, not `affiliations()[0]`: the latter returns detail order, so a
+        roster that happens to list the city first sends "Marisol Quennebeck Providence"
+        to the search engine — a query about a city, whose every result is a stranger who
+        lives there.
+        """
+        return f"{person.name} {best_affiliation(person)}".strip()
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
         query = self.query_for(person)
-        docs = await self._tavily(query, budget)
-        if docs:
-            return docs
-        return await self._duckduckgo(query, budget)
+        results = await self._tavily(query, budget)
+        if results is None:
+            # Tavily is unavailable (no key, transport failure, unparseable body) —
+            # NOT "Tavily answered and none of it was about her". The distinction is the
+            # whole reason this returns `None` rather than `[]`: falling back to a second
+            # search engine because the first one honestly had nothing about this person
+            # spends a request to ask a worse engine the same question.
+            results = await self._duckduckgo(query)
+            if results is None:
+                return []
+        return self._documents(person, results, budget)
 
-    async def _tavily(self, query: str, budget: int) -> list[RawDoc]:
-        api_key = self.settings.tavily_api_key
-        if not api_key:
-            return []
-        payload = await self.get_json(
-            TAVILY_ENDPOINT,
-            method="POST",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json_body={
-                "query": query,
-                "max_results": max(1, budget),
-                "search_depth": "basic",
-                "include_answer": False,
-            },
-        )
-        if not isinstance(payload, dict):
-            return []
-        results = payload.get("results")
-        if not isinstance(results, list):
-            return []
+    def _documents(
+        self, person: PersonRef, results: list[dict[str, str]], budget: int
+    ) -> list[RawDoc]:
+        """Turn accepted results into citations. The identity gate is here, not in `doc`.
 
+        A search engine's ranking is not evidence about a person: it is evidence about the
+        query. So a result earns a document by being on a domain the roster gave for her,
+        or by NAMING her in full and echoing something the roster supplied — and by
+        nothing else. Judged on the snippet the engine already returned, never by fetching
+        the landing page: a verification round trip against N unknown hosts is a different
+        product.
+        """
         docs: list[RawDoc] = []
-        for result in results[:budget]:
-            if not isinstance(result, dict):
+        for result in results:
+            if len(docs) >= budget:
+                break
+            url = result.get("url") or ""
+            title = result.get("title") or ""
+            body = result.get("content") or ""
+            if not identifies(person, prose=[title, body], urls=[url], context=[url]):
                 continue
-            body = result.get("raw_content") or result.get("content") or ""
             doc = self.doc(
-                str(result.get("url") or ""),
-                title=str(result.get("title") or ""),
-                text=text_block(result.get("title"), body),
+                url,
+                title=title,
+                text=text_block(title, body),
                 published_at=parse_date(result.get("published_date")),
             )
             if doc is not None:
                 docs.append(doc)
         return docs
 
-    async def _duckduckgo(self, query: str, budget: int) -> list[RawDoc]:
+    async def _tavily(self, query: str, budget: int) -> list[dict[str, str]] | None:
+        """Tavily's results, or `None` when Tavily could not answer at all."""
+        api_key = self.settings.tavily_api_key
+        if not api_key:
+            return None
+        payload = await self.get_json(
+            TAVILY_ENDPOINT,
+            method="POST",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json_body={
+                "query": query,
+                # Headroom: the results are about to be filtered down to the ones actually
+                # about her, and the engine's top hit is not reliably one of them.
+                "max_results": max(1, min(budget * 2, 10)),
+                "search_depth": "basic",
+                "include_answer": False,
+            },
+        )
+        if not isinstance(payload, dict):
+            return None
+        results = payload.get("results")
+        if not isinstance(results, list):
+            return None
+        return [
+            {
+                "url": str(result.get("url") or ""),
+                "title": str(result.get("title") or ""),
+                "content": str(result.get("raw_content") or result.get("content") or ""),
+                "published_date": str(result.get("published_date") or ""),
+            }
+            for result in results
+            if isinstance(result, dict)
+        ]
+
+    async def _duckduckgo(self, query: str) -> list[dict[str, str]] | None:
         record = await self._html(query)
         if record is None:
-            return []
+            return None
         parser = _DuckDuckGoResults()
         try:
             parser.feed(record)
             parser.close()
         except Exception:  # noqa: BLE001 - a mangled results page is [] , not a crash
-            return []
-
-        docs: list[RawDoc] = []
-        for result in parser.results[:budget]:
-            doc = self.doc(
-                result["url"],
-                title=result["title"],
-                text=text_block(result["title"], result["snippet"]),
-            )
-            if doc is not None:
-                docs.append(doc)
-        return docs
+            return None
+        return [
+            {
+                "url": result["url"],
+                "title": result["title"],
+                "content": result["snippet"],
+                "published_date": "",
+            }
+            for result in parser.results
+        ]
 
     async def _html(self, query: str) -> str | None:
         record = await fetch_record(

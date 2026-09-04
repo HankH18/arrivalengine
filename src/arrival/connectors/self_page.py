@@ -25,6 +25,7 @@ from typing import Any
 from urllib.parse import urljoin, urlsplit
 
 from arrival.connectors.base import BaseConnector, urls_in
+from arrival.connectors.identity import carries_name, choose_one, corroborates
 from arrival.contracts import PersonRef, RawDoc
 from arrival.http.client import fetch_record
 
@@ -34,6 +35,16 @@ WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 
 #: Wikidata "official website".
 OFFICIAL_WEBSITE_PROPERTY = "P856"
+
+#: Wikidata "instance of", and the item id for "human".
+INSTANCE_OF = "P31"
+HUMAN = "Q5"
+
+#: How many same-name candidates to look at before deciding. `limit=1` was the defect:
+#: it makes the search engine's ranking the identity decision, and hides from the
+#: connector the very fact -- that there is more than one of her -- that should make it
+#: decline.
+CANDIDATES = 5
 
 #: Paths that are never a person's own prose, so following them wastes the budget.
 _SKIP_SEGMENTS = ("/login", "/signup", "/cart", "/privacy", "/terms", "/rss", "/feed")
@@ -129,37 +140,139 @@ class SelfPageConnector(BaseConnector):
         return doc, record.body
 
     async def _official_website(self, person: PersonRef) -> str:
-        """Wikidata P856 for the best-matching entity, or "" when there is not one."""
+        """Wikidata P856 for the entity the ROSTER identifies, or "" when there is not one.
+
+        THE WORST CASE IN THE FAN-OUT, AND THE ONE WITH NO FIXTURE COVERAGE.  This branch
+        runs only when `details` names no URL, which no recorded corpus does, so nothing
+        watched it.  What it used to do: search Wikidata on the NAME ALONE with `limit=1`,
+        take whatever came back first, follow that item's website one hop, and stamp the
+        result `self_page` — **the highest-trust `SourceKind` in the system**, the one
+        whose whole justification is "they published it, on their own domain, on purpose".
+        A same-name stranger at rank 1 got the member's most-trusted document slot, and
+        `wbsearchentities` ranks by sitelink count, so the stranger it picks is
+        systematically the more famous of the two.
+
+        So: headroom instead of `limit=1` (a stranger at rank 1 must not be able to spend
+        the whole allowance), the label has to carry the name, the item has to say it is a
+        human, and the roster has to recognise it — `require_corroboration=True`, which is
+        the one place in the fan-out that flag is set. A tie declines, and so does a lone
+        candidate nothing corroborates.
+        """
         found = await self.get_json(
             WIKIDATA_API,
             params={
                 "action": "wbsearchentities",
                 "search": person.name,
                 "language": "en",
+                "uselang": "en",
                 "type": "item",
-                "limit": 1,
+                "limit": CANDIDATES,
                 "format": "json",
             },
         )
-        qid = ""
-        if isinstance(found, dict) and isinstance(found.get("search"), list):
-            for row in found["search"]:
-                if isinstance(row, dict) and str(row.get("id", "")).startswith("Q"):
-                    qid = str(row["id"])
-                    break
-        if not qid:
+        qids = [
+            str(row["id"])
+            for row in _rows(found)
+            if str(row.get("id", "")).startswith("Q")
+            and carries_name(str(row.get("label") or row.get("id") or ""), person.name)
+        ][:CANDIDATES]
+        if not qids:
             return ""
 
         entities = await self.get_json(
             WIKIDATA_API,
             params={
                 "action": "wbgetentities",
-                "ids": qid,
-                "props": "claims",
+                "ids": "|".join(qids),
+                "props": "claims|labels|descriptions|aliases",
+                "languages": "en",
                 "format": "json",
             },
         )
-        return _website_claim(entities, qid)
+        people = [
+            (qid, entity)
+            for qid in qids
+            if _is_a_human(entity := _entity(entities, qid))
+        ]
+        chosen = choose_one(
+            people,
+            lambda pair: corroborates(person, _identity_text(pair[1])),
+            require_corroboration=True,
+        )
+        if chosen is None:
+            return ""
+        return _website_claim(entities, chosen[0])
+
+
+def _rows(payload: Any) -> list[dict[str, Any]]:
+    if not isinstance(payload, dict):
+        return []
+    rows = payload.get("search")
+    return [row for row in rows if isinstance(row, dict)] if isinstance(rows, list) else []
+
+
+def _entity(payload: Any, qid: str) -> dict[str, Any]:
+    entities = payload.get("entities") if isinstance(payload, dict) else None
+    entity = entities.get(qid) if isinstance(entities, dict) else None
+    return entity if isinstance(entity, dict) else {}
+
+
+def _is_a_human(entity: dict[str, Any]) -> bool:
+    """`P31 = Q5`. An item that says it is something else is not a member of the club.
+
+    An item with no `P31` at all is allowed through to the corroboration check rather than
+    rejected: Wikidata is incomplete, and "unstated" is not "stated to be a company".
+    """
+    instances = [
+        value
+        for claim in (entity.get("claims") or {}).get(INSTANCE_OF, []) or []
+        if isinstance(claim, dict)
+        for value in [_item_id(claim)]
+        if value
+    ]
+    return not instances or HUMAN in instances
+
+
+def _item_id(claim: dict[str, Any]) -> str:
+    snak = claim.get("mainsnak")
+    datavalue = snak.get("datavalue") if isinstance(snak, dict) else None
+    value = datavalue.get("value") if isinstance(datavalue, dict) else None
+    if isinstance(value, dict) and isinstance(value.get("id"), str):
+        return value["id"]
+    return ""
+
+
+def _identity_text(entity: dict[str, Any]) -> str:
+    """Everything on an item that a roster detail could match: label, description, aliases.
+
+    Item-valued claims are deliberately NOT resolved here. Turning `P108 -> Q90000001`
+    into "Thornfield Loom" costs a third round trip per person, and it is the `wikidata`
+    connector's job — this one only needs to decide whether to fetch a website.
+    """
+    parts: list[str] = []
+    for group in ("labels", "descriptions"):
+        values = entity.get(group)
+        if isinstance(values, dict):
+            for value in values.values():
+                if isinstance(value, dict) and value.get("value"):
+                    parts.append(str(value["value"]))
+    aliases = entity.get("aliases")
+    if isinstance(aliases, dict):
+        for group in aliases.values():
+            if isinstance(group, list):
+                parts.extend(
+                    str(alias["value"])
+                    for alias in group
+                    if isinstance(alias, dict) and alias.get("value")
+                )
+    for claim in (entity.get("claims") or {}).get(OFFICIAL_WEBSITE_PROPERTY, []) or []:
+        if isinstance(claim, dict):
+            snak = claim.get("mainsnak")
+            datavalue = snak.get("datavalue") if isinstance(snak, dict) else None
+            value = datavalue.get("value") if isinstance(datavalue, dict) else None
+            if isinstance(value, str):
+                parts.append(value)
+    return " ".join(parts)
 
 
 def _website_claim(payload: Any, qid: str) -> str:
