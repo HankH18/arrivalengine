@@ -1621,6 +1621,51 @@
       "defect": "`quote(...)` is utf-8/strict at :57 and :163 and raises UnicodeEncodeError on a lone-surrogate title. Currently survives only because connectors/base.py:195 has a bare `except Exception`, so it degrades by catch-all rather than deliberately. Part of the 28 uncaught encoding sites the ENCFIX2 sweep enumerated across 51 total; the six that can actually raise were all in that lane's ownership and are closed, and this is the notable one outside it.",
       "finding_id": "37d0536914ddff7cb943daf11a47a1b95fc4ad6bd70f4e58926131cb2aa13cd5",
       "reproduction": "Call the wikipedia connector with a title containing a lone surrogate. Reported by the ENCFIX2 lane."
+    },
+    {
+      "id": "T-080",
+      "title": "`_CORROBORABLE = ('employer', 'city')` is justified in-code as 'the only two the person carries in PersonRef.details' \u2014 AND THAT PREMISE IS FALSE FOR 6 OF THE 10 ROSTER PEOPLE. Sarah Tavel's third detail is 'formerly Greylock and Pinterest', and THREE of her accepted documents quote it verbatim (TechCrunch: 'Tavel joined Benchmark in 2017 after spending one and a half years as a partner at Greylock and three years as a product manager at Pinterest.'). The roster author already supplied the disambiguator and the resolver structurally cannot count it, so she resolves `unresolved` with 10 accepted `yes` verdicts, all corroborating {employer}. The LIVEFIX lane measured the proposed rule offline WITHOUT committing it, per instruction: counting non-employer/non-city details, phrase-split the way `affiliations` already splits one, gives Sarah {employer, greylock, pinterest} -> WOULD RESOLVE, while Josh Kopelman (two details, no span quoting Philadelphia) -> would NOT. It raises no threshold: two accepted verdicts and the verbatim-span rule are untouched, and the model's label still decides nothing. Authorized by the owner ('You have my authorization for everything', 2026-09-04) \u2014 this is widening what counts as a corroborable attribute the roster already stated, not loosening the refusal doctrine.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/resolve.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/resolve.py",
+      "defect": "`_CORROBORABLE = ('employer', 'city')` is justified in-code as 'the only two the person carries in PersonRef.details' \u2014 AND THAT PREMISE IS FALSE FOR 6 OF THE 10 ROSTER PEOPLE. Sarah Tavel's third detail is 'formerly Greylock and Pinterest', and THREE of her accepted documents quote it verbatim (TechCrunch: 'Tavel joined Benchmark in 2017 after spending one and a half years as a partner at Greylock and three years as a product manager at Pinterest.'). The roster author already supplied the disambiguator and the resolver structurally cannot count it, so she resolves `unresolved` with 10 accepted `yes` verdicts, all corroborating {employer}. The LIVEFIX lane measured the proposed rule offline WITHOUT committing it, per instruction: counting non-employer/non-city details, phrase-split the way `affiliations` already splits one, gives Sarah {employer, greylock, pinterest} -> WOULD RESOLVE, while Josh Kopelman (two details, no span quoting Philadelphia) -> would NOT. It raises no threshold: two accepted verdicts and the verbatim-span rule are untouched, and the model's label still decides nothing. Authorized by the owner ('You have my authorization for everything', 2026-09-04) \u2014 this is widening what counts as a corroborable attribute the roster already stated, not loosening the refusal doctrine.",
+      "finding_id": "aafc23072b488b949babf04d4c8b90b3ba67dd90e522fbc3b4a2adf24acc4ee8",
+      "reproduction": "Instrument resolve for sarah-tavel on a live build: 10 accepted yes verdicts, corroborated attributes {employer} x10, unresolved. Measured by the LIVEFIX lane and escalated rather than shipped."
+    },
+    {
+      "id": "T-081",
+      "title": "`organisation_queries` sends a bare CITY as an organisation name \u2014 `is_an_address` tests for a US STATE, so `q=Philadelphia` (10,000 orgs) and `q=San Francisco` (9,267) still go out, as does Nabeel Qureshi's NEGATIVE detail 'NOT the author/apologist Nabeel Qureshi who died in 2017'. Bounded by MAX_QUERIES=3 and MAX_CANDIDATES=8 and it changes no output today because the officer filter rejects everything, but it is wasted live requests against a courtesy API and a negative detail read as a positive query. Fixing it properly needs a gazetteer, which the LIVEFIX lane correctly judged a bigger call than its ticket.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/propublica.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/propublica.py",
+      "defect": "`organisation_queries` sends a bare CITY as an organisation name \u2014 `is_an_address` tests for a US STATE, so `q=Philadelphia` (10,000 orgs) and `q=San Francisco` (9,267) still go out, as does Nabeel Qureshi's NEGATIVE detail 'NOT the author/apologist Nabeel Qureshi who died in 2017'. Bounded by MAX_QUERIES=3 and MAX_CANDIDATES=8 and it changes no output today because the officer filter rejects everything, but it is wasted live requests against a courtesy API and a negative detail read as a positive query. Fixing it properly needs a gazetteer, which the LIVEFIX lane correctly judged a bigger call than its ticket.",
+      "finding_id": "1a5bbc255187272b7605d33bc5b0b37e61f1f0127e09e97f21a2d46a5c14a624",
+      "reproduction": "Instrument propublica's request list on a live build. Reported by the LIVEFIX lane, deliberately left."
+    },
+    {
+      "id": "T-082",
+      "title": "`log.warning('fetch failed for %s: %s', full_url, exc)` prints an EMPTY reason for a timeout, because `str(httpx.ReadTimeout())` is ''. Live evidence from the build log: `fetch failed for https://web.archive.org/cdx/search/cdx?...: ` with nothing after the colon, twice. An operator reading that log learns a fetch failed and nothing about why. Log `type(exc).__name__` alongside the message.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/client.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "LOW",
+      "location": "src/arrival/http/client.py:324",
+      "defect": "`log.warning('fetch failed for %s: %s', full_url, exc)` prints an EMPTY reason for a timeout, because `str(httpx.ReadTimeout())` is ''. Live evidence from the build log: `fetch failed for https://web.archive.org/cdx/search/cdx?...: ` with nothing after the colon, twice. An operator reading that log learns a fetch failed and nothing about why. Log `type(exc).__name__` alongside the message.",
+      "finding_id": "e291d9033014c193ec2fe1fa087d4c61086db75baad3122972c2129cb9eead30",
+      "reproduction": "Read the live build log for a wayback CDX timeout. Reported by the LIVEFIX lane."
     }
   ],
   "cut_list": [
