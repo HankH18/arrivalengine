@@ -29,6 +29,7 @@ would pass for any template, grammatical or not.
 
 from __future__ import annotations
 
+import datetime as dt
 import itertools
 
 import pytest
@@ -40,6 +41,7 @@ from arrival.digest import (
     WHY_OF_LAST_RESORT,
     is_speakable,
     make_digest,
+    pick_lately,
     pick_opener_hook,
 )
 from doubles import LLMDouble
@@ -292,21 +294,32 @@ async def test_a_documents_citation_is_its_strongest_evidence_not_the_first_sect
     """T-033: ``Provenance`` is per-fact; ``sources`` holds one per document.
 
     ``alpha-recent`` and ``alpha-hook`` are extracted from the same document and carry
-    different quotes and different confidences. ``alpha-recent`` reaches the page first — it
-    is a Lately bullet, while ``alpha-hook`` arrives last as the fact the templated opener
-    quotes — so under a first-wins dedupe the document's single citation displayed the Lately
-    bullet's quote and confidence whatever the strength of the evidence behind it.
+    different quotes. The dates below make ``alpha-recent`` the fresher of the two, so Lately
+    reaches the document through IT first while the stronger evidence — ``alpha-hook``,
+    further down the same list — arrives second. Under a first-wins dedupe the document's one
+    citation then displayed a 0.75 quote while the page held a 0.92 one from the same source.
 
-    Here the arrival order is unchanged and only the confidences are swapped, so a fix that
-    merely reshuffled the list cannot pass this: the assertion is about WHICH provenance
-    survives, at a position first-use order still owns.
+    The dates are set explicitly rather than left to the fixture because ``pick_lately``
+    orders on ``(published_at, confidence, fact_id)``: raising a fact's confidence alone
+    ALSO promotes it up the bullet list, which would move the very arrival order this test
+    needs to hold still. Separating the two knobs is what makes the assertion about which
+    provenance survives rather than about which fact happened to be read first.
     """
-    weak_recent = variant(fact_of(alpha, "alpha-recent"), confidence=0.75)
-    strong_hook = variant(fact_of(alpha, "alpha-hook"), confidence=0.92)
+    weak_recent = variant(
+        fact_of(alpha, "alpha-recent"), confidence=0.75, published_at=dt.date(2026, 8, 15)
+    )
+    strong_hook = variant(
+        fact_of(alpha, "alpha-hook"), confidence=0.92, published_at=dt.date(2026, 6, 1)
+    )
     dossier = replacing(alpha, {"alpha-recent": weak_recent, "alpha-hook": strong_hook})
     doc_id = weak_recent.provenance.doc_id
     assert strong_hook.provenance.doc_id == doc_id, "fixture changed: the two facts split docs"
     assert weak_recent.provenance.quote != strong_hook.provenance.quote
+
+    order = [f.fact_id for f in pick_lately(dossier, exclude=[fact_of(alpha, "alpha-work")])]
+    assert order.index("alpha-recent") < order.index("alpha-hook"), (
+        f"positive control: the weaker fact no longer reaches the document first ({order})"
+    )
 
     digest = await make_digest(dossier, [], _dead_llm())
 
@@ -326,8 +339,12 @@ async def test_the_citation_list_keeps_first_use_order_while_choosing_its_entrie
 
     T-8 numbers citations by position in ``Digest.sources``, so first-use order is pinned.
     """
-    weak_recent = variant(fact_of(alpha, "alpha-recent"), confidence=0.75)
-    strong_hook = variant(fact_of(alpha, "alpha-hook"), confidence=0.92)
+    weak_recent = variant(
+        fact_of(alpha, "alpha-recent"), confidence=0.75, published_at=dt.date(2026, 8, 15)
+    )
+    strong_hook = variant(
+        fact_of(alpha, "alpha-hook"), confidence=0.92, published_at=dt.date(2026, 6, 1)
+    )
     dossier = replacing(alpha, {"alpha-recent": weak_recent, "alpha-hook": strong_hook})
 
     digest = await make_digest(dossier, [], _dead_llm())
