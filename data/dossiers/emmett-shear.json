@@ -1,0 +1,608 @@
+{
+  "person": {
+    "person_id": "emmett-shear",
+    "name": "Emmett Shear",
+    "details": [
+      "co-founder and former CEO, Twitch",
+      "San Francisco",
+      "briefly interim CEO of OpenAI (Nov 2023)"
+    ]
+  },
+  "resolution": {
+    "person_id": "emmett-shear",
+    "status": "resolved",
+    "strong_keys": {
+      "wikidata_qid": "Q5373565"
+    },
+    "accepted_doc_ids": [
+      "9a3f9d9d9096bb98",
+      "ae16b472ad9a6b60",
+      "b5c7f888c40a3e6b",
+      "463a9f88097825e1",
+      "30203b75ef3cc6a0",
+      "0d373a5d5faac21f",
+      "262bc9659f486847",
+      "79606006591d4f2e",
+      "514ae769418bded0",
+      "569d980d13479a77",
+      "2e9f3b2ce2b92b28",
+      "7da6503454f73ff0",
+      "7f2dea69b927032d",
+      "8ddfb07ef67b0eef",
+      "72d132103086616a"
+    ],
+    "rejected": [
+      {
+        "doc_id": "4e74614b6e7be262",
+        "match": "no",
+        "confidence": 0.85,
+        "evidence": "Affiliation: Yale University",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "cc4df70377969736",
+        "match": "unsure",
+        "confidence": 0.5,
+        "evidence": "Authors: Anthony Di Franco, Andrew Petro, Emmett Shear, Vladimir Vladimirov",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "9a3f9d9d9096bb98-f0",
+      "text": "Emmett Shear co-founded the live video platform Justin.tv.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9a3f9d9d9096bb98",
+        "url": "https://en.wikipedia.org/wiki/Emmett_Shear",
+        "source_kind": "wikipedia",
+        "quote": "He co-founded the live video platform Justin.tv.",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:54.892199Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9a3f9d9d9096bb98-f1",
+      "text": "Shear became CEO of Twitch when it was spun off from Justin.tv.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9a3f9d9d9096bb98",
+        "url": "https://en.wikipedia.org/wiki/Emmett_Shear",
+        "source_kind": "wikipedia",
+        "quote": "Shear became the chief executive officer of Twitch when it was spun off from Justin.tv",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:54.892199Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9a3f9d9d9096bb98-f2",
+      "text": "He held the CEO position at Twitch until March 2023.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9a3f9d9d9096bb98",
+        "url": "https://en.wikipedia.org/wiki/Emmett_Shear",
+        "source_kind": "wikipedia",
+        "quote": "a position he held until March 2023",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:54.892199Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9a3f9d9d9096bb98-f3",
+      "text": "In 2011, Shear was appointed as a part-time partner at venture capital firm Y Combinator.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "9a3f9d9d9096bb98",
+        "url": "https://en.wikipedia.org/wiki/Emmett_Shear",
+        "source_kind": "wikipedia",
+        "quote": "In 2011, he was appointed as a part-time partner at venture capital firm Y Combinator.",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:54.892199Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9a3f9d9d9096bb98-f4",
+      "text": "In November 2023, Shear was briefly the interim CEO of OpenAI.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9a3f9d9d9096bb98",
+        "url": "https://en.wikipedia.org/wiki/Emmett_Shear",
+        "source_kind": "wikipedia",
+        "quote": "In November 2023, he was briefly the interim CEO of OpenAI.",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:54.892199Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ae16b472ad9a6b60-f0",
+      "text": "Emmett Shear was educated at Yale University.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "ae16b472ad9a6b60",
+        "url": "https://www.wikidata.org/wiki/Q5373565",
+        "source_kind": "wikidata",
+        "quote": "educated at: Yale University",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:54.633543Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "463a9f88097825e1-f0",
+      "text": "Emmett Shear spoke at StartUpSchool in 2014 at 6pm.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "463a9f88097825e1",
+        "url": "https://news.ycombinator.com/item?id=8442815",
+        "source_kind": "hn",
+        "quote": "6pm Emmett Shear Twitch",
+        "published_at": "2014-10-11",
+        "retrieved_at": "2026-09-04T10:26:54.862370Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f0",
+      "text": "Emmett Shear spent nearly his entire career at Twitch after helping grow it from Justin.tv.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "spent nearly his entire career at Twitch after helping to grow the platform from a fledgling site called Justin.tv",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f1",
+      "text": "Emmett Shear is founding an AI startup called Stem AI backed by a16z.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "Emmett Shear, the former CEO of Twitch, is launching a new AI startup, TechCrunch has learned. The startup, called Stem AI, is currently in stealth.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f2",
+      "text": "Stem AI was incorporated in June 2023 and filed for trademark in August 2023.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "incorporated in June 2023, and filed for a trademark in August 2023",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f3",
+      "text": "Emmett Shear was briefly interim CEO of OpenAI in November 2023 after the board ousted Sam Altman.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "In November 2023, Shear was briefly named interim CEO of ChatGPT maker OpenAI after several members of the company's board ousted CEO Sam Altman.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f4",
+      "text": "Emmett Shear was in the same Y Combinator group as Sam Altman.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "Shear, who was once in the same Y Combinator group as Altman",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f5",
+      "text": "Emmett Shear was a part-time partner at Y Combinator during Altman's time as president.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "was a part-time partner at Y Combinator during some of Altman's time as president there",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "30203b75ef3cc6a0-f6",
+      "text": "Emmett Shear expressed concerns that AI could gain ability to self-improve beyond human control.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "30203b75ef3cc6a0",
+        "url": "https://finance.yahoo.com/news/ex-twitch-ceo-emmett-shear-203330943.html",
+        "source_kind": "search",
+        "quote": "has long expressed concerns that powerful AI will one day have the capacity to destroy humanity. In a tech podcast last June, Shear said he worried that AI will eventually gain the ability to self-improve beyond the reach of human control.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802522Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "262bc9659f486847-f0",
+      "text": "Emmett Shear is the founder and CEO of Softmax.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "262bc9659f486847",
+        "url": "https://www.deep-tech-week.com/speakers/emmett-shear",
+        "source_kind": "search",
+        "quote": "Emmett Shear is the founder and CEO of Softmax",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802709Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "262bc9659f486847-f1",
+      "text": "He helped build Twitch from Justin.tv starting in 2011.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "262bc9659f486847",
+        "url": "https://www.deep-tech-week.com/speakers/emmett-shear",
+        "source_kind": "search",
+        "quote": "he helped build from Justin.tv starting in 2011",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802709Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "262bc9659f486847-f2",
+      "text": "He served as Twitch CEO from 2014 until early 2023.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "262bc9659f486847",
+        "url": "https://www.deep-tech-week.com/speakers/emmett-shear",
+        "source_kind": "search",
+        "quote": "He served as Twitch CEO from 2014 until early 2023",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802709Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "262bc9659f486847-f3",
+      "text": "In November 2023, he briefly acted as interim CEO of OpenAI.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "262bc9659f486847",
+        "url": "https://www.deep-tech-week.com/speakers/emmett-shear",
+        "source_kind": "search",
+        "quote": "In November 2023, he briefly acted as interim CEO of OpenAI",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802709Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "514ae769418bded0-f0",
+      "text": "Emmett Shear is founder and CEO of Twitch, the world's leading video platform for gamers.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "514ae769418bded0",
+        "url": "https://www.reddit.com/r/singularity/comments/17zh9fs/the_openai_board_has_hired_emmett_shear_as_ceo_he",
+        "source_kind": "search",
+        "quote": "founder and CEO of Twitch, the world's leading video platform and community for gamers",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.802846Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2e9f3b2ce2b92b28-f0",
+      "text": "Became interim CEO of OpenAI after receiving a call inviting him to consider the opportunity.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "2e9f3b2ce2b92b28",
+        "url": "https://x.com/eshear/status/1726526112019382275",
+        "source_kind": "search",
+        "quote": "Today I got a call inviting me to consider a once-in-a-lifetime opportunity: to become the interim CEO of @OpenAI. After consulting with my family and reflecting on it for just a few hours, I accepted.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.803070Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2e9f3b2ce2b92b28-f1",
+      "text": "Recently resigned from his role as CEO of Twitch due to the birth of his 9 month old son.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "2e9f3b2ce2b92b28",
+        "url": "https://x.com/eshear/status/1726526112019382275",
+        "source_kind": "search",
+        "quote": "I had recently resigned from my role as CEO of Twitch due to the birth of my now 9 month old son.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.803070Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2e9f3b2ce2b92b28-f2",
+      "text": "Was happily avoiding full time employment before accepting the OpenAI interim CEO role.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "2e9f3b2ce2b92b28",
+        "url": "https://x.com/eshear/status/1726526112019382275",
+        "source_kind": "search",
+        "quote": "I was happily avoiding full time employment.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.803070Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "7da6503454f73ff0-f0",
+      "text": "Was CEO of Twitch as of October 2020.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "7da6503454f73ff0",
+        "url": "https://news.ycombinator.com/item?id=24767149",
+        "source_kind": "hn",
+        "quote": "YC Gaming: Tech Talks and Job Expo W Emmett Shear, CEO of Twitch (Nov 10)",
+        "published_at": "2020-10-13",
+        "retrieved_at": "2026-09-04T10:26:54.862782Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "7f2dea69b927032d-f0",
+      "text": "Emmett Shear has a background in electrical and systems engineering.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "7f2dea69b927032d",
+        "url": "https://www.linkedin.com/in/emmettshear",
+        "source_kind": "search",
+        "quote": "my background in electrical and systems engineering",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.803278Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "7f2dea69b927032d-f1",
+      "text": "Emmett Shear worked at Stripe.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "7f2dea69b927032d",
+        "url": "https://www.linkedin.com/in/emmettshear",
+        "source_kind": "search",
+        "quote": "Stripe sharpened my sense of how to scale fast",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.803278Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "7f2dea69b927032d-f2",
+      "text": "Emmett Shear is involved with Midjourney.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "7f2dea69b927032d",
+        "url": "https://www.linkedin.com/in/emmettshear",
+        "source_kind": "search",
+        "quote": "Twitch taught me what it means to build with a community at the heart of it all, something that Midjourney has in spades",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:55.803278Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "72d132103086616a-f0",
+      "text": "Emmett Shear was CEO of Twitch as of November 2018.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "72d132103086616a",
+        "url": "https://news.ycombinator.com/item?id=18528052",
+        "source_kind": "hn",
+        "quote": "Twitch CEO Emmett Shear",
+        "published_at": "2018-11-25",
+        "retrieved_at": "2026-09-04T10:26:54.862931Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "company:justin-tv",
+      "label": "Justin.tv",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "9a3f9d9d9096bb98-f0",
+        "9a3f9d9d9096bb98-f1",
+        "30203b75ef3cc6a0-f0",
+        "262bc9659f486847-f1"
+      ]
+    },
+    {
+      "hub_id": "company:midjourney",
+      "label": "Midjourney",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "7f2dea69b927032d-f2"
+      ]
+    },
+    {
+      "hub_id": "company:openai",
+      "label": "OpenAI",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "9a3f9d9d9096bb98-f4",
+        "30203b75ef3cc6a0-f3",
+        "262bc9659f486847-f3",
+        "2e9f3b2ce2b92b28-f0"
+      ]
+    },
+    {
+      "hub_id": "company:softmax",
+      "label": "Softmax",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "262bc9659f486847-f0"
+      ]
+    },
+    {
+      "hub_id": "company:stem-ai",
+      "label": "Stem AI",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "30203b75ef3cc6a0-f1",
+        "30203b75ef3cc6a0-f2"
+      ]
+    },
+    {
+      "hub_id": "company:stripe",
+      "label": "Stripe",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "7f2dea69b927032d-f1"
+      ]
+    },
+    {
+      "hub_id": "company:twitch",
+      "label": "Twitch",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "9a3f9d9d9096bb98-f1",
+        "9a3f9d9d9096bb98-f2",
+        "30203b75ef3cc6a0-f0",
+        "30203b75ef3cc6a0-f1",
+        "262bc9659f486847-f1",
+        "262bc9659f486847-f2",
+        "514ae769418bded0-f0",
+        "2e9f3b2ce2b92b28-f1",
+        "7da6503454f73ff0-f0",
+        "72d132103086616a-f0"
+      ]
+    },
+    {
+      "hub_id": "investor:a16z",
+      "label": "a16z",
+      "type": "investor",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "30203b75ef3cc6a0-f1"
+      ]
+    },
+    {
+      "hub_id": "investor:y-combinator",
+      "label": "Y Combinator",
+      "type": "investor",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "9a3f9d9d9096bb98-f3",
+        "30203b75ef3cc6a0-f4",
+        "30203b75ef3cc6a0-f5"
+      ]
+    },
+    {
+      "hub_id": "person:sam-altman",
+      "label": "Sam Altman",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "30203b75ef3cc6a0-f3",
+        "30203b75ef3cc6a0-f4"
+      ]
+    },
+    {
+      "hub_id": "school:yale-university",
+      "label": "Yale University",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ae16b472ad9a6b60-f0"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:27:30.696862Z",
+  "schema_version": 1
+}

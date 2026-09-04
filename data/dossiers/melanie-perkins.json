@@ -1,0 +1,597 @@
+{
+  "person": {
+    "person_id": "melanie-perkins",
+    "name": "Melanie Perkins",
+    "details": [
+      "co-founder and CEO, Canva",
+      "Sydney, Australia"
+    ]
+  },
+  "resolution": {
+    "person_id": "melanie-perkins",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "canva.com"
+    },
+    "accepted_doc_ids": [
+      "b8b8541deed97fb6",
+      "ce044498d8cfd03b",
+      "9d93e4711a8de2b4",
+      "f3b006ed6ea64ad7",
+      "cb0cf7c64c433f45",
+      "51853e7ed11e0e76",
+      "dd48ff73ed9ca4bc",
+      "68c85bf6eca92011",
+      "92b8d04651b48ec4",
+      "c1acc6a1c5e6cf19",
+      "0591525f7860842e"
+    ],
+    "rejected": [
+      {
+        "doc_id": "6626a97eb793f7e9",
+        "match": "unsure",
+        "confidence": 0.5,
+        "evidence": "Australian technology entrepreneur",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "b8b8541deed97fb6-f0",
+      "text": "Melanie Perkins co-founded Canva with Cliff Obrecht and Cameron Adams.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "b8b8541deed97fb6",
+        "url": "https://en.wikipedia.org/wiki/Melanie_Perkins",
+        "source_kind": "wikipedia",
+        "quote": "co-founding Canva, an online graphic design platform, with Cliff Obrecht and Cameron Adams",
+        "published_at": "2026-08-31",
+        "retrieved_at": "2026-09-04T10:29:49.624062Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "b8b8541deed97fb6-f1",
+      "text": "Melanie Perkins serves as Canva's chief executive officer.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "b8b8541deed97fb6",
+        "url": "https://en.wikipedia.org/wiki/Melanie_Perkins",
+        "source_kind": "wikipedia",
+        "quote": "She serves as the company's chief executive officer",
+        "published_at": "2026-08-31",
+        "retrieved_at": "2026-09-04T10:29:49.624062Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "b8b8541deed97fb6-f2",
+      "text": "Melanie Perkins previously co-founded Fusion Books, a web-based yearbook publisher.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "b8b8541deed97fb6",
+        "url": "https://en.wikipedia.org/wiki/Melanie_Perkins",
+        "source_kind": "wikipedia",
+        "quote": "Perkins previously co-founded Fusion Books, a web-based yearbook publisher",
+        "published_at": "2026-08-31",
+        "retrieved_at": "2026-09-04T10:29:49.624062Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ce044498d8cfd03b-f0",
+      "text": "Melanie Perkins is CEO and cofounder of Canva.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ce044498d8cfd03b",
+        "url": "https://news.ycombinator.com/item?id=19298226",
+        "source_kind": "hn",
+        "quote": "CEO and cofounder Melanie Perkins",
+        "published_at": "2019-03-04",
+        "retrieved_at": "2026-09-04T10:29:49.543713Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f3b006ed6ea64ad7-f0",
+      "text": "Co-founded Canva with boyfriend Cliff Obrecht, who is from Perth.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f3b006ed6ea64ad7",
+        "url": "https://www.youtube.com/watch?v=GUjt0iRJ3eo",
+        "source_kind": "search",
+        "quote": "Together with her boyfriend Cliff Obrecht, two kids from Perth tried to take on some of the biggest companies in the world.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306236Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f3b006ed6ea64ad7-f1",
+      "text": "Canva has 135 million users worldwide.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f3b006ed6ea64ad7",
+        "url": "https://www.youtube.com/watch?v=GUjt0iRJ3eo",
+        "source_kind": "search",
+        "quote": "Now with 135 million users worldwide, Canva makes graphic design accessible to everyone, everywhere.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306236Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f3b006ed6ea64ad7-f2",
+      "text": "Melanie Perkins was 32 years old and worth billions at the time of this interview.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "f3b006ed6ea64ad7",
+        "url": "https://www.youtube.com/watch?v=GUjt0iRJ3eo",
+        "source_kind": "search",
+        "quote": "Just 32 years old and worth billions, Melanie Perkins is proof that dreams can come true.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306236Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "cb0cf7c64c433f45-f0",
+      "text": "Melanie Perkins was 35 years old and got rejected by 100 VCs.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "cb0cf7c64c433f45",
+        "url": "https://news.ycombinator.com/item?id=33113092",
+        "source_kind": "hn",
+        "quote": "35-year-old Canva founder Melanie Perkins got rejected by 100 VCs",
+        "published_at": "2022-10-06",
+        "retrieved_at": "2026-09-04T10:29:49.543876Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "51853e7ed11e0e76-f0",
+      "text": "Canva is valued at over $42 billion with over $3 billion in annual revenue.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "51853e7ed11e0e76",
+        "url": "https://www.lennysnewsletter.com/p/the-making-of-canva",
+        "source_kind": "search",
+        "quote": "Melanie Perkins is CEO and co-founder of Canva, currently valued at over $42 billion, generating over $3 billion in annual revenue",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306501Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "51853e7ed11e0e76-f1",
+      "text": "Canva has more than 240 million monthly active users.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "51853e7ed11e0e76",
+        "url": "https://www.lennysnewsletter.com/p/the-making-of-canva",
+        "source_kind": "search",
+        "quote": "with more than 240 million monthly active users",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306501Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "51853e7ed11e0e76-f2",
+      "text": "Canva has eight consecutive years of profitability.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "51853e7ed11e0e76",
+        "url": "https://www.lennysnewsletter.com/p/the-making-of-canva",
+        "source_kind": "search",
+        "quote": "and, incredibly, eight consecutive years of profitability",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306501Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "51853e7ed11e0e76-f3",
+      "text": "Melanie was rejected by over 100 investors during her first fundraising round.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "51853e7ed11e0e76",
+        "url": "https://www.lennysnewsletter.com/p/the-making-of-canva",
+        "source_kind": "search",
+        "quote": "Melanie was rejected by over 100 investors during her first fundraising round",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306501Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "51853e7ed11e0e76-f4",
+      "text": "Canva's team spent two years without shipping a new feature during a technical rewrite.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "51853e7ed11e0e76",
+        "url": "https://www.lennysnewsletter.com/p/the-making-of-canva",
+        "source_kind": "search",
+        "quote": "her team spent two years without being able to ship a new feature during a technical rewrite",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306501Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "51853e7ed11e0e76-f5",
+      "text": "Canva pivoted early from a yearbook product.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "51853e7ed11e0e76",
+        "url": "https://www.lennysnewsletter.com/p/the-making-of-canva",
+        "source_kind": "search",
+        "quote": "the company pivoted early from a yearbook",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306501Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd48ff73ed9ca4bc-f0",
+      "text": "Melanie Perkins is married to Cliff Obrecht, co-founder of Canva.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "dd48ff73ed9ca4bc",
+        "url": "https://www.forbes.com/sites/madhulika-pathak/2026/07/16/exclusive-canvas-billionaire-cofounders-reveal-next-step-in-plan-to-give-away-80-of-their-fortune",
+        "source_kind": "search",
+        "quote": "billionaires Cliff Obrecht and Melanie Perkins, the husband and wife cofounders of Australian design software maker Canva",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306640Z",
+        "confidence": 0.95
+      },
+      "excluded": true,
+      "exclusion_reason": "family"
+    },
+    {
+      "fact_id": "dd48ff73ed9ca4bc-f1",
+      "text": "Perkins and Obrecht each own an 18% stake in Canva worth $7.6 billion.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd48ff73ed9ca4bc",
+        "url": "https://www.forbes.com/sites/madhulika-pathak/2026/07/16/exclusive-canvas-billionaire-cofounders-reveal-next-step-in-plan-to-give-away-80-of-their-fortune",
+        "source_kind": "search",
+        "quote": "Perkins and Obrecht, who Forbes estimates each own an 18% stake in Canva worth $7.6 billion",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306640Z",
+        "confidence": 0.9
+      },
+      "excluded": true,
+      "exclusion_reason": "wealth"
+    },
+    {
+      "fact_id": "dd48ff73ed9ca4bc-f2",
+      "text": "Melanie Perkins signed The Giving Pledge in 2021, promising to donate over 80% of wealth to charity.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "dd48ff73ed9ca4bc",
+        "url": "https://www.forbes.com/sites/madhulika-pathak/2026/07/16/exclusive-canvas-billionaire-cofounders-reveal-next-step-in-plan-to-give-away-80-of-their-fortune",
+        "source_kind": "search",
+        "quote": "signed The Giving Pledge in 2021, promising to donate more than 80% of their wealth to charity",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306640Z",
+        "confidence": 0.95
+      },
+      "excluded": true,
+      "exclusion_reason": "wealth"
+    },
+    {
+      "fact_id": "dd48ff73ed9ca4bc-f3",
+      "text": "Perkins launched the Global Goals Platform through the Canva Foundation.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "dd48ff73ed9ca4bc",
+        "url": "https://www.forbes.com/sites/madhulika-pathak/2026/07/16/exclusive-canvas-billionaire-cofounders-reveal-next-step-in-plan-to-give-away-80-of-their-fortune",
+        "source_kind": "search",
+        "quote": "announced the launch of a new philanthropic initiative called the Global Goals Platform. The effort, funded by their Canva Foundation",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306640Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "68c85bf6eca92011-f0",
+      "text": "Melanie Perkins was born in Perth, Australia, in 1987.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "68c85bf6eca92011",
+        "url": "https://kitrum.com/blog/melanie-perkins-story-as-canva-ceo",
+        "source_kind": "search",
+        "quote": "Melanie Perkin was born in Perth, Australia, in 1987",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306759Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "68c85bf6eca92011-f1",
+      "text": "In childhood, Perkins was passionate about figure skating and trained at 4:30 a.m. daily.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "68c85bf6eca92011",
+        "url": "https://kitrum.com/blog/melanie-perkins-story-as-canva-ceo",
+        "source_kind": "search",
+        "quote": "In Melanie Perkins’s childhood, she was passionate about figure skating and would normally wake up at 4:30 a.m. every day for training",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306759Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "68c85bf6eca92011-f2",
+      "text": "At age 14, Perkins started her first business selling handmade scarves at markets in Perth.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "68c85bf6eca92011",
+        "url": "https://kitrum.com/blog/melanie-perkins-story-as-canva-ceo",
+        "source_kind": "search",
+        "quote": "At the age of 14, she started her first business selling handmade scarves at markets and shops throughout Perth",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306759Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "68c85bf6eca92011-f3",
+      "text": "Canva has 165 million users who act as advocates for the platform.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "68c85bf6eca92011",
+        "url": "https://kitrum.com/blog/melanie-perkins-story-as-canva-ceo",
+        "source_kind": "search",
+        "quote": "One of the platform’s biggest strengths is its 165 million passionate users, who act as advocates",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306759Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "92b8d04651b48ec4-f0",
+      "text": "Perkins is working to empower the world to design through Canva.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "92b8d04651b48ec4",
+        "url": "https://www.canva.com/newsroom/news/author/melanie-perkins",
+        "source_kind": "search",
+        "quote": "Working with an incredible team to empower the world to design",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306875Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd48ff73ed9ca4bc-f4",
+      "text": "Canva is valued at $42 billion as a private company.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd48ff73ed9ca4bc",
+        "url": "https://www.forbes.com/sites/madhulika-pathak/2026/07/16/exclusive-canvas-billionaire-cofounders-reveal-next-step-in-plan-to-give-away-80-of-their-fortune",
+        "source_kind": "search",
+        "quote": "their $42 billion private company",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306640Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c1acc6a1c5e6cf19-f0",
+      "text": "Co-founder and CEO of Canva since May 2012",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "c1acc6a1c5e6cf19",
+        "url": "https://au.linkedin.com/in/melanieperkins",
+        "source_kind": "search",
+        "quote": "CEO & Co-founder Canva May 2012 - Present",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306967Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c1acc6a1c5e6cf19-f1",
+      "text": "Based in Greater Sydney Area, Australia",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "c1acc6a1c5e6cf19",
+        "url": "https://au.linkedin.com/in/melanieperkins",
+        "source_kind": "search",
+        "quote": "Greater Sydney Area, AU",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306967Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c1acc6a1c5e6cf19-f2",
+      "text": "Studied BA(Arts)/BA(Commerce) in Communications, Psychology, Marketing and Management at University of Western Australia",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "c1acc6a1c5e6cf19",
+        "url": "https://au.linkedin.com/in/melanieperkins",
+        "source_kind": "search",
+        "quote": "BA(Arts)/BA(Commerce), Communications, Pyschology, Marketing and Management",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306967Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c1acc6a1c5e6cf19-f3",
+      "text": "Completed Innovation Excellence Program at University of Western Australia in 2009",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "c1acc6a1c5e6cf19",
+        "url": "https://au.linkedin.com/in/melanieperkins",
+        "source_kind": "search",
+        "quote": "Innovation Excellence Program (Commercializing Innovation) 2009 - 2009",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306967Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c1acc6a1c5e6cf19-f4",
+      "text": "Canva has over 15 million users from 190 countries",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "c1acc6a1c5e6cf19",
+        "url": "https://au.linkedin.com/in/melanieperkins",
+        "source_kind": "search",
+        "quote": "With over 15 million users from 190 countries",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:29:50.306967Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:perth",
+      "label": "Perth",
+      "type": "city",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "68c85bf6eca92011-f0",
+        "68c85bf6eca92011-f2"
+      ]
+    },
+    {
+      "hub_id": "company:canva",
+      "label": "Canva",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "b8b8541deed97fb6-f0",
+        "b8b8541deed97fb6-f1",
+        "f3b006ed6ea64ad7-f0",
+        "f3b006ed6ea64ad7-f1",
+        "51853e7ed11e0e76-f0",
+        "51853e7ed11e0e76-f1",
+        "51853e7ed11e0e76-f2",
+        "dd48ff73ed9ca4bc-f3",
+        "68c85bf6eca92011-f3",
+        "92b8d04651b48ec4-f0",
+        "dd48ff73ed9ca4bc-f4",
+        "c1acc6a1c5e6cf19-f0",
+        "c1acc6a1c5e6cf19-f4"
+      ]
+    },
+    {
+      "hub_id": "company:canva-foundation",
+      "label": "Canva Foundation",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "dd48ff73ed9ca4bc-f3"
+      ]
+    },
+    {
+      "hub_id": "company:fusion-books",
+      "label": "Fusion Books",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "b8b8541deed97fb6-f2"
+      ]
+    },
+    {
+      "hub_id": "person:cameron-adams",
+      "label": "Cameron Adams",
+      "type": "person",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "b8b8541deed97fb6-f0"
+      ]
+    },
+    {
+      "hub_id": "person:cliff-obrecht",
+      "label": "Cliff Obrecht",
+      "type": "person",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "b8b8541deed97fb6-f0",
+        "f3b006ed6ea64ad7-f0"
+      ]
+    },
+    {
+      "hub_id": "school:university-of-western-australia",
+      "label": "University of Western Australia",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "c1acc6a1c5e6cf19-f2",
+        "c1acc6a1c5e6cf19-f3"
+      ]
+    },
+    {
+      "hub_id": "topic:global-goals-platform",
+      "label": "Global Goals Platform",
+      "type": "topic",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "dd48ff73ed9ca4bc-f3"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:30:22.780149Z",
+  "schema_version": 1
+}

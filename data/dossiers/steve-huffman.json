@@ -1,0 +1,562 @@
+{
+  "person": {
+    "person_id": "steve-huffman",
+    "name": "Steve Huffman",
+    "details": [
+      "co-founder and CEO, Reddit",
+      "San Francisco"
+    ]
+  },
+  "resolution": {
+    "person_id": "steve-huffman",
+    "status": "resolved",
+    "strong_keys": {
+      "wikidata_qid": "Q7612894",
+      "company_domain": "reddit.com"
+    },
+    "accepted_doc_ids": [
+      "603126aa5d12ade0",
+      "ea1c16e672d1ebae",
+      "6b8443eb5c0ff0f6",
+      "cc130533d8e467dc",
+      "1409d3735bc85a10",
+      "0ac03e554cc94039",
+      "0b0f4da074a50b91",
+      "2a976f82a75a5c40",
+      "dc991c2621f23c0c",
+      "3d0ae344466de8f3",
+      "ddef00f9b5ca920b",
+      "3dd0abafc6ae4957",
+      "52c2193358e50be9",
+      "00d7fdc18ade0fc6",
+      "097933c07a81b776"
+    ],
+    "rejected": [
+      {
+        "doc_id": "6f700208a6a2f498",
+        "match": "no",
+        "confidence": 0.75,
+        "evidence": "Hipmunk\nSan Francisco, California, United States, US",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "603126aa5d12ade0-f0",
+      "text": "Steve Huffman is also known by his Reddit username spez.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "603126aa5d12ade0",
+        "url": "https://en.wikipedia.org/wiki/Steve_Huffman",
+        "source_kind": "wikipedia",
+        "quote": "also known by his Reddit username spez",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:12.665405Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "603126aa5d12ade0-f1",
+      "text": "He co-founded the airfare search engine website Hipmunk, which was shut down in 2020.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "603126aa5d12ade0",
+        "url": "https://en.wikipedia.org/wiki/Steve_Huffman",
+        "source_kind": "wikipedia",
+        "quote": "co-founded the airfare search engine website Hipmunk, which was shut down in 2020",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:12.665405Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "603126aa5d12ade0-f2",
+      "text": "Reddit is the seventh most-visited website in the world as of July 2025.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "603126aa5d12ade0",
+        "url": "https://en.wikipedia.org/wiki/Steve_Huffman",
+        "source_kind": "wikipedia",
+        "quote": "seventh most-visited website in the world as of July 2025",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:12.665405Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "603126aa5d12ade0-f3",
+      "text": "His tenure as Reddit CEO has been met with many controversies regarding his changes to the platform.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "603126aa5d12ade0",
+        "url": "https://en.wikipedia.org/wiki/Steve_Huffman",
+        "source_kind": "wikipedia",
+        "quote": "His tenure as Reddit CEO has been met with many controversies regarding his changes to the platform",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:12.665405Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "603126aa5d12ade0-f4",
+      "text": "As of November 2025, Huffman's estimated net worth is approximately $1.2 billion.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "603126aa5d12ade0",
+        "url": "https://en.wikipedia.org/wiki/Steve_Huffman",
+        "source_kind": "wikipedia",
+        "quote": "As of November 2025, Huffman's estimated net worth is approximately $1.2 billion",
+        "published_at": "2026-09-01",
+        "retrieved_at": "2026-09-04T10:26:12.665405Z",
+        "confidence": 0.85
+      },
+      "excluded": true,
+      "exclusion_reason": "wealth"
+    },
+    {
+      "fact_id": "ea1c16e672d1ebae-f0",
+      "text": "Steve Huffman was educated at University of Virginia and Wakefield School.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "ea1c16e672d1ebae",
+        "url": "https://www.wikidata.org/wiki/Q7612894",
+        "source_kind": "wikidata",
+        "quote": "educated at: University of Virginia, Wakefield School",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:12.405808Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f0",
+      "text": "Steve Huffman is the co-founder and CEO of Reddit.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "Steve Huffman is the co-founder and CEO of Reddit",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f1",
+      "text": "Huffman pursued a computer science degree at the University of Virginia.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "followed it through a computer science degree at the University of Virginia",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f2",
+      "text": "Huffman pitched his first start-up to Y Combinator in 2005 with his college roommate.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "He and his college roommate pitched their first start-up to then-new incubator Y Combinator in 2005",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f3",
+      "text": "Huffman co-founded the travel company Hipmunk and served as CTO.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "Huffman co-founded the travel company Hipmunk and served as CTO",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f4",
+      "text": "Huffman was named to Inc. Magazine's '30 Under 30' list in 2011.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "he was named to Inc. Magazine's “30 Under 30” list in 2011",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f5",
+      "text": "Huffman was named to Forbes '30 Under 30' list in 2012.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "the Forbes “30 Under 30” list in 2012",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f6",
+      "text": "Huffman returned to Reddit as CEO in 2015.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "Huffman returned to Reddit as CEO in 2015",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f7",
+      "text": "Huffman was named in Fortune's '40 under 40 in Tech' for 2020.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "Huffman was named in Fortune’s “40 under 40 in Tech” for 2020",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f8",
+      "text": "Huffman is a mentor at Hackbright Academy, a San Francisco-based coding school.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "Huffman is a mentor at Hackbright Academy, a San Francisco-based coding school",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1409d3735bc85a10-f9",
+      "text": "Huffman was raised in northern Virginia.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "1409d3735bc85a10",
+        "url": "https://investor.redditinc.com/governance/board-of-directors/person-details/default.aspx?ItemId=aff4caba-2eb8-4c16-80fd-1f9c93ea514b",
+        "source_kind": "search",
+        "quote": "Raised in northern Virginia",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853018Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "0b0f4da074a50b91-f0",
+      "text": "Steve Huffman co-founded Reddit with college roommate Alexis Ohanian in 2005.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "0b0f4da074a50b91",
+        "url": "https://sequoiacap.com/podcast/crucible-moments-reddit",
+        "source_kind": "search",
+        "quote": "College roommates Steve Huffman and Alexis Ohanian founded Reddit in 2005",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853126Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "0b0f4da074a50b91-f1",
+      "text": "Steve Huffman is co-founder and CEO of Reddit.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "0b0f4da074a50b91",
+        "url": "https://sequoiacap.com/podcast/crucible-moments-reddit",
+        "source_kind": "search",
+        "quote": "Steve Huffman is co-founder and CEO of Reddit.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853126Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "0b0f4da074a50b91-f2",
+      "text": "Steve Huffman was co-founder of travel booking site Hipmunk.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "0b0f4da074a50b91",
+        "url": "https://sequoiacap.com/podcast/crucible-moments-reddit",
+        "source_kind": "search",
+        "quote": "He was also the co-founder of travel booking site Hipmunk.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853126Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dc991c2621f23c0c-f0",
+      "text": "Steve Huffman founded Reddit ten years before 2015 with his college roommate.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dc991c2621f23c0c",
+        "url": "https://www.reddit.com/r/IAmA/comments/3cxedn/i_am_steve_huffman_the_new_ceo_of_reddit_ama",
+        "source_kind": "search",
+        "quote": "I founded reddit ten years ago with my college roommate",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853186Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "3d0ae344466de8f3-f0",
+      "text": "Steve Huffman co-founded Hipmunk in addition to Reddit.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "3d0ae344466de8f3",
+        "url": "https://news.ycombinator.com/item?id=4863626",
+        "source_kind": "hn",
+        "quote": "Steve Huffman (Reddit / Hipmunk)",
+        "published_at": "2012-12-03",
+        "retrieved_at": "2026-09-04T10:26:12.753915Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "3dd0abafc6ae4957-f0",
+      "text": "Steve Huffman is CEO and founder of Reddit.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "3dd0abafc6ae4957",
+        "url": "https://www.reddit.com/r/technology/comments/1kg3hnn/reddit_ceo_steve_huffman_says_employees",
+        "source_kind": "search",
+        "quote": "Steve Huffman(CEO and founder of Reddit far right)",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853388Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "3dd0abafc6ae4957-f1",
+      "text": "Alexis Ohanian is a Reddit co-founder.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "3dd0abafc6ae4957",
+        "url": "https://www.reddit.com/r/technology/comments/1kg3hnn/reddit_ceo_steve_huffman_says_employees",
+        "source_kind": "search",
+        "quote": "Alexis Ohanion Reddit co founder in middle",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853388Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "3dd0abafc6ae4957-f2",
+      "text": "Christopher Slowe is the Reddit CTO.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "3dd0abafc6ae4957",
+        "url": "https://www.reddit.com/r/technology/comments/1kg3hnn/reddit_ceo_steve_huffman_says_employees",
+        "source_kind": "search",
+        "quote": "Christopher Slowe The Reddit CTO in the middle",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:26:13.853388Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "52c2193358e50be9-f0",
+      "text": "Steve Huffman became Reddit's new CEO.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "52c2193358e50be9",
+        "url": "https://news.ycombinator.com/item?id=9897606",
+        "source_kind": "hn",
+        "quote": "Steve Huffman, Reddit's new CEO",
+        "published_at": "2015-07-16",
+        "retrieved_at": "2026-09-04T10:26:12.753994Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "097933c07a81b776-f0",
+      "text": "Steve Huffman taught Web Applications Engineering at Udacity.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "097933c07a81b776",
+        "url": "https://news.ycombinator.com/item?id=4258029",
+        "source_kind": "hn",
+        "quote": "Web Applications Engineering taught by Steve Huffman (of Reddit)",
+        "published_at": "2012-07-17",
+        "retrieved_at": "2026-09-04T10:26:12.754131Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "company:hipmunk",
+      "label": "Hipmunk",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "603126aa5d12ade0-f1",
+        "1409d3735bc85a10-f3",
+        "0b0f4da074a50b91-f2",
+        "3d0ae344466de8f3-f0"
+      ]
+    },
+    {
+      "hub_id": "company:reddit",
+      "label": "Reddit",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "603126aa5d12ade0-f2",
+        "603126aa5d12ade0-f3",
+        "1409d3735bc85a10-f0",
+        "1409d3735bc85a10-f6",
+        "0b0f4da074a50b91-f0",
+        "0b0f4da074a50b91-f1",
+        "3dd0abafc6ae4957-f0",
+        "3dd0abafc6ae4957-f1",
+        "3dd0abafc6ae4957-f2",
+        "52c2193358e50be9-f0"
+      ]
+    },
+    {
+      "hub_id": "company:udacity",
+      "label": "Udacity",
+      "type": "company",
+      "recency": 0.3,
+      "evidence_fact_ids": [
+        "097933c07a81b776-f0"
+      ]
+    },
+    {
+      "hub_id": "investor:y-combinator",
+      "label": "Y Combinator",
+      "type": "investor",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1409d3735bc85a10-f2"
+      ]
+    },
+    {
+      "hub_id": "person:alexis-ohanian",
+      "label": "Alexis Ohanian",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "0b0f4da074a50b91-f0",
+        "3dd0abafc6ae4957-f1"
+      ]
+    },
+    {
+      "hub_id": "person:christopher-slowe",
+      "label": "Christopher Slowe",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "3dd0abafc6ae4957-f2"
+      ]
+    },
+    {
+      "hub_id": "school:hackbright-academy",
+      "label": "Hackbright Academy",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1409d3735bc85a10-f8"
+      ]
+    },
+    {
+      "hub_id": "school:university-of-virginia",
+      "label": "University of Virginia",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ea1c16e672d1ebae-f0",
+        "1409d3735bc85a10-f1"
+      ]
+    },
+    {
+      "hub_id": "school:wakefield-school",
+      "label": "Wakefield School",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ea1c16e672d1ebae-f0"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:26:54.620157Z",
+  "schema_version": 1
+}

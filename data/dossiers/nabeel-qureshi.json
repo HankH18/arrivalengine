@@ -1,0 +1,870 @@
+{
+  "person": {
+    "person_id": "nabeel-qureshi",
+    "name": "Nabeel Qureshi",
+    "details": [
+      "writer and researcher",
+      "formerly Palantir; essays at nabeelqu.co",
+      "NOT the author/apologist Nabeel Qureshi who died in 2017"
+    ]
+  },
+  "resolution": {
+    "person_id": "nabeel-qureshi",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "nabeelqu.co"
+    },
+    "accepted_doc_ids": [
+      "9c86f572e80d07cf",
+      "d6661dcfbbd4ee64",
+      "58fbfdc66b9908f4",
+      "4229c9eed07562ee",
+      "d6c4ef02d396becd",
+      "dac41de9b8aebfe3",
+      "61f36dc7d94b6f59",
+      "aad3b979dab8311f",
+      "6439afdd38b08468",
+      "42a15d4b544e67cd",
+      "94d08201e321bff6",
+      "3089802a99e9a019",
+      "2969ef8ebadd4464",
+      "b5d18c52dea2ec04",
+      "2688ba74927369a1",
+      "7a3621e7bcb1db79",
+      "51327c132f7d752e"
+    ],
+    "rejected": [],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "9c86f572e80d07cf-f0",
+      "text": "British-American entrepreneur, writer, and technologist",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9c86f572e80d07cf",
+        "url": "https://www.wikidata.org/wiki/Q140450368",
+        "source_kind": "wikidata",
+        "quote": "British-American entrepreneur, writer, and technologist",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:09.289102Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9c86f572e80d07cf-f1",
+      "text": "Employer is Palantir Technologies",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9c86f572e80d07cf",
+        "url": "https://www.wikidata.org/wiki/Q140450368",
+        "source_kind": "wikidata",
+        "quote": "employer: Palantir Technologies",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:09.289102Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9c86f572e80d07cf-f2",
+      "text": "Educated at University of Oxford",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "9c86f572e80d07cf",
+        "url": "https://www.wikidata.org/wiki/Q140450368",
+        "source_kind": "wikidata",
+        "quote": "educated at: University of Oxford",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:09.289102Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9c86f572e80d07cf-f3",
+      "text": "Work location is New York City",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9c86f572e80d07cf",
+        "url": "https://www.wikidata.org/wiki/Q140450368",
+        "source_kind": "wikidata",
+        "quote": "work location: New York City",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:09.289102Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9c86f572e80d07cf-f4",
+      "text": "Affiliated with Mercatus Center",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "9c86f572e80d07cf",
+        "url": "https://www.wikidata.org/wiki/Q140450368",
+        "source_kind": "wikidata",
+        "quote": "affiliation: Mercatus Center",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:09.289102Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "58fbfdc66b9908f4-f0",
+      "text": "Helped build GoCardless, a payments company in the UK",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "58fbfdc66b9908f4",
+        "url": "https://web.archive.org/web/20190716001012/https://nabeelqu.co/",
+        "source_kind": "wayback",
+        "quote": "I helped build GoCardless, a payments company in the UK.",
+        "published_at": "2019-07-16",
+        "retrieved_at": "2026-09-04T10:28:25.466484Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "58fbfdc66b9908f4-f1",
+      "text": "Was an economic researcher at the Bank of England focusing on housing",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "58fbfdc66b9908f4",
+        "url": "https://web.archive.org/web/20190716001012/https://nabeelqu.co/",
+        "source_kind": "wayback",
+        "quote": "For a brief period, I was an economic researcher at the Bank of England, focusing on housing.",
+        "published_at": "2019-07-16",
+        "retrieved_at": "2026-09-04T10:28:25.466484Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "58fbfdc66b9908f4-f2",
+      "text": "Interested in intelligence augmentation through technology, economic development, human flourishing, and art",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "58fbfdc66b9908f4",
+        "url": "https://web.archive.org/web/20190716001012/https://nabeelqu.co/",
+        "source_kind": "wayback",
+        "quote": "my interests are in intelligence augmentation through technology, economic development, human flourishing, & art, particularly literature.",
+        "published_at": "2019-07-16",
+        "retrieved_at": "2026-09-04T10:28:25.466484Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "58fbfdc66b9908f4-f3",
+      "text": "Grew up in the UK and studied Philosophy, Politics & Economics at Oxford",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "58fbfdc66b9908f4",
+        "url": "https://web.archive.org/web/20190716001012/https://nabeelqu.co/",
+        "source_kind": "wayback",
+        "quote": "I grew up in the UK and previously studied Philosophy, Politics & Economics at Oxford.",
+        "published_at": "2019-07-16",
+        "retrieved_at": "2026-09-04T10:28:25.466484Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4229c9eed07562ee-f0",
+      "text": "Nabeel Qureshi is a visiting scholar of AI policy at the Mercatus Center alongside Tyler Cowen.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4229c9eed07562ee",
+        "url": "https://www.lennysnewsletter.com/p/inside-palantir-nabeel-qureshi",
+        "source_kind": "search",
+        "quote": "visiting scholar of AI policy at the Mercatus Center (alongside Tyler Cowen)",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617667Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4229c9eed07562ee-f1",
+      "text": "Nabeel Qureshi spent nearly eight years at Palantir as a forward-deployed engineer.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4229c9eed07562ee",
+        "url": "https://www.lennysnewsletter.com/p/inside-palantir-nabeel-qureshi",
+        "source_kind": "search",
+        "quote": "spent nearly eight years at Palantir, working as a forward-deployed engineer",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617667Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4229c9eed07562ee-f2",
+      "text": "At Palantir, Nabeel Qureshi worked on accelerating the Covid-19 response, applying AI to drug discovery, and optimizing aircraft manufacturing at Airbus.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4229c9eed07562ee",
+        "url": "https://www.lennysnewsletter.com/p/inside-palantir-nabeel-qureshi",
+        "source_kind": "search",
+        "quote": "His work at Palantir ranged from accelerating the Covid-19 response to applying AI to drug discovery to optimizing aircraft manufacturing at Airbus",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617667Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4229c9eed07562ee-f3",
+      "text": "Nabeel Qureshi was a founding employee and VP of business development at GoCardless.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4229c9eed07562ee",
+        "url": "https://www.lennysnewsletter.com/p/inside-palantir-nabeel-qureshi",
+        "source_kind": "search",
+        "quote": "founding employee and VP of business development at GoCardless",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617667Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4229c9eed07562ee-f4",
+      "text": "GoCardless is a leading European fintech unicorn.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4229c9eed07562ee",
+        "url": "https://www.lennysnewsletter.com/p/inside-palantir-nabeel-qureshi",
+        "source_kind": "search",
+        "quote": "GoCardless, a leading European fintech unicorn",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617667Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f0",
+      "text": "Led engagements with US federal agencies as Enterprise Lead at Palantir Technologies.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "Nabeel led various engagements with US federal agencies as an Enterprise Lead at Palantir Technologies",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f1",
+      "text": "Had extensive experience with machine learning in biosciences and public health during COVID-19 response.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "extensive experience with machine learning in the biosciences, public health during the COVID-19 response",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f2",
+      "text": "Applied AI in drug discovery at Palantir.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "applied AI in the context of drug discovery",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f3",
+      "text": "Founding employee and VP of Business Development at GoCardless, a Y Combinator-funded fintech unicorn.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "founding employee and Vice President of Business Development at GoCardless, a Y Combinator-funded company headquartered in London, now one of Europe’s biggest financial technology unicorns",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f4",
+      "text": "Visiting Scholar at the Mercatus Center.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "Nabeel S. Qureshi is a Visiting Scholar at the Mercatus Center",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f5",
+      "text": "Focused on developing optimistic vision for AI, supported by Emergent Ventures.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "currently focused on developing an optimistic vision for AI, supported by Emergent Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f6",
+      "text": "Research focuses on intersection of AI, economy, and technology governance.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "His research is focused on the intersection of artificial intelligence, the economy, and technology governance",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f7",
+      "text": "Co-authored papers on science, public health, and technology.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "He has co-authored several papers ranging from topics pertaining to science, public health, and technology",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f8",
+      "text": "Studied Philosophy, Politics, and Economics at University of Oxford, graduated top 10%.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "Nabeel studied Philosophy, Politics, and Economics at the University of Oxford and graduated in the top 10% of his class",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f9",
+      "text": "Specialized in Development Economics, Derek Parfit's philosophy, and later Wittgenstein.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "specializing in Development Economics, Derek Parfit's philosophy, and the later philosophy of Wittgenstein",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "61f36dc7d94b6f59-f10",
+      "text": "Currently lives in New York City.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "61f36dc7d94b6f59",
+        "url": "https://bigthink.com/people/nabeel-s-qureshi",
+        "source_kind": "search",
+        "quote": "Nabeel currently lives in New York City",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.617933Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "6439afdd38b08468-f0",
+      "text": "Spent nearly eight years at Palantir as a forward-deployed engineer.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "6439afdd38b08468",
+        "url": "https://www.linkedin.com/in/nabeelqu",
+        "source_kind": "search",
+        "quote": "Nabeel spent nearly eight years at Palantir, working as a forward-deployed engineer",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618158Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "6439afdd38b08468-f1",
+      "text": "Work at Palantir included accelerating COVID-19 response and applying AI to drug discovery.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "6439afdd38b08468",
+        "url": "https://www.linkedin.com/in/nabeelqu",
+        "source_kind": "search",
+        "quote": "His work at Palantir ranged from accelerating the COVID-19 response to applying AI to drug discovery",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618158Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "6439afdd38b08468-f2",
+      "text": "Optimized aircraft manufacturing at Airbus while at Palantir.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "6439afdd38b08468",
+        "url": "https://www.linkedin.com/in/nabeelqu",
+        "source_kind": "search",
+        "quote": "optimizing aircraft manufacturing at Airbus",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618158Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "6439afdd38b08468-f3",
+      "text": "Co-founder of OpenHealth with Amin Manna, focused on health provider data integration.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "6439afdd38b08468",
+        "url": "https://www.linkedin.com/in/nabeelqu",
+        "source_kind": "search",
+        "quote": "Founders Nabeel S. Qureshi and Amin Manna",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618158Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f0",
+      "text": "Entrepreneur, writer, and researcher currently working on a startup in stealth.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "I’m an entrepreneur, writer, and researcher. I’m currently working on a startup in stealth.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f1",
+      "text": "Previously worked at Palantir with focus on health and biology related projects.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "Previously, I worked at Palantir with a focus on health and biology related projects.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f2",
+      "text": "Visiting Scholar in AI at the Mercatus Center.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "I was also a Visiting Scholar in AI at the Mercatus Center",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f3",
+      "text": "Emergent Ventures awardee.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "as well as an Emergent Ventures awardee.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f4",
+      "text": "Studied Philosophy, Politics, and Economics at the University of Oxford.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "I studied Philosophy, Politics, and Economics at the University of Oxford",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f5",
+      "text": "Currently based in New York City.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "am currently based in New York City.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f6",
+      "text": "Appeared on Dialectic #50 with Tyler Cowen in June 2026.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "Dialectic #50, with Tyler Cowen | Jun 2026",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f7",
+      "text": "Appeared on Lenny's Podcast in May 2025 discussing Palantir and AI strategy.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "Lenny’s Podcast | May 2025 | Palantir, forward-deployed engineers, enterprise data, hiring for independent thinkers, AI strategy",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "94d08201e321bff6-f8",
+      "text": "Wrote essay on what it was like working at Palantir from early days through S&P 500.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "94d08201e321bff6",
+        "url": "https://nabeelqu.co",
+        "source_kind": "search",
+        "quote": "What it was like working at Palantir, from the early days through joining the S&P 500.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618208Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2969ef8ebadd4464-f0",
+      "text": "Worked at Palantir for eight years.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2969ef8ebadd4464",
+        "url": "https://nabeelqu.substack.com/p/reflections-on-palantir",
+        "source_kind": "search",
+        "quote": "A retrospective of an eight-year stint.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618368Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2969ef8ebadd4464-f1",
+      "text": "Joined Palantir to learn about an industry and obtain a US green card before starting a company.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "2969ef8ebadd4464",
+        "url": "https://nabeelqu.substack.com/p/reflections-on-palantir",
+        "source_kind": "search",
+        "quote": "My goal was to start a company, but I wanted (1) to go deep in one of these industries for a while first and learn real things about it; (2) to work for a US company and get a green card that way.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618368Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2688ba74927369a1-f0",
+      "text": "Interacted with Stephen Cohen at Palantir, who kept ice in his office and chewed it during conversations.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "2688ba74927369a1",
+        "url": "https://nabeelqu.substack.com",
+        "source_kind": "search",
+        "quote": "I remember my first time I talked to Stephen Cohen) he had the A/C in his office set at 60, several weird-looking devices for minimizing CO2 content in the room, and had a giant pile of ice in a cup. Throughout the conversation, he kept chewing pieces of ice.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618544Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2688ba74927369a1-f1",
+      "text": "Writes essays on Substack about his experiences and observations.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2688ba74927369a1",
+        "url": "https://nabeelqu.substack.com",
+        "source_kind": "search",
+        "quote": "Nabeel S. Qureshi | Substack",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:28:10.618544Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "city:new-york-city",
+      "label": "New York City",
+      "type": "city",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9c86f572e80d07cf-f3",
+        "94d08201e321bff6-f5"
+      ]
+    },
+    {
+      "hub_id": "company:airbus",
+      "label": "Airbus",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "4229c9eed07562ee-f2",
+        "6439afdd38b08468-f2"
+      ]
+    },
+    {
+      "hub_id": "company:bank-of-england",
+      "label": "Bank of England",
+      "type": "company",
+      "recency": 0.3,
+      "evidence_fact_ids": [
+        "58fbfdc66b9908f4-f1"
+      ]
+    },
+    {
+      "hub_id": "company:gocardless",
+      "label": "GoCardless",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "58fbfdc66b9908f4-f0",
+        "4229c9eed07562ee-f3",
+        "4229c9eed07562ee-f4",
+        "61f36dc7d94b6f59-f3"
+      ]
+    },
+    {
+      "hub_id": "company:openhealth",
+      "label": "OpenHealth",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "6439afdd38b08468-f3"
+      ]
+    },
+    {
+      "hub_id": "company:palantir",
+      "label": "Palantir",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "4229c9eed07562ee-f1",
+        "4229c9eed07562ee-f2",
+        "94d08201e321bff6-f1",
+        "94d08201e321bff6-f7",
+        "94d08201e321bff6-f8",
+        "2969ef8ebadd4464-f0",
+        "2969ef8ebadd4464-f1",
+        "2688ba74927369a1-f0"
+      ]
+    },
+    {
+      "hub_id": "company:palantir-technologies",
+      "label": "Palantir Technologies",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9c86f572e80d07cf-f1",
+        "61f36dc7d94b6f59-f0",
+        "61f36dc7d94b6f59-f1",
+        "61f36dc7d94b6f59-f2",
+        "61f36dc7d94b6f59-f3",
+        "6439afdd38b08468-f0",
+        "6439afdd38b08468-f1",
+        "6439afdd38b08468-f2"
+      ]
+    },
+    {
+      "hub_id": "event:lennys-podcast",
+      "label": "Lenny's Podcast",
+      "type": "event",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "94d08201e321bff6-f7"
+      ]
+    },
+    {
+      "hub_id": "investor:emergent-ventures",
+      "label": "Emergent Ventures",
+      "type": "investor",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "61f36dc7d94b6f59-f5",
+        "94d08201e321bff6-f3"
+      ]
+    },
+    {
+      "hub_id": "person:amin-manna",
+      "label": "Amin Manna",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "6439afdd38b08468-f3"
+      ]
+    },
+    {
+      "hub_id": "person:stephen-cohen",
+      "label": "Stephen Cohen",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2688ba74927369a1-f0"
+      ]
+    },
+    {
+      "hub_id": "person:tyler-cowen",
+      "label": "Tyler Cowen",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "4229c9eed07562ee-f0",
+        "94d08201e321bff6-f6"
+      ]
+    },
+    {
+      "hub_id": "school:mercatus-center",
+      "label": "Mercatus Center",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9c86f572e80d07cf-f4",
+        "4229c9eed07562ee-f0",
+        "61f36dc7d94b6f59-f4",
+        "94d08201e321bff6-f2"
+      ]
+    },
+    {
+      "hub_id": "school:university-of-oxford",
+      "label": "University of Oxford",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9c86f572e80d07cf-f2",
+        "58fbfdc66b9908f4-f3",
+        "61f36dc7d94b6f59-f8",
+        "94d08201e321bff6-f4"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:29:49.282114Z",
+  "schema_version": 1
+}

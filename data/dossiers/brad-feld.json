@@ -1,0 +1,1636 @@
+{
+  "person": {
+    "person_id": "brad-feld",
+    "name": "Brad Feld",
+    "details": [
+      "co-founder, Foundry Group; co-founder, Techstars",
+      "Boulder, Colorado",
+      "feld.com"
+    ]
+  },
+  "resolution": {
+    "person_id": "brad-feld",
+    "status": "resolved",
+    "strong_keys": {},
+    "accepted_doc_ids": [
+      "fc0fd0d09f495cbb",
+      "0d6623cc1f9f29a5",
+      "d5d3c2f74b3f6e2d",
+      "1438bd604e678bff",
+      "d9725f1ef87e8ec7",
+      "2b1b45dbf1d31438",
+      "78cb50b2046d8e45",
+      "76660a6e4e872e71",
+      "5185f5d4a316f937",
+      "45c91a91b597b9ef",
+      "508564329d4fd15d",
+      "59d659ecad04db7c",
+      "a4d7620faff7b1bf",
+      "9b0949b73d1ff354",
+      "9c5168f0bbe5eb18",
+      "4891e8a07f14ff43",
+      "015688b8bb76dfbc",
+      "436446e8c3eac4c3",
+      "d4189dec51f5e874",
+      "ef6d8b928d78d66a"
+    ],
+    "rejected": [
+      {
+        "doc_id": "03c17ba6badce038",
+        "match": "unsure",
+        "confidence": 0.9,
+        "evidence": "https://feld.com/archives/2026/07/what-the-actual-fuck-carl/",
+        "disambiguator": "handle"
+      },
+      {
+        "doc_id": "f5b4893c1f891734",
+        "match": "unsure",
+        "confidence": 0.97,
+        "evidence": "https://feld.com/archives/2026/07/zero-knowledge-twenty-chapters-in/",
+        "disambiguator": "city"
+      },
+      {
+        "doc_id": "444a1941f1c1fbfd",
+        "match": "unsure",
+        "confidence": 0.97,
+        "evidence": "https://feld.com/archives/2026/06/does-the-rule-of-40-work-for-hardware/",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "0d6623cc1f9f29a5-f0",
+      "text": "Brad Feld is a venture capitalist at Foundry Group in Boulder, Colorado.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "0d6623cc1f9f29a5",
+        "url": "https://en.wikipedia.org/wiki/Brad_Feld",
+        "source_kind": "wikipedia",
+        "quote": "venture capitalist at Foundry Group in Boulder, Colorado",
+        "published_at": "2026-07-28",
+        "retrieved_at": "2026-09-04T10:23:53.925925Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "0d6623cc1f9f29a5-f1",
+      "text": "Brad Feld started Foundry Group with Seth Levine, Ryan McIntyre, and Jason Mendelson.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "0d6623cc1f9f29a5",
+        "url": "https://en.wikipedia.org/wiki/Brad_Feld",
+        "source_kind": "wikipedia",
+        "quote": "a firm he started with partners Seth Levine, Ryan McIntyre, and Jason Mendelson",
+        "published_at": "2026-07-28",
+        "retrieved_at": "2026-09-04T10:23:53.925925Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "0d6623cc1f9f29a5-f2",
+      "text": "Brad Feld is an American entrepreneur, author, and blogger.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "0d6623cc1f9f29a5",
+        "url": "https://en.wikipedia.org/wiki/Brad_Feld",
+        "source_kind": "wikipedia",
+        "quote": "American entrepreneur blogger",
+        "published_at": "2026-07-28",
+        "retrieved_at": "2026-09-04T10:23:53.925925Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "fc0fd0d09f495cbb-f0",
+      "text": "Brad Feld has been writing about startups, venture capital, books, and life since 2004.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "fc0fd0d09f495cbb",
+        "url": "https://feld.com",
+        "source_kind": "self_page",
+        "quote": "Writing about startups, venture capital, books, and life since 2004",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.896726Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "fc0fd0d09f495cbb-f1",
+      "text": "Brad Feld is co-writing a crypto-thriller called Zero Knowledge with his AI, Phin Argofy.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "fc0fd0d09f495cbb",
+        "url": "https://feld.com",
+        "source_kind": "self_page",
+        "quote": "a crypto-thriller called Zero Knowledge, co-written with my AI, Phin Argofy",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.896726Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "fc0fd0d09f495cbb-f2",
+      "text": "Brad Feld has written nine non-fiction books.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "fc0fd0d09f495cbb",
+        "url": "https://feld.com",
+        "source_kind": "self_page",
+        "quote": "I've written nine non-fiction books",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.896726Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "fc0fd0d09f495cbb-f3",
+      "text": "Brad Feld built Overwatch, a home automation dashboard for multiple houses and devices.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "fc0fd0d09f495cbb",
+        "url": "https://feld.com",
+        "source_kind": "self_page",
+        "quote": "spent a Sunday building Overwatch instead - one web app for multiple houses, every device",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.896726Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "fc0fd0d09f495cbb-f4",
+      "text": "Brad Feld is friends with Phil Weiser and Michael Bennet.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "fc0fd0d09f495cbb",
+        "url": "https://feld.com",
+        "source_kind": "self_page",
+        "quote": "I'm good friends with Phil Weiser and Michael Bennet",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.896726Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "d5d3c2f74b3f6e2d-f0",
+      "text": "Brad Feld and Foundry Group invested $18M in SEOmoz in a Series B round.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "d5d3c2f74b3f6e2d",
+        "url": "https://news.ycombinator.com/item?id=3913939",
+        "source_kind": "hn",
+        "quote": "SEOmoz Raises $18M from Brad Feld & Foundry Group",
+        "published_at": "2012-05-01",
+        "retrieved_at": "2026-09-04T10:23:53.921210Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1438bd604e678bff-f0",
+      "text": "Brad Feld owns homes in Aspen, Tucson, Boulder, and Basalt.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "1438bd604e678bff",
+        "url": "https://feld.com/archives/2026/09/overwatch-one-home-automation-dashboard-to-rule-them-all/",
+        "source_kind": "self_page",
+        "quote": "across multiple houses",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131171Z",
+        "confidence": 0.75
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1438bd604e678bff-f1",
+      "text": "Brad Feld built a home automation dashboard called Overwatch.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1438bd604e678bff",
+        "url": "https://feld.com/archives/2026/09/overwatch-one-home-automation-dashboard-to-rule-them-all/",
+        "source_kind": "self_page",
+        "quote": "I call it Overwatch.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131171Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1438bd604e678bff-f2",
+      "text": "Brad Feld uses Claude Code as his daily driver for development.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "1438bd604e678bff",
+        "url": "https://feld.com/archives/2026/09/overwatch-one-home-automation-dashboard-to-rule-them-all/",
+        "source_kind": "self_page",
+        "quote": "While Claude Code is my daily driver",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131171Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1438bd604e678bff-f3",
+      "text": "Brad Feld built Overwatch using Fable 5 and Claude AI.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1438bd604e678bff",
+        "url": "https://feld.com/archives/2026/09/overwatch-one-home-automation-dashboard-to-rule-them-all/",
+        "source_kind": "self_page",
+        "quote": "I decided to use Fable 5 (and then 5.1 when that came out)",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131171Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1438bd604e678bff-f4",
+      "text": "Brad Feld works at IntensityMagic and IntensityLabs.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "1438bd604e678bff",
+        "url": "https://feld.com/archives/2026/09/overwatch-one-home-automation-dashboard-to-rule-them-all/",
+        "source_kind": "self_page",
+        "quote": "the ones I’ve been building at IntensityMagic and IntensityLabs",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131171Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f0",
+      "text": "Brad Feld is Managing Director of Foundry Group.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "Brad Feld is Managing Director of Foundry Group",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f1",
+      "text": "Brad Feld co-founded Techstars.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "Brad is also a co-founder of Techstars",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f2",
+      "text": "Brad Feld co-founded Mobius Venture Capital.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "he co-founded Mobius Venture Capital",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f3",
+      "text": "Brad Feld founded Intensity Ventures.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "founded Intensity Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f4",
+      "text": "Brad Feld chairs the National Center for Women & Information Technology.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "He currently is chair of the National Center for Women & Information Technology",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f5",
+      "text": "Brad Feld chairs the Global EIR Coalition.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "chair of the National Center for Women & Information Technology and the Global EIR Coalition",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f6",
+      "text": "Brad Feld is on the board of Path Forward.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "on the boards of Path Forward",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f7",
+      "text": "Brad Feld is on the board of the Kauffman Fellows.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "on the boards of Path Forward, the Kauffman Fellows",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f8",
+      "text": "Brad Feld is on the board of Defy Ventures.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "on the boards of Path Forward, the Kauffman Fellows, and [...] Fellows, and Defy Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f9",
+      "text": "Brad Feld has degrees in Management Science from MIT.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "Brad holds Bachelor of Science and Master of Science degrees in Management Science from the Massachusetts Institute of Technology",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f10",
+      "text": "Brad Feld is an art collector and long-distance runner.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "Brad is also an art collector and long-distance runner",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f11",
+      "text": "Brad Feld has completed 24 marathons.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "He has completed 24 marathons",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "2b1b45dbf1d31438-f12",
+      "text": "Brad Feld writes blogs Feld Thoughts and Venture Deals.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "2b1b45dbf1d31438",
+        "url": "https://startupsusa.org/people/brad-feld",
+        "source_kind": "search",
+        "quote": "writes the blogs Feld Thoughts and Venture Deals",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877625Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "78cb50b2046d8e45-f0",
+      "text": "Writing a novel called Zero Knowledge with an AI collaborator named Phin Argofy.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "78cb50b2046d8e45",
+        "url": "https://feld.com/archives/2026/08/ai-writing-2400-years-old/",
+        "source_kind": "self_page",
+        "quote": "I’m thirty-four chapters into Zero Knowledge, a novel I’m writing with Phin Argofy.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131669Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "78cb50b2046d8e45-f1",
+      "text": "Has been writing his blog since 2004 as a way to discover what he thinks.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "78cb50b2046d8e45",
+        "url": "https://feld.com/archives/2026/08/ai-writing-2400-years-old/",
+        "source_kind": "self_page",
+        "quote": "I’ve been writing this blog since 2004 because writing is how I find out what I actually think.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.131669Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f0",
+      "text": "Has been an early stage investor and entrepreneur since 1987.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "Brad has been an early stage investor and entrepreneur since 1987.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f1",
+      "text": "Co-founded Mobius Venture Capital before Foundry Group.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "Prior to co-founding Foundry Group, he co-founded Mobius Venture Capital",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f2",
+      "text": "Founded Intensity Ventures before Mobius Venture Capital.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "prior to that, founded Intensity Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f3",
+      "text": "Writes blogs called Feld Thoughts and Venture Deals.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "writes the blogs Feld Thoughts and Venture Deals",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f4",
+      "text": "Has completed 25 marathons as part of a mission to finish a marathon in each of the 50 states.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "He has completed 25 marathons as part of his mission to finish a marathon in each of the 50 states.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f5",
+      "text": "Holds Bachelor of Science and Master of Science degrees in Management Science from MIT.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "Brad holds Bachelor of Science and Master of Science degrees in Management Science from the Massachusetts Institute of Technology.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f6",
+      "text": "Is an art collector.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "Brad is also an art collector",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f7",
+      "text": "Written books as part of the Startup Revolution series.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "He’s written a number of books as part of the Startup Revolution series",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5185f5d4a316f937-f8",
+      "text": "Authored a book called The Startup Community Way.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5185f5d4a316f937",
+        "url": "https://www.startupgrind.com/events/details/startup-grind-boston-presents-the-startup-community-way-with-brad-feld-foundry-group",
+        "source_kind": "search",
+        "quote": "His new book, the Startup Community Way, will be available to attendees.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877714Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f0",
+      "text": "Brad Feld has been an early-stage entrepreneur and investor since 1987.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "Brad Feld has been an early-stage entrepreneur and investor since 1987",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f1",
+      "text": "Brad Feld co-founded Mobius Venture Capital.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "He co-founded two venture capital firms, Foundry Group and Mobius Venture Capital",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f2",
+      "text": "Brad Feld is a writer and speaker on venture capital investing and entrepreneurship.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "Brad is a writer and speaker on venture capital investing and entrepreneurship",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f3",
+      "text": "Brad Feld has written books including Venture Deals and Startup Communities.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "has written several popular books, including Venture Deals and Startup Communities",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f4",
+      "text": "Brad Feld runs the Anchor Point Foundation with his wife, Amy Batchelor.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "He runs the Anchor Point Foundation with his wife, Amy Batchelor",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": true,
+      "exclusion_reason": "family"
+    },
+    {
+      "fact_id": "508564329d4fd15d-f5",
+      "text": "Brad Feld is a Managing Director at Intensity Ventures since 1995.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "Managing Director Intensity Ventures 1995 - Present",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f6",
+      "text": "Brad Feld graduated from MIT Sloan School of Management with an S.M. in 1988.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "MIT Sloan School of Management S.M. 1987 - 1988",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f7",
+      "text": "Brad Feld earned an S.B. from Massachusetts Institute of Technology in 1987.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "Massachusetts Institute of Technology S.B. 1983 - 1987",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "508564329d4fd15d-f8",
+      "text": "Brad Feld published Give First: The Power of Mentorship in June 2025.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "508564329d4fd15d",
+        "url": "https://www.linkedin.com/in/bfeld",
+        "source_kind": "search",
+        "quote": "Give First: The Power of Mentorship Ideapress Publishing • Published on June 17, 2025",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877784Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "a4d7620faff7b1bf-f0",
+      "text": "Brad Feld is a VC at Foundry and lives in Colorado.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "a4d7620faff7b1bf",
+        "url": "https://x.com/bfeld?lang=en",
+        "source_kind": "search",
+        "quote": "I'm a VC at Foundry. I live in Colorado",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877908Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "a4d7620faff7b1bf-f1",
+      "text": "Brad Feld invests in software and Internet companies around the US.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "a4d7620faff7b1bf",
+        "url": "https://x.com/bfeld?lang=en",
+        "source_kind": "search",
+        "quote": "invest in software and Internet companies around the US",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877908Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "a4d7620faff7b1bf-f2",
+      "text": "Brad Feld runs marathons and loves to read.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "a4d7620faff7b1bf",
+        "url": "https://x.com/bfeld?lang=en",
+        "source_kind": "search",
+        "quote": "run marathons, and love to read",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877908Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "a4d7620faff7b1bf-f3",
+      "text": "Brad Feld is writing a novel called Zero Knowledge.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "a4d7620faff7b1bf",
+        "url": "https://x.com/bfeld?lang=en",
+        "source_kind": "search",
+        "quote": "Chapter 23 of Zero Knowledge is up",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877908Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9b0949b73d1ff354-f0",
+      "text": "Brad Feld is writing a novel about three MIT grads running a quantum startup.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9b0949b73d1ff354",
+        "url": "https://feld.com/archives/2026/06/read-zero-knowledge-as-i-write-it/",
+        "source_kind": "self_page",
+        "quote": "Zero Knowledge is about three twenty-something MIT grads who run a quantum startup called Basalt Labs",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133485Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9b0949b73d1ff354-f1",
+      "text": "Brad Feld's novel Zero Knowledge is set in Basalt, Colorado.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9b0949b73d1ff354",
+        "url": "https://feld.com/archives/2026/06/read-zero-knowledge-as-i-write-it/",
+        "source_kind": "self_page",
+        "quote": "Basalt Labs in Basalt, Colorado",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133485Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9b0949b73d1ff354-f2",
+      "text": "Brad Feld is publishing his novel Zero Knowledge for free online as he writes it.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9b0949b73d1ff354",
+        "url": "https://feld.com/archives/2026/06/read-zero-knowledge-as-i-write-it/",
+        "source_kind": "self_page",
+        "quote": "Zero Knowledge now has a home at zeroknowledge.ink. Six chapters are up. More land as I write them. It’s free to read.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133485Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9b0949b73d1ff354-f3",
+      "text": "Brad Feld plans to integrate his novel writing process into AuthorMagic.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9b0949b73d1ff354",
+        "url": "https://feld.com/archives/2026/06/read-zero-knowledge-as-i-write-it/",
+        "source_kind": "self_page",
+        "quote": "I’m going to integrate all of this into AuthorMagic for anyone who wants to write a book this way",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133485Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9b0949b73d1ff354-f4",
+      "text": "Brad Feld's novel Zero Knowledge has 97 chapters planned across three parts.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9b0949b73d1ff354",
+        "url": "https://feld.com/archives/2026/06/read-zero-knowledge-as-i-write-it/",
+        "source_kind": "self_page",
+        "quote": "There are 97 chapters across three parts, broken into 31 beats",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133485Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4891e8a07f14ff43-f0",
+      "text": "Co-founder and partner of Foundry with over 40 years of experience as an early-stage investor and entrepreneur.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4891e8a07f14ff43",
+        "url": "https://feld.com/about",
+        "source_kind": "search",
+        "quote": "I am a partner and co-founder of Foundry with over 40 years of experience as an early-stage investor and entrepreneur.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877928Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4891e8a07f14ff43-f1",
+      "text": "Founded Feld Technologies while in college.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4891e8a07f14ff43",
+        "url": "https://feld.com/about",
+        "source_kind": "search",
+        "quote": "I founded my first company, Feld Technologies, while in college.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877928Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4891e8a07f14ff43-f2",
+      "text": "Co-founded Techstars.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4891e8a07f14ff43",
+        "url": "https://feld.com/about",
+        "source_kind": "search",
+        "quote": "I co-founded Techstars",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877928Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4891e8a07f14ff43-f3",
+      "text": "Author of nine books on entrepreneurship and venture capital.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4891e8a07f14ff43",
+        "url": "https://feld.com/about",
+        "source_kind": "search",
+        "quote": "I am an author of nine books on entrepreneurship and venture capital",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877928Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4891e8a07f14ff43-f4",
+      "text": "Has written a blog since 2004.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "4891e8a07f14ff43",
+        "url": "https://feld.com/about",
+        "source_kind": "search",
+        "quote": "have written this blog since 2004",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877928Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4891e8a07f14ff43-f5",
+      "text": "Holds Bachelor of Science and Master of Science degrees in Management Science from MIT.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "4891e8a07f14ff43",
+        "url": "https://feld.com/about",
+        "source_kind": "search",
+        "quote": "I hold Bachelor of Science and Master of Science degrees in Management Science from MIT.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.877928Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "015688b8bb76dfbc-f0",
+      "text": "Was on the board of Return Path, which acquired OtherInbox in 2011.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "015688b8bb76dfbc",
+        "url": "https://feld.com/archives/2026/06/rip-josh-baer/",
+        "source_kind": "self_page",
+        "quote": "At the end of 2011, Return Path - a company I was on the board of - acquired it",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133776Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "015688b8bb76dfbc-f1",
+      "text": "Became an investor in Josh Baer's fund.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "015688b8bb76dfbc",
+        "url": "https://feld.com/archives/2026/06/rip-josh-baer/",
+        "source_kind": "self_page",
+        "quote": "I eventually became an investor in his fund.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133776Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "015688b8bb76dfbc-f2",
+      "text": "Contributed to Texas Votes, an open-source tool for Texas elections.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "015688b8bb76dfbc",
+        "url": "https://feld.com/archives/2026/06/rip-josh-baer/",
+        "source_kind": "self_page",
+        "quote": "He invited me in as a contributor on the GitHub repo, we sat down and did some Claude Code together",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133776Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "015688b8bb76dfbc-f3",
+      "text": "Wrote a book about startup communities and entrepreneurial ecosystems.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "015688b8bb76dfbc",
+        "url": "https://feld.com/archives/2026/06/rip-josh-baer/",
+        "source_kind": "self_page",
+        "quote": "I wrote a whole book on the idea that a great entrepreneurial ecosystem is built by the entrepreneurs who lead it",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:54.133776Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "436446e8c3eac4c3-f0",
+      "text": "Published a new book on startup communities in 2012.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "436446e8c3eac4c3",
+        "url": "https://news.ycombinator.com/item?id=4517895",
+        "source_kind": "hn",
+        "quote": "Foundry Group's Brad Feld has a new book on startup communities",
+        "published_at": "2012-09-13",
+        "retrieved_at": "2026-09-04T10:23:53.921735Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f0",
+      "text": "Brad Feld has been an early stage investor and entrepreneur since 1987.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "Brad has been an early stage investor and entrepreneur since 1987.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f1",
+      "text": "Brad Feld co-founded Mobius Venture Capital prior to Foundry Group.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "Prior to co-founding Foundry Group, he co-founded Mobius Venture Capital",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f2",
+      "text": "Brad Feld founded Intensity Ventures prior to Mobius Venture Capital.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "prior to that, founded Intensity Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f3",
+      "text": "Brad Feld is chair of the National Center for Women & Information Technology.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "currently is chair of the National Center for Women & Information Technology",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f4",
+      "text": "Brad Feld is co-chair of Startup Colorado.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "co-chair of Startup Colorado",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f5",
+      "text": "Brad Feld is on the board of UP Global.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "on the board of UP Global",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f6",
+      "text": "Brad Feld writes blogs including Feld Thoughts, Startup Revolution, and Ask the VC.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "writes the widely read blogs Feld Thoughts, Startup Revolution, and Ask the VC",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f7",
+      "text": "Brad Feld holds a Bachelor of Science in Management Science from MIT.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "Brad holds Bachelor of Science and Master of Science degrees in Management Science from the Massachusetts Institute of",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f8",
+      "text": "Brad Feld is on a quest to run a marathon in every state in the US.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "is on a quest to run a marathon in every state in the US",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ef6d8b928d78d66a-f9",
+      "text": "Brad Feld lives in Boulder, Colorado and Homer, Alaska.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ef6d8b928d78d66a",
+        "url": "https://www.startupgrind.com/blog/vc-corner-brad-feld-of-foundry-group-techstars-fitbit-zynga-moz-sphero",
+        "source_kind": "search",
+        "quote": "He lives in Boulder, Colorado and Homer, Alaska",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:23:53.878052Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "board:defy-ventures",
+      "label": "Defy Ventures",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f8"
+      ]
+    },
+    {
+      "hub_id": "board:global-eir-coalition",
+      "label": "Global EIR Coalition",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f5"
+      ]
+    },
+    {
+      "hub_id": "board:kauffman-fellows",
+      "label": "Kauffman Fellows",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f7"
+      ]
+    },
+    {
+      "hub_id": "board:national-center-for-women-information-technology",
+      "label": "National Center for Women & Information Technology",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f4",
+        "ef6d8b928d78d66a-f3"
+      ]
+    },
+    {
+      "hub_id": "board:path-forward",
+      "label": "Path Forward",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f6"
+      ]
+    },
+    {
+      "hub_id": "board:startup-colorado",
+      "label": "Startup Colorado",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ef6d8b928d78d66a-f4"
+      ]
+    },
+    {
+      "hub_id": "board:up-global",
+      "label": "UP Global",
+      "type": "board",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ef6d8b928d78d66a-f5"
+      ]
+    },
+    {
+      "hub_id": "city:basalt-colorado",
+      "label": "Basalt, Colorado",
+      "type": "city",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9b0949b73d1ff354-f1"
+      ]
+    },
+    {
+      "hub_id": "city:boulder-colorado",
+      "label": "Boulder, Colorado",
+      "type": "city",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ef6d8b928d78d66a-f9"
+      ]
+    },
+    {
+      "hub_id": "city:homer-alaska",
+      "label": "Homer, Alaska",
+      "type": "city",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ef6d8b928d78d66a-f9"
+      ]
+    },
+    {
+      "hub_id": "company:basalt-labs",
+      "label": "Basalt Labs",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9b0949b73d1ff354-f0"
+      ]
+    },
+    {
+      "hub_id": "company:foundry",
+      "label": "Foundry",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "4891e8a07f14ff43-f0"
+      ]
+    },
+    {
+      "hub_id": "company:foundry-group",
+      "label": "Foundry Group",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "0d6623cc1f9f29a5-f0",
+        "0d6623cc1f9f29a5-f1",
+        "2b1b45dbf1d31438-f0",
+        "5185f5d4a316f937-f0",
+        "a4d7620faff7b1bf-f0",
+        "ef6d8b928d78d66a-f1"
+      ]
+    },
+    {
+      "hub_id": "company:intensity-ventures",
+      "label": "Intensity Ventures",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f3",
+        "5185f5d4a316f937-f2",
+        "508564329d4fd15d-f5",
+        "ef6d8b928d78d66a-f2"
+      ]
+    },
+    {
+      "hub_id": "company:intensitylabs",
+      "label": "IntensityLabs",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1438bd604e678bff-f4"
+      ]
+    },
+    {
+      "hub_id": "company:intensitymagic",
+      "label": "IntensityMagic",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1438bd604e678bff-f4"
+      ]
+    },
+    {
+      "hub_id": "company:mobius-venture-capital",
+      "label": "Mobius Venture Capital",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f2",
+        "5185f5d4a316f937-f1",
+        "508564329d4fd15d-f1",
+        "ef6d8b928d78d66a-f1"
+      ]
+    },
+    {
+      "hub_id": "company:return-path",
+      "label": "Return Path",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "015688b8bb76dfbc-f0"
+      ]
+    },
+    {
+      "hub_id": "company:seomoz",
+      "label": "SEOmoz",
+      "type": "company",
+      "recency": 0.3,
+      "evidence_fact_ids": [
+        "d5d3c2f74b3f6e2d-f0"
+      ]
+    },
+    {
+      "hub_id": "company:techstars",
+      "label": "Techstars",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f1",
+        "4891e8a07f14ff43-f2"
+      ]
+    },
+    {
+      "hub_id": "person:jason-mendelson",
+      "label": "Jason Mendelson",
+      "type": "person",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "0d6623cc1f9f29a5-f1"
+      ]
+    },
+    {
+      "hub_id": "person:josh-baer",
+      "label": "Josh Baer",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "015688b8bb76dfbc-f1"
+      ]
+    },
+    {
+      "hub_id": "person:michael-bennet",
+      "label": "Michael Bennet",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "fc0fd0d09f495cbb-f4"
+      ]
+    },
+    {
+      "hub_id": "person:phil-weiser",
+      "label": "Phil Weiser",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "fc0fd0d09f495cbb-f4"
+      ]
+    },
+    {
+      "hub_id": "person:phin-argofy",
+      "label": "Phin Argofy",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "fc0fd0d09f495cbb-f1",
+        "78cb50b2046d8e45-f0"
+      ]
+    },
+    {
+      "hub_id": "person:ryan-mcintyre",
+      "label": "Ryan McIntyre",
+      "type": "person",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "0d6623cc1f9f29a5-f1"
+      ]
+    },
+    {
+      "hub_id": "person:seth-levine",
+      "label": "Seth Levine",
+      "type": "person",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "0d6623cc1f9f29a5-f1"
+      ]
+    },
+    {
+      "hub_id": "school:massachusetts-institute-of-technology",
+      "label": "Massachusetts Institute of Technology",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "2b1b45dbf1d31438-f9",
+        "5185f5d4a316f937-f5",
+        "508564329d4fd15d-f7",
+        "ef6d8b928d78d66a-f7"
+      ]
+    },
+    {
+      "hub_id": "school:mit",
+      "label": "MIT",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "4891e8a07f14ff43-f5"
+      ]
+    },
+    {
+      "hub_id": "school:mit-sloan-school-of-management",
+      "label": "MIT Sloan School of Management",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "508564329d4fd15d-f6"
+      ]
+    },
+    {
+      "hub_id": "technology:authormagic",
+      "label": "AuthorMagic",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9b0949b73d1ff354-f3"
+      ]
+    },
+    {
+      "hub_id": "technology:claude-code",
+      "label": "Claude Code",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1438bd604e678bff-f2"
+      ]
+    },
+    {
+      "hub_id": "technology:fable-5",
+      "label": "Fable 5",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1438bd604e678bff-f3"
+      ]
+    },
+    {
+      "hub_id": "technology:texas-votes",
+      "label": "Texas Votes",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "015688b8bb76dfbc-f2"
+      ]
+    },
+    {
+      "hub_id": "topic:zero-knowledge",
+      "label": "Zero Knowledge",
+      "type": "topic",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "a4d7620faff7b1bf-f3",
+        "9b0949b73d1ff354-f0",
+        "9b0949b73d1ff354-f1",
+        "9b0949b73d1ff354-f2",
+        "9b0949b73d1ff354-f4"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:25:19.605291Z",
+  "schema_version": 1
+}

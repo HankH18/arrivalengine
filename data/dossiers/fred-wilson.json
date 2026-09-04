@@ -1,0 +1,1150 @@
+{
+  "person": {
+    "person_id": "fred-wilson",
+    "name": "Fred Wilson",
+    "details": [
+      "co-founder and partner, Union Square Ventures",
+      "New York",
+      "writes the AVC blog (avc.com)"
+    ]
+  },
+  "resolution": {
+    "person_id": "fred-wilson",
+    "status": "resolved",
+    "strong_keys": {},
+    "accepted_doc_ids": [
+      "50d212531249e044",
+      "bd70d6810c80d033",
+      "64b9c5f1b3d536b4",
+      "4308a4207195d6d3",
+      "f83c3d9a972c7034",
+      "f39e6473ec9c5a3a",
+      "15954b72f4c6dfd4",
+      "dc458a137c8a0ec7",
+      "f40a5ba04891d754",
+      "1f62a222af6d82cc",
+      "ae51d22145fca3e9",
+      "38bc0ec6fe1f0c10",
+      "9289acf10692cc72",
+      "78d92c8d7aa28781",
+      "1dc7847622fca929",
+      "b4f5f40404d11b62",
+      "088ca6dda1f23066",
+      "36b1e3b5c10ccdf8",
+      "362fff0c5510a7ed",
+      "39202a54a6febd20"
+    ],
+    "rejected": [
+      {
+        "doc_id": "6cb6b4b8d28bf581",
+        "match": "no",
+        "confidence": 0.97,
+        "evidence": "American conceptual artist (born 1954)",
+        "disambiguator": "role"
+      },
+      {
+        "doc_id": "4d4cc5cf4396fc14",
+        "match": "unsure",
+        "confidence": 0.9,
+        "evidence": "https://avc.com/2024/01/transit-tech-lab/",
+        "disambiguator": "handle"
+      },
+      {
+        "doc_id": "98201b3fe69cf1e0",
+        "match": "unsure",
+        "confidence": 0.97,
+        "evidence": "https://avc.com/2024/01/what-will-happen-in-2024/",
+        "disambiguator": "handle"
+      },
+      {
+        "doc_id": "9166d68702c4c6db",
+        "match": "unsure",
+        "confidence": 0.85,
+        "evidence": "https://avc.com/2023/12/my-year-end-playlist-2/",
+        "disambiguator": "handle"
+      }
+    ],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "50d212531249e044-f0",
+      "text": "Started blogging at AVC in September 2003 at avc.typepad.com before moving to avc.com.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "I started out in September 2003 at avc.typepad.com but moved to avc.com a few years later.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f1",
+      "text": "Has blogged at AVC.com for over twenty years.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "AVC.com has been my home for blogging for over twenty years.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f2",
+      "text": "Stopped posting new content at AVC.com as of January 10, 2024, moving blogging onchain.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "I do not plan to post here at AVC.com going forward",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f3",
+      "text": "USV invested in both Mirror and Paragraph, becoming a major shareholder in their merged company.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "USV has invested in both of them and now will be a major shareholder in the merged company.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f4",
+      "text": "USV is an investor in Kiosk, a new app built by the Mirror.xyz team.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "USV is now also an investor in that project.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f5",
+      "text": "Has written over 9,000 blog posts used to train large language models.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "the author of over 9,000 blog posts that have been used to train these large language models",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f6",
+      "text": "Chris Dixon, who leads A16Z crypto fund, has been an entrepreneur, VC, and friend for over twenty years.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "Chris Dixon, who leads the A16Z crypto fund, and has been an entrepreneur, VC, and friend of mine for over twenty years",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f7",
+      "text": "Met with Tom Secunda last summer to discuss philanthropic interests in AI/ML infrastructure for universities.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "Last summer I sat down with Tom Secunda, who co-founded Bloomberg LP with Mike Bloomberg, to talk about areas of shared philanthropic interest.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f8",
+      "text": "Supports Empire AI, a state-of-the-art AI computing center in Upstate New York for academic research.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "I am glad Governor Hochul and her team were quick to recognize the promise of this idea.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f9",
+      "text": "Has been in the tech sector for forty years.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "I have never seen an environment with more innovation in the forty years I have been in the tech sector.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "50d212531249e044-f10",
+      "text": "Invests in the new energy stack and clean energy transition.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "50d212531249e044",
+        "url": "https://avc.com",
+        "source_kind": "self_page",
+        "quote": "I am excited to be investing in this area and helping to make it happen.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.657428Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "bd70d6810c80d033-f0",
+      "text": "Co-founder of Union Square Ventures, a New York City-based venture capital firm.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "bd70d6810c80d033",
+        "url": "https://en.wikipedia.org/wiki/Fred_Wilson_(financier)",
+        "source_kind": "wikipedia",
+        "quote": "Wilson is the co-founder of Union Square Ventures, a New York City-based venture capital firm",
+        "published_at": "2026-09-02",
+        "retrieved_at": "2026-09-04T10:22:38.590495Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "bd70d6810c80d033-f1",
+      "text": "USV invested in Web 2.0 companies including Twitter, Tumblr, Foursquare, Zynga, Kickstarter, Etsy and MongoDB.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "bd70d6810c80d033",
+        "url": "https://en.wikipedia.org/wiki/Fred_Wilson_(financier)",
+        "source_kind": "wikipedia",
+        "quote": "with investments in Web 2.0 companies such as Twitter, Tumblr, Foursquare, Zynga, Kickstarter, Etsy and MongoDB.",
+        "published_at": "2026-09-02",
+        "retrieved_at": "2026-09-04T10:22:38.590495Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f0",
+      "text": "Started blogging at AVC in September 2003 at avc.typepad.com",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "I started out in September 2003 at avc.typepad.com",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f1",
+      "text": "Blogged at AVC.com for over twenty years",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "AVC.com has been my home for blogging for over twenty years.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f2",
+      "text": "Used Mirror.xyz for blogging from 2021 to 2023",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "I kept avc.mirror.xyz for most of 2021, 2022, and 2023.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f3",
+      "text": "Joined Paragraph.xyz in November 2023",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "that became an option for me in November 2023 when I joined Paragraph.xyz",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f4",
+      "text": "Moved primary blogging to AVC.xyz on Paragraph",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "My home for blogging is and has been onchain for a while now",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f5",
+      "text": "USV invested in Mirror and Paragraph and is major shareholder in merged company",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "USV has invested in both of them and now will be a major shareholder in the merged company.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4308a4207195d6d3-f6",
+      "text": "USV is an investor in Kiosk, a new app from Mirror's team",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "4308a4207195d6d3",
+        "url": "https://avc.com/2024/05/ive-moved-onchain/",
+        "source_kind": "self_page",
+        "quote": "USV is now also an investor in that project.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.610973Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f83c3d9a972c7034-f0",
+      "text": "Educated at Massachusetts Institute of Technology",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "f83c3d9a972c7034",
+        "url": "https://www.wikidata.org/wiki/Q5496570",
+        "source_kind": "wikidata",
+        "quote": "educated at: Massachusetts Institute of Technology",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:38.238848Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f0",
+      "text": "Fred Wilson has been a venture capitalist since 1987.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "Fred Wilson has been a venture capitalist since 1987.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f1",
+      "text": "Fred Wilson is a partner at Union Square Ventures.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "He currently is a partner at Union Square Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f2",
+      "text": "Fred Wilson founded Flatiron Partners.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "also founded Flatiron Partners",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f3",
+      "text": "Fred Wilson has a Bachelors degree in Mechanical Engineering from MIT.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "Fred has a Bachelors degree in Mechanical Engineering from MIT",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f4",
+      "text": "Fred Wilson has an MBA from The Wharton School of Business at the University of Pennsylvania.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "an MBA from The Wharton School of Business at the University of Pennsylvania",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f5",
+      "text": "Fred Wilson is Chairman of the NYC Department of Education's CS4All Capital Campaign.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "Fred is Chairman of the NYC Department of Education's CS4All Capital Campaign",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f6",
+      "text": "Fred Wilson is co-Chairman of Tech:NYC.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "co-Chairman of Tech:NYC",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f7",
+      "text": "Fred Wilson wrote about Korea and Japan in October 2024.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "Twelve Days In Korea and Japan Fred Wilson – Oct 8, 2024",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "15954b72f4c6dfd4-f8",
+      "text": "Fred Wilson wrote about Ethereum in September 2024.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "15954b72f4c6dfd4",
+        "url": "https://www.usv.com/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "Vitalik: An Ethereum Story Fred Wilson – Sep 20, 2024",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710122Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f40a5ba04891d754-f0",
+      "text": "Fred Wilson is a managing partner at Union Square Ventures.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f40a5ba04891d754",
+        "url": "https://marroninstitute.nyu.edu/people/fred-wilson",
+        "source_kind": "search",
+        "quote": "He currently is a managing partner at Union Square Ventures",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710196Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1f62a222af6d82cc-f0",
+      "text": "Fred Wilson met with Tom Secunda to discuss philanthropic interests in AI/ML infrastructure.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1f62a222af6d82cc",
+        "url": "https://avc.com/2024/01/empire-ai/",
+        "source_kind": "self_page",
+        "quote": "Last summer I sat down with Tom Secunda, who co-founded Bloomberg LP with Mike Bloomberg, to talk about areas of shared philanthropic interest.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611391Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1f62a222af6d82cc-f1",
+      "text": "Fred Wilson was convinced by Tom Secunda's idea for a shared AI/ML facility in upstate New York.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "1f62a222af6d82cc",
+        "url": "https://avc.com/2024/01/empire-ai/",
+        "source_kind": "self_page",
+        "quote": "Tom is a convincing person. He convinced me that this was a good idea last summer",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611391Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1f62a222af6d82cc-f2",
+      "text": "Fred Wilson supports Empire AI, a state-of-the-art AI computing center in upstate New York.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "1f62a222af6d82cc",
+        "url": "https://avc.com/2024/01/empire-ai/",
+        "source_kind": "self_page",
+        "quote": "I am glad Governor Hochul and her team were quick to recognize the promise of this idea.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611391Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1f62a222af6d82cc-f3",
+      "text": "Fred Wilson believes academic institutions should have equal access to AI/ML infrastructure as tech companies.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "1f62a222af6d82cc",
+        "url": "https://avc.com/2024/01/empire-ai/",
+        "source_kind": "self_page",
+        "quote": "Cutting-edge AI/ML research should not be limited to large tech companies. We need our academic institutions to be on equal footing.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611391Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "38bc0ec6fe1f0c10-f0",
+      "text": "Fred Wilson was an Associate at Euclid Partners from 1987-1991.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "38bc0ec6fe1f0c10",
+        "url": "https://www.linkedin.com/in/fredwilson",
+        "source_kind": "search",
+        "quote": "Associate, Euclid Partners, 1987-1991",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710281Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "38bc0ec6fe1f0c10-f1",
+      "text": "Fred Wilson was a General Partner at Euclid Partners.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "38bc0ec6fe1f0c10",
+        "url": "https://www.linkedin.com/in/fredwilson",
+        "source_kind": "search",
+        "quote": "General Partner, Euclid Partners",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710281Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9289acf10692cc72-f0",
+      "text": "Fred Wilson has been friends with Chris Dixon for over twenty years.",
+      "category": "collaborator",
+      "provenance": {
+        "doc_id": "9289acf10692cc72",
+        "url": "https://avc.com/2024/01/read-write-own/",
+        "source_kind": "self_page",
+        "quote": "Chris Dixon, who leads the A16Z crypto fund, and has been an entrepreneur, VC, and friend of mine for over twenty years",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611588Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9289acf10692cc72-f1",
+      "text": "Fred Wilson calls the evolution of blockchain networks Web3.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "9289acf10692cc72",
+        "url": "https://avc.com/2024/01/read-write-own/",
+        "source_kind": "self_page",
+        "quote": "What Chris calls Blockchain Networks, I call Web3.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611588Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9289acf10692cc72-f2",
+      "text": "Fred Wilson has spent the last decade of his career imagining Web3.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "9289acf10692cc72",
+        "url": "https://avc.com/2024/01/read-write-own/",
+        "source_kind": "self_page",
+        "quote": "I’ve spent the last decade of my career imagining what a better version could be, which I call Web3.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611588Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "9289acf10692cc72-f3",
+      "text": "Fred Wilson's investing career took meaning during the initial phase of the web (Web1).",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "9289acf10692cc72",
+        "url": "https://avc.com/2024/01/read-write-own/",
+        "source_kind": "self_page",
+        "quote": "my investing career first took meaning during the initial phase of the web, which I think of as Web1.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.611588Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1dc7847622fca929-f0",
+      "text": "Fred Wilson is a Partner at Union Square Ventures.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "1dc7847622fca929",
+        "url": "https://www.usv.com/people",
+        "source_kind": "search",
+        "quote": "Fred Wilson Fred Wilson Partner",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710380Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "b4f5f40404d11b62-f0",
+      "text": "Union Square Ventures funded Twitter.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "b4f5f40404d11b62",
+        "url": "https://news.ycombinator.com/item?id=37071",
+        "source_kind": "hn",
+        "quote": "Fred Wilson's Union Square Ventures has funded Twitter",
+        "published_at": "2007-07-27",
+        "retrieved_at": "2026-09-04T10:22:38.544205Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "088ca6dda1f23066-f0",
+      "text": "Fred Wilson wrote about Vitalik and Ethereum.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "088ca6dda1f23066",
+        "url": "https://www.usv.com/people/fred-wilson/page/2",
+        "source_kind": "search",
+        "quote": "Vitalik: An Ethereum Story",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710451Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "088ca6dda1f23066-f1",
+      "text": "Fred Wilson wrote about his twelve-day trip to Korea and Japan in October 2024.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "088ca6dda1f23066",
+        "url": "https://www.usv.com/people/fred-wilson/page/2",
+        "source_kind": "search",
+        "quote": "Twelve Days In Korea and Japan",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:39.710451Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "36b1e3b5c10ccdf8-f0",
+      "text": "Fred Wilson discussed Silicon Valley Bank's failure in March 2023.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "36b1e3b5c10ccdf8",
+        "url": "https://avc.com/2023/12/what-happened-in-2023/",
+        "source_kind": "self_page",
+        "quote": "the failure of Silicon Valley Bank and several other banks that focused on the startup and web3 sectors",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.612176Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "36b1e3b5c10ccdf8-f1",
+      "text": "Fred Wilson has been in tech for over forty years.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "36b1e3b5c10ccdf8",
+        "url": "https://avc.com/2023/12/what-happened-in-2023/",
+        "source_kind": "self_page",
+        "quote": "as long as I have been in tech, so that is over forty years now",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.612176Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "36b1e3b5c10ccdf8-f2",
+      "text": "Fred Wilson identified ChatGPT as the biggest new thing in tech in 2023.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "36b1e3b5c10ccdf8",
+        "url": "https://avc.com/2023/12/what-happened-in-2023/",
+        "source_kind": "self_page",
+        "quote": "the biggest new thing in tech, Chat GPT",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:22:41.612176Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "362fff0c5510a7ed-f0",
+      "text": "Fred Wilson was a speaker at Startup School New York on June 18, 2014.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "362fff0c5510a7ed",
+        "url": "https://news.ycombinator.com/item?id=7775785",
+        "source_kind": "hn",
+        "quote": "Fred Wilson - Union Square Ventures",
+        "published_at": "2014-05-20",
+        "retrieved_at": "2026-09-04T10:22:38.544300Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "39202a54a6febd20-f0",
+      "text": "Fred Wilson is co-founder of Union Square Ventures.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "39202a54a6febd20",
+        "url": "https://news.ycombinator.com/item?id=2337312",
+        "source_kind": "hn",
+        "quote": "co-founder, Union Square Ventures",
+        "published_at": "2011-03-17",
+        "retrieved_at": "2026-09-04T10:22:38.544351Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "cause:tech-nyc",
+      "label": "Tech:NYC",
+      "type": "cause",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "15954b72f4c6dfd4-f6"
+      ]
+    },
+    {
+      "hub_id": "company:a16z",
+      "label": "A16Z",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f6",
+        "9289acf10692cc72-f0"
+      ]
+    },
+    {
+      "hub_id": "company:bloomberg-lp",
+      "label": "Bloomberg LP",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f7",
+        "1f62a222af6d82cc-f0"
+      ]
+    },
+    {
+      "hub_id": "company:etsy",
+      "label": "Etsy",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1"
+      ]
+    },
+    {
+      "hub_id": "company:euclid-partners",
+      "label": "Euclid Partners",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "38bc0ec6fe1f0c10-f0",
+        "38bc0ec6fe1f0c10-f1"
+      ]
+    },
+    {
+      "hub_id": "company:flatiron-partners",
+      "label": "Flatiron Partners",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "15954b72f4c6dfd4-f2"
+      ]
+    },
+    {
+      "hub_id": "company:foursquare",
+      "label": "Foursquare",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1"
+      ]
+    },
+    {
+      "hub_id": "company:kickstarter",
+      "label": "Kickstarter",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1"
+      ]
+    },
+    {
+      "hub_id": "company:kiosk",
+      "label": "Kiosk",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f4",
+        "4308a4207195d6d3-f6"
+      ]
+    },
+    {
+      "hub_id": "company:mirror-xyz",
+      "label": "Mirror.xyz",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f3",
+        "4308a4207195d6d3-f2",
+        "4308a4207195d6d3-f5",
+        "4308a4207195d6d3-f6"
+      ]
+    },
+    {
+      "hub_id": "company:mongodb",
+      "label": "MongoDB",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1"
+      ]
+    },
+    {
+      "hub_id": "company:paragraph-xyz",
+      "label": "Paragraph.xyz",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f3",
+        "4308a4207195d6d3-f3",
+        "4308a4207195d6d3-f5"
+      ]
+    },
+    {
+      "hub_id": "company:silicon-valley-bank",
+      "label": "Silicon Valley Bank",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "36b1e3b5c10ccdf8-f0"
+      ]
+    },
+    {
+      "hub_id": "company:tumblr",
+      "label": "Tumblr",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1"
+      ]
+    },
+    {
+      "hub_id": "company:twitter",
+      "label": "Twitter",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1",
+        "b4f5f40404d11b62-f0"
+      ]
+    },
+    {
+      "hub_id": "company:union-square-ventures",
+      "label": "Union Square Ventures",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "50d212531249e044-f3",
+        "50d212531249e044-f4",
+        "bd70d6810c80d033-f0",
+        "15954b72f4c6dfd4-f1",
+        "f40a5ba04891d754-f0",
+        "1dc7847622fca929-f0",
+        "b4f5f40404d11b62-f0",
+        "362fff0c5510a7ed-f0",
+        "39202a54a6febd20-f0"
+      ]
+    },
+    {
+      "hub_id": "company:zynga",
+      "label": "Zynga",
+      "type": "company",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "bd70d6810c80d033-f1"
+      ]
+    },
+    {
+      "hub_id": "event:startup-school-new-york",
+      "label": "Startup School New York",
+      "type": "event",
+      "recency": 0.3,
+      "evidence_fact_ids": [
+        "362fff0c5510a7ed-f0"
+      ]
+    },
+    {
+      "hub_id": "person:chris-dixon",
+      "label": "Chris Dixon",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f6",
+        "9289acf10692cc72-f0"
+      ]
+    },
+    {
+      "hub_id": "person:governor-hochul",
+      "label": "Governor Hochul",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1f62a222af6d82cc-f2"
+      ]
+    },
+    {
+      "hub_id": "person:tom-secunda",
+      "label": "Tom Secunda",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f7",
+        "1f62a222af6d82cc-f0",
+        "1f62a222af6d82cc-f1"
+      ]
+    },
+    {
+      "hub_id": "school:massachusetts-institute-of-technology",
+      "label": "Massachusetts Institute of Technology",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "f83c3d9a972c7034-f0"
+      ]
+    },
+    {
+      "hub_id": "school:mit",
+      "label": "MIT",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "15954b72f4c6dfd4-f3"
+      ]
+    },
+    {
+      "hub_id": "school:the-wharton-school-of-business",
+      "label": "The Wharton School of Business",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "15954b72f4c6dfd4-f4"
+      ]
+    },
+    {
+      "hub_id": "technology:blockchain-networks",
+      "label": "Blockchain Networks",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "9289acf10692cc72-f1",
+        "9289acf10692cc72-f2"
+      ]
+    },
+    {
+      "hub_id": "technology:chatgpt",
+      "label": "ChatGPT",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "36b1e3b5c10ccdf8-f2"
+      ]
+    },
+    {
+      "hub_id": "technology:ethereum",
+      "label": "Ethereum",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "088ca6dda1f23066-f0"
+      ]
+    },
+    {
+      "hub_id": "topic:empire-ai",
+      "label": "Empire AI",
+      "type": "topic",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "50d212531249e044-f8",
+        "1f62a222af6d82cc-f2"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:23:53.652322Z",
+  "schema_version": 1
+}

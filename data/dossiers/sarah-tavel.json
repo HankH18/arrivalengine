@@ -1,0 +1,101 @@
+{
+  "person": {
+    "person_id": "sarah-tavel",
+    "name": "Sarah Tavel",
+    "details": [
+      "general partner, Benchmark",
+      "San Francisco",
+      "formerly Greylock and Pinterest"
+    ]
+  },
+  "resolution": {
+    "person_id": "sarah-tavel",
+    "status": "unresolved",
+    "strong_keys": {},
+    "accepted_doc_ids": [],
+    "rejected": [
+      {
+        "doc_id": "579f3afa59d813a4",
+        "match": "unsure",
+        "confidence": 0.2,
+        "evidence": "2 works, 149 citations.",
+        "disambiguator": "role"
+      },
+      {
+        "doc_id": "5465d95cd9c63ca7",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "General Partner, Benchmark",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "260e0ac0466ddfd9",
+        "match": "yes",
+        "confidence": 0.95,
+        "evidence": "Visual Search at Pinterest",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "db6316bb3fdbdb56",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "Sarah Tavel is a General Partner at Benchmark and sits on the boards of Chainalysis, Hipcamp, Rekki, Cambly, and Medely.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "e72ef89663dfd93a",
+        "match": "yes",
+        "confidence": 0.9,
+        "evidence": "Sarah Tavel",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "4827f12d4b1229d6",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "Tavel joined Benchmark in 2017 after spending one and a half years as a partner at Greylock and three years as a product manager at Pinterest.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "2c31b56086377060",
+        "match": "yes",
+        "confidence": 0.95,
+        "evidence": "After eight years at Benchmark, I’m shifting to a Venture Partner role.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "d180b448e21b47fa",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "General Partner Benchmark Capital2017 - Present",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "e93ee8afc6dae2a9",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "native new yorker, SF-resident. general partner @benchmark. formerly product @Pinterest.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "4dc2f89b199a5780",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "Partner at @Benchmark. Student of escaping competition. Formerly product @pinterest.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "42ef9c6441092abc",
+        "match": "yes",
+        "confidence": 0.98,
+        "evidence": "Sarah Tavel - Partner at Benchmark",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.0
+  },
+  "facts": [],
+  "hubs": [],
+  "built_at": "2026-09-04T10:25:33.532907Z",
+  "schema_version": 1
+}

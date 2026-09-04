@@ -1,0 +1,51 @@
+{
+  "person": {
+    "person_id": "josh-kopelman",
+    "name": "Josh Kopelman",
+    "details": [
+      "founder and partner, First Round Capital",
+      "Philadelphia"
+    ]
+  },
+  "resolution": {
+    "person_id": "josh-kopelman",
+    "status": "unresolved",
+    "strong_keys": {},
+    "accepted_doc_ids": [],
+    "rejected": [
+      {
+        "doc_id": "cd33599874005c17",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "He was the founder of First Round Capital, and before that, a founder of Half.com, which he sold to eBay in 2000.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "fb520639a81169e6",
+        "match": "yes",
+        "confidence": 0.98,
+        "evidence": "Josh Kopelman from First Round Capital tonight",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "dae9b75b8d17702c",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "Josh co-founded First Round Capital in 2004.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "3c069d21df51767e",
+        "match": "yes",
+        "confidence": 0.99,
+        "evidence": "Josh is a founding Partner at First Round Capital, a seed-stage technology venture fund",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.0
+  },
+  "facts": [],
+  "hubs": [],
+  "built_at": "2026-09-04T10:25:24.829846Z",
+  "schema_version": 1
+}

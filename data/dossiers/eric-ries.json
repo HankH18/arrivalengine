@@ -1,0 +1,516 @@
+{
+  "person": {
+    "person_id": "eric-ries",
+    "name": "Eric Ries",
+    "details": [
+      "author of The Lean Startup",
+      "founder, Long-Term Stock Exchange (LTSE)",
+      "San Francisco"
+    ]
+  },
+  "resolution": {
+    "person_id": "eric-ries",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "leanstartup.co"
+    },
+    "accepted_doc_ids": [
+      "ee2855ff13770eed",
+      "687e6587efaa2f20",
+      "476298742ed9b79a",
+      "47986a9cecff79b5",
+      "4c5b75b3bcd1de4d",
+      "835874f7600385a4",
+      "f7cf965f5ccf939e",
+      "691f6ae93767a59d",
+      "f1fdddffdd7afacc",
+      "dd848b95a1dd64ba",
+      "48b2f365944b0060",
+      "9e6a95e575bf6ec8",
+      "1c2980e781d3ee4d",
+      "f2fe26b00982daea",
+      "ebe1280a44008bbe",
+      "523881066cac5cd8",
+      "165281ae0a011c4c"
+    ],
+    "rejected": [
+      {
+        "doc_id": "e3f260040e02cae8",
+        "match": "unsure",
+        "confidence": 0.4,
+        "evidence": "occupation: entrepreneur, author",
+        "disambiguator": "role"
+      },
+      {
+        "doc_id": "d33917bfa8e409a0",
+        "match": "no",
+        "confidence": 0.95,
+        "evidence": "Devin Lauderdale",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "ba8dfa4072e0b25d",
+        "match": "no",
+        "confidence": 0.95,
+        "evidence": "Intentionally vulnerable Node.js app for CodeQL security testing and webhook events.",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "e8d3fd0f16051916",
+        "match": "no",
+        "confidence": 0.95,
+        "evidence": "A tool to patch, extend, and modify OpenTofu modules",
+        "disambiguator": "employer"
+      },
+      {
+        "doc_id": "d593d91821d6c592",
+        "match": "no",
+        "confidence": 0.9,
+        "evidence": "Public activity by dragonfleas.",
+        "disambiguator": "handle"
+      }
+    ],
+    "confidence": 0.98
+  },
+  "facts": [
+    {
+      "fact_id": "ee2855ff13770eed-f0",
+      "text": "Eric Ries is an American entrepreneur and author of The Lean Startup.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ee2855ff13770eed",
+        "url": "https://en.wikipedia.org/wiki/Eric_Ries",
+        "source_kind": "wikipedia",
+        "quote": "American entrepreneur Eric Ries is an American entrepreneur, blogger, and author of The Lean Startup",
+        "published_at": "2026-07-15",
+        "retrieved_at": "2026-09-04T10:27:30.976245Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ee2855ff13770eed-f1",
+      "text": "Eric Ries authored The Startup Way, a book on modern entrepreneurial management.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ee2855ff13770eed",
+        "url": "https://en.wikipedia.org/wiki/Eric_Ries",
+        "source_kind": "wikipedia",
+        "quote": "He is also the author of The Startup Way, a book on modern entrepreneurial management.",
+        "published_at": "2026-07-15",
+        "retrieved_at": "2026-09-04T10:27:30.976245Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4c5b75b3bcd1de4d-f0",
+      "text": "Eric Ries authored The Lean Startup, a 2011 book on entrepreneurship and startup methodology.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4c5b75b3bcd1de4d",
+        "url": "https://en.wikipedia.org/wiki/The_Lean_Startup",
+        "source_kind": "search",
+        "quote": "The Lean Startup: How Today's Entrepreneurs Use Continuous Innovation to Create Radically Successful Businesses is a 2011 book by American entrepreneur Eric Ries.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282028Z",
+        "confidence": 0.99
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4c5b75b3bcd1de4d-f1",
+      "text": "The Lean Startup outlines a framework prioritizing rapid prototyping, validated learning, and iterative product releases.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4c5b75b3bcd1de4d",
+        "url": "https://en.wikipedia.org/wiki/The_Lean_Startup",
+        "source_kind": "search",
+        "quote": "It outlines the lean startup methodology, a framework for startup development that prioritizes rapid prototyping, validated learning, and iterative product releases.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282028Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "4c5b75b3bcd1de4d-f2",
+      "text": "The Lean Startup was published by Crown Business in the United States.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "4c5b75b3bcd1de4d",
+        "url": "https://en.wikipedia.org/wiki/The_Lean_Startup",
+        "source_kind": "search",
+        "quote": "Publisher | Crown Business (USA)",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282028Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "835874f7600385a4-f0",
+      "text": "Eric Ries gave a talk at Authors at Google about The Lean Startup.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "835874f7600385a4",
+        "url": "https://news.ycombinator.com/item?id=2427322",
+        "source_kind": "hn",
+        "quote": "Authors at Google: Eric Ries \"The Lean Startup\" (video)",
+        "published_at": "2011-04-09",
+        "retrieved_at": "2026-09-04T10:27:31.007955Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f0",
+      "text": "Eric Ries is the creator of the Lean Startup methodology.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "Eric is the creator of the Lean Startup methodology",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f1",
+      "text": "Eric Ries authored The Lean Startup, a New York Times bestseller.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "author of New York Times bestseller The Lean Startup",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f2",
+      "text": "Eric Ries authored The Startup Way.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "author of New York Times bestseller The Lean Startup, The Startup Way",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f3",
+      "text": "Eric Ries authored The Leaders Guide, funded by a top Kickstarter book campaign.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "author of New York Times bestseller The Lean Startup, The Startup Way, and The Leaders Guide (funded by one of the top Kickstarter book campaigns of all time)",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f4",
+      "text": "Eric Ries is currently Executive Chair and Chairman of the Board at LTSE.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "LTSE, where he is currently Executive Chair and Chairman of the Board",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f5",
+      "text": "Eric Ries founded LTSE.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "He has founded a number of startups, including LTSE",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f7cf965f5ccf939e-f6",
+      "text": "Eric Ries served as CTO at IMVU.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "f7cf965f5ccf939e",
+        "url": "https://leanstartup.co/about/team/eric-ries",
+        "source_kind": "search",
+        "quote": "IMVU, where he served as CTO",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282181Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "f1fdddffdd7afacc-f0",
+      "text": "Eric Ries has worked with General Electric and Toyota to help them become more nimble.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "f1fdddffdd7afacc",
+        "url": "https://theleanstartup.com",
+        "source_kind": "search",
+        "quote": "Eric Ries has been working with giant firms like General Electric and Toyota to help them become more nimble",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282478Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "48b2f365944b0060-f0",
+      "text": "Eric Ries cofounded and served as CTO of IMVU, his third startup.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "48b2f365944b0060",
+        "url": "https://ia800509.us.archive.org/7/items/TheLeanStartupErickRies/The%20Lean%20Startup%20-%20Erick%20Ries.pdf",
+        "source_kind": "search",
+        "quote": "He cofounded and served as CTO of IMVU, his third startup.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282839Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "48b2f365944b0060-f1",
+      "text": "Eric Ries is an entrepreneur and author of the popular blog Startup Lessons Learned.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "48b2f365944b0060",
+        "url": "https://ia800509.us.archive.org/7/items/TheLeanStartupErickRies/The%20Lean%20Startup%20-%20Erick%20Ries.pdf",
+        "source_kind": "search",
+        "quote": "ERIC RIES is an entrepreneur and author of the popular blog Startup Lessons Learned",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.282839Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd848b95a1dd64ba-f0",
+      "text": "Eric Ries is known as the lean startup guru.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd848b95a1dd64ba",
+        "url": "https://news.ycombinator.com/item?id=2735355",
+        "source_kind": "hn",
+        "quote": "Eric Ries, the lean startup guru",
+        "published_at": "2011-07-06",
+        "retrieved_at": "2026-09-04T10:27:31.008085Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1c2980e781d3ee4d-f0",
+      "text": "Eric Ries is a NYT Bestselling Author of Incorruptible.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "1c2980e781d3ee4d",
+        "url": "https://www.linkedin.com/in/eries",
+        "source_kind": "search",
+        "quote": "NYT Bestselling Author of Incorruptible",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.283011Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "1c2980e781d3ee4d-f1",
+      "text": "Eric Ries advocates building organizations around mission-driven values to attract special people and accomplish goals.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "1c2980e781d3ee4d",
+        "url": "https://www.linkedin.com/in/eries",
+        "source_kind": "search",
+        "quote": "Build your organization around those values in such a coherent way that almost every decision you make is guided by the mission. If you do so, you will attract a very special kind of person, and as a team, you will be able to accomplish all what you dreamed of.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.283011Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "165281ae0a011c4c-f0",
+      "text": "Eric Ries defines a startup as a human institution designed to create a new product or service under conditions of extreme uncertainty.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "165281ae0a011c4c",
+        "url": "https://theleanstartup.com/principles",
+        "source_kind": "search",
+        "quote": "a human institution designed to create a new product or service under conditions of extreme uncertainty",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.283348Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "165281ae0a011c4c-f1",
+      "text": "Eric Ries believes startup success can be engineered by following a process that can be learned and taught.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "165281ae0a011c4c",
+        "url": "https://theleanstartup.com/principles",
+        "source_kind": "search",
+        "quote": "Startup success can be engineered by following the process, which means it can be learned, which means it can be taught.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:27:32.283348Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "company:crown-business",
+      "label": "Crown Business",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "4c5b75b3bcd1de4d-f2"
+      ]
+    },
+    {
+      "hub_id": "company:general-electric",
+      "label": "General Electric",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "f1fdddffdd7afacc-f0"
+      ]
+    },
+    {
+      "hub_id": "company:google",
+      "label": "Google",
+      "type": "company",
+      "recency": 0.3,
+      "evidence_fact_ids": [
+        "835874f7600385a4-f0"
+      ]
+    },
+    {
+      "hub_id": "company:imvu",
+      "label": "IMVU",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "f7cf965f5ccf939e-f6",
+        "48b2f365944b0060-f0"
+      ]
+    },
+    {
+      "hub_id": "company:ltse",
+      "label": "LTSE",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "f7cf965f5ccf939e-f4",
+        "f7cf965f5ccf939e-f5"
+      ]
+    },
+    {
+      "hub_id": "company:toyota",
+      "label": "Toyota",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "f1fdddffdd7afacc-f0"
+      ]
+    },
+    {
+      "hub_id": "topic:incorruptible",
+      "label": "Incorruptible",
+      "type": "topic",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "1c2980e781d3ee4d-f0"
+      ]
+    },
+    {
+      "hub_id": "topic:startup-lessons-learned",
+      "label": "Startup Lessons Learned",
+      "type": "topic",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "48b2f365944b0060-f1"
+      ]
+    },
+    {
+      "hub_id": "topic:the-lean-startup",
+      "label": "The Lean Startup",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "ee2855ff13770eed-f0",
+        "4c5b75b3bcd1de4d-f0",
+        "4c5b75b3bcd1de4d-f1",
+        "4c5b75b3bcd1de4d-f2",
+        "f7cf965f5ccf939e-f0",
+        "f7cf965f5ccf939e-f1",
+        "165281ae0a011c4c-f0",
+        "165281ae0a011c4c-f1"
+      ]
+    },
+    {
+      "hub_id": "topic:the-startup-way",
+      "label": "The Startup Way",
+      "type": "topic",
+      "recency": 1.0,
+      "evidence_fact_ids": [
+        "ee2855ff13770eed-f1"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:28:09.262265Z",
+  "schema_version": 1
+}

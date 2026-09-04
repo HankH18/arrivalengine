@@ -1,0 +1,656 @@
+{
+  "person": {
+    "person_id": "hunter-walk",
+    "name": "Hunter Walk",
+    "details": [
+      "co-founder and partner, Homebrew",
+      "San Francisco",
+      "formerly YouTube product"
+    ]
+  },
+  "resolution": {
+    "person_id": "hunter-walk",
+    "status": "resolved",
+    "strong_keys": {
+      "company_domain": "homebrew.co"
+    },
+    "accepted_doc_ids": [
+      "17d209de24d71897",
+      "c99ff1704150637f",
+      "c575497d58a1e7e4",
+      "5fb01506e0bbe233",
+      "04b22541d03c68ae",
+      "72fcf27b4587e7c6",
+      "dd5eed5c4f4b39b3",
+      "afc2512d86c12d88",
+      "200d8fc597616613",
+      "7dd07ea000c341d9",
+      "e18c145b4933424e",
+      "ee66a7cf88228562"
+    ],
+    "rejected": [
+      {
+        "doc_id": "c50ae03a4722797e",
+        "match": "unsure",
+        "confidence": 0.5,
+        "evidence": "Hunter Walk\nResearch areas: Computer science\n1 works, 0 citations.",
+        "disambiguator": "employer"
+      }
+    ],
+    "confidence": 0.99
+  },
+  "facts": [
+    {
+      "fact_id": "c99ff1704150637f-f0",
+      "text": "Hunter Walk is a partner at Homebrew, a seed-stage venture capital firm.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "c99ff1704150637f",
+        "url": "https://theframeworkproject.com/hunter-walk",
+        "source_kind": "search",
+        "quote": "Hunter is a partner at Homebrew, a seed-stage venture capital firm.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657820Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c99ff1704150637f-f1",
+      "text": "Hunter Walk led consumer product management at YouTube.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "c99ff1704150637f",
+        "url": "https://theframeworkproject.com/hunter-walk",
+        "source_kind": "search",
+        "quote": "He led consumer product management at YouTube",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657820Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c99ff1704150637f-f2",
+      "text": "Hunter Walk worked on building Second Life at Linden Labs.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "c99ff1704150637f",
+        "url": "https://theframeworkproject.com/hunter-walk",
+        "source_kind": "search",
+        "quote": "worked on building Second Life at Linden Labs",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657820Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "c99ff1704150637f-f3",
+      "text": "Hunter Walk discusses philosophy of bottom-up investing and unconscious bias in work culture.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "c99ff1704150637f",
+        "url": "https://theframeworkproject.com/hunter-walk",
+        "source_kind": "search",
+        "quote": "Hunter talked to me about his philosophy of bottom-up investing, addressing unconscious bias, and the work culture in Silicon Valley.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657820Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "04b22541d03c68ae-f0",
+      "text": "Hunter Walk is a Partner at Homebrew.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "04b22541d03c68ae",
+        "url": "https://www.crunchbase.com/person/hunter-walk",
+        "source_kind": "search",
+        "quote": "Hunter Walk is a Partner at Homebrew",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657978Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "04b22541d03c68ae-f1",
+      "text": "Hunter Walk holds a BA degree in History from Vassar.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "04b22541d03c68ae",
+        "url": "https://www.crunchbase.com/person/hunter-walk",
+        "source_kind": "search",
+        "quote": "He holds a BA degree in History from Vassar",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657978Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "04b22541d03c68ae-f2",
+      "text": "Hunter Walk holds an MBA from Stanford University.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "04b22541d03c68ae",
+        "url": "https://www.crunchbase.com/person/hunter-walk",
+        "source_kind": "search",
+        "quote": "MBA from Stanford University",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.657978Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "5fb01506e0bbe233-f0",
+      "text": "Hunter Walk is a co-founder of Homebrew.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "5fb01506e0bbe233",
+        "url": "https://news.ycombinator.com/item?id=20859360",
+        "source_kind": "hn",
+        "quote": "Homebrew Founders Hunter Walk and Satya Patel",
+        "published_at": "2019-09-02",
+        "retrieved_at": "2026-09-04T10:25:33.763219Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "72fcf27b4587e7c6-f0",
+      "text": "Hunter Walk closed $35M for Homebrew Ventures First Fund.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "72fcf27b4587e7c6",
+        "url": "https://news.ycombinator.com/item?id=5621987",
+        "source_kind": "hn",
+        "quote": "Hunter Walk & Satya Patel Close $35M for Homebrew Ventures First Fund",
+        "published_at": "2013-04-28",
+        "retrieved_at": "2026-09-04T10:25:33.763272Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd5eed5c4f4b39b3-f0",
+      "text": "Co-founder of Homebrew, a venture capital firm.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd5eed5c4f4b39b3",
+        "url": "https://www.youtube.com/watch?v=3GB6uvOoPFo",
+        "source_kind": "search",
+        "quote": "Hunter Walk, co-founder of Homebrew",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658205Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd5eed5c4f4b39b3-f1",
+      "text": "Previously worked in product management at Google and YouTube.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd5eed5c4f4b39b3",
+        "url": "https://www.youtube.com/watch?v=3GB6uvOoPFo",
+        "source_kind": "search",
+        "quote": "his journey from product management at Google and YouTube",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658205Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd5eed5c4f4b39b3-f2",
+      "text": "Co-founder Satya Patel and Hunter Walk rethought the traditional VC model after nearly a decade.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "dd5eed5c4f4b39b3",
+        "url": "https://www.youtube.com/watch?v=3GB6uvOoPFo",
+        "source_kind": "search",
+        "quote": "he and his co-founder Satya Patel decided to rethink the traditional VC model after nearly a decade",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658205Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd5eed5c4f4b39b3-f3",
+      "text": "Homebrew operates as a self-funded evergreen fund called Homebrew 4.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd5eed5c4f4b39b3",
+        "url": "https://www.youtube.com/watch?v=3GB6uvOoPFo",
+        "source_kind": "search",
+        "quote": "Homebrew 4 is the name of the fund that we sell funded",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658205Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "dd5eed5c4f4b39b3-f4",
+      "text": "Built products like AdSense and YouTube that reached billions of people and revenue.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "dd5eed5c4f4b39b3",
+        "url": "https://www.youtube.com/watch?v=3GB6uvOoPFo",
+        "source_kind": "search",
+        "quote": "building products like AdSense YouTube reaching billions of people and billions in Revenue",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658205Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f0",
+      "text": "Partner at Homebrew, a seed stage venture capital firm based in San Francisco.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "Partner at Homebrew. Seed stage venture capital serving founders. Brewed in SF.",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f1",
+      "text": "Led consumer product management at YouTube delivering billions of playbacks daily.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "Led consumer product management at YouTube, delivering billions of playbacks a day",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f2",
+      "text": "Joined Google in 2003 managing product and sales for contextual advertising business.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "Joined Google in 2003 managing product and sales efforts for Google’s contextual advertising business",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f3",
+      "text": "Founding member of product and marketing team at Linden Lab, creators of Second Life.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "Founding member of the product and marketing team at Linden Lab, the creators of online virtual world Second Life",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f4",
+      "text": "Worked as management consultant and spent a year at Late Night with Conan O'Brien.",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "a management consultant and also spent a year at Late Night with Conan O’ Brien",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f5",
+      "text": "Earned BA in History from Vassar and MBA from Stanford University.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "Grinded a BA in History from Vassar and an MBA from Stanford University",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "afc2512d86c12d88-f6",
+      "text": "Backing new venture firms via Screendoor, a new type of LP.",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "afc2512d86c12d88",
+        "url": "https://hunterwalk.com/about",
+        "source_kind": "search",
+        "quote": "Also backing new venture firms via Screendoor, a new type of LP",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658358Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "200d8fc597616613-f0",
+      "text": "Homebrew was inspired by the Homebrew Computer Club where Steve Jobs met Steve Wozniak.",
+      "category": "hook",
+      "provenance": {
+        "doc_id": "200d8fc597616613",
+        "url": "https://ltse.com/insights/homebrew-investing-careers-and-the-journey",
+        "source_kind": "search",
+        "quote": "The club also serves as inspiration for venture capital company, Homebrew",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658537Z",
+        "confidence": 0.8
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "200d8fc597616613-f1",
+      "text": "Believes sharing information freely and candidly is key to helping startups scale.",
+      "category": "interest",
+      "provenance": {
+        "doc_id": "200d8fc597616613",
+        "url": "https://ltse.com/insights/homebrew-investing-careers-and-the-journey",
+        "source_kind": "search",
+        "quote": "believe deeply that sharing information freely and candidly is the key to helping startups in its portfolio move faster and scale bigger",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658537Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "e18c145b4933424e-f0",
+      "text": "Co-founder of Homebrew with Satya Patel",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "e18c145b4933424e",
+        "url": "https://www.homebrew.co",
+        "source_kind": "search",
+        "quote": "Satya Patel Hunter Walk",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.659040Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ee66a7cf88228562-f0",
+      "text": "Previously made products at YouTube",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ee66a7cf88228562",
+        "url": "https://hunterwalk.medium.com",
+        "source_kind": "search",
+        "quote": "Previously made products at YouTube, Google & SecondLife",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.659461Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ee66a7cf88228562-f1",
+      "text": "Previously made products at Google",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ee66a7cf88228562",
+        "url": "https://hunterwalk.medium.com",
+        "source_kind": "search",
+        "quote": "Previously made products at YouTube, Google & SecondLife",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.659461Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ee66a7cf88228562-f2",
+      "text": "Previously made products at SecondLife",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "ee66a7cf88228562",
+        "url": "https://hunterwalk.medium.com",
+        "source_kind": "search",
+        "quote": "Previously made products at YouTube, Google & SecondLife",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.659461Z",
+        "confidence": 0.9
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "7dd07ea000c341d9-f0",
+      "text": "Involved with Screendoor LP for new VCs",
+      "category": "current_work",
+      "provenance": {
+        "doc_id": "7dd07ea000c341d9",
+        "url": "https://www.linkedin.com/posts/hunterwalk_you-have-to-assume-every-company-will-have-activity-7298352262404284416-arHM",
+        "source_kind": "search",
+        "quote": "Funding Startups via Homebrew and new VCs via Screendoor LP",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.658713Z",
+        "confidence": 0.85
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "ee66a7cf88228562-f3",
+      "text": "Started Homebrew in 2012/2013",
+      "category": "recent_activity",
+      "provenance": {
+        "doc_id": "ee66a7cf88228562",
+        "url": "https://hunterwalk.medium.com",
+        "source_kind": "search",
+        "quote": "When we started Homebrew in 2012/2013",
+        "published_at": null,
+        "retrieved_at": "2026-09-04T10:25:34.659461Z",
+        "confidence": 0.95
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    }
+  ],
+  "hubs": [
+    {
+      "hub_id": "company:google",
+      "label": "Google",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "dd5eed5c4f4b39b3-f1",
+        "afc2512d86c12d88-f2",
+        "ee66a7cf88228562-f1"
+      ]
+    },
+    {
+      "hub_id": "company:homebrew",
+      "label": "Homebrew",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "c99ff1704150637f-f0",
+        "04b22541d03c68ae-f0",
+        "5fb01506e0bbe233-f0",
+        "72fcf27b4587e7c6-f0",
+        "dd5eed5c4f4b39b3-f0",
+        "afc2512d86c12d88-f0",
+        "e18c145b4933424e-f0",
+        "ee66a7cf88228562-f3"
+      ]
+    },
+    {
+      "hub_id": "company:linden-lab",
+      "label": "Linden Lab",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "afc2512d86c12d88-f3"
+      ]
+    },
+    {
+      "hub_id": "company:linden-labs",
+      "label": "Linden Labs",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "c99ff1704150637f-f2"
+      ]
+    },
+    {
+      "hub_id": "company:screendoor",
+      "label": "Screendoor",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "afc2512d86c12d88-f6"
+      ]
+    },
+    {
+      "hub_id": "company:youtube",
+      "label": "YouTube",
+      "type": "company",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "c99ff1704150637f-f1",
+        "dd5eed5c4f4b39b3-f1",
+        "afc2512d86c12d88-f1",
+        "ee66a7cf88228562-f0"
+      ]
+    },
+    {
+      "hub_id": "event:homebrew-computer-club",
+      "label": "Homebrew Computer Club",
+      "type": "event",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "200d8fc597616613-f0"
+      ]
+    },
+    {
+      "hub_id": "investor:screendoor-lp",
+      "label": "Screendoor LP",
+      "type": "investor",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "7dd07ea000c341d9-f0"
+      ]
+    },
+    {
+      "hub_id": "person:satya-patel",
+      "label": "Satya Patel",
+      "type": "person",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "5fb01506e0bbe233-f0",
+        "72fcf27b4587e7c6-f0",
+        "dd5eed5c4f4b39b3-f2",
+        "e18c145b4933424e-f0"
+      ]
+    },
+    {
+      "hub_id": "school:stanford-university",
+      "label": "Stanford University",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "04b22541d03c68ae-f2",
+        "afc2512d86c12d88-f5"
+      ]
+    },
+    {
+      "hub_id": "school:vassar",
+      "label": "Vassar",
+      "type": "school",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "04b22541d03c68ae-f1",
+        "afc2512d86c12d88-f5"
+      ]
+    },
+    {
+      "hub_id": "technology:adsense",
+      "label": "AdSense",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "dd5eed5c4f4b39b3-f4"
+      ]
+    },
+    {
+      "hub_id": "technology:second-life",
+      "label": "Second Life",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "c99ff1704150637f-f2",
+        "afc2512d86c12d88-f3"
+      ]
+    },
+    {
+      "hub_id": "technology:secondlife",
+      "label": "SecondLife",
+      "type": "technology",
+      "recency": 0.5,
+      "evidence_fact_ids": [
+        "ee66a7cf88228562-f2"
+      ]
+    }
+  ],
+  "built_at": "2026-09-04T10:26:12.350568Z",
+  "schema_version": 1
+}
