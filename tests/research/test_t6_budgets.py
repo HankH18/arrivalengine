@@ -201,3 +201,8 @@ async def test_budgeted_client_conforms_refuses_past_the_cap_and_never_calls_thr
     assert inner.calls == 2, "a refused call must not reach the real client"
     assert metered.used == 2
     assert metered.refused == 1
+
+
+def test_interleave_with_no_sources_at_all_is_empty_not_an_error():
+    assert _interleave([], 40) == []
+    assert _interleave([[]], 40) == []

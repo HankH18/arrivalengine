@@ -284,3 +284,15 @@ async def test_a_missing_roster_raises_rosererror_not_oserror(tmp_path, missing)
 
     with pytest.raises(RosterError):
         await build_all(tmp_path / missing, tmp_path / "out", connectors=[], llm=LLMDouble())
+
+
+def test_format_report_survives_a_report_with_nobody_in_it():
+    """`--only` matching nobody still prints a table rather than dividing by zero."""
+    empty = BuildReport(
+        people=[], started_at="2026-02-20T14:00:00Z", finished_at="2026-02-20T14:00:00Z"
+    )
+
+    table = format_report(empty)
+
+    assert "zero-result sources" in table
+    assert "0 person/people: 0 resolved, 0 unresolved, 0 skipped" in table
