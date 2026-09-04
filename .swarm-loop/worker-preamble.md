@@ -207,6 +207,31 @@ Never trust the installer's exit code.
   commands are wired) but is not an all-clear either — confirm by eye that the table is
   imported and mounted, and say so in DECISIONS. Exit 3 is the tool refusing your
   arguments, never a finding about your code.
+- **PROVE THE COPY IS WHAT RUNS, BEFORE ANY OTHER SABOTAGE STEP.** Copying a tree does
+  not make it the tree under test, and the way that fails is silent and reassuring.
+  Measured elsewhere on this machine: a venv's `.pth` hardcodes the ABSOLUTE path of the
+  primary checkout, so a tree copied to scratch and run with that venv imported the REAL
+  modules — the run reported "30 passed" with every resolved path under the primary
+  checkout, having sabotaged one tree and measured another, and the sabotage read as NOT
+  CAUGHT. Run the copy with `PYTHONPATH=<copy>/src`, name the interpreter explicitly
+  rather than letting `python` resolve off PATH (a bare `python` on this box finds an
+  unrelated Anaconda install), and then, before believing ANY sabotage result, print the
+  resolved path of the module you sabotaged and assert it sits inside the copy,
+  canonicalizing both sides. **The positive control does NOT cover this** — a witness can
+  fire perfectly in the real module while your copy sits untouched.
+- **A TEST YOU WRITE MAY NOT GRADE AGAINST A FILE YOU OWN.** Whatever an assertion
+  compares against — a fixture, a golden file, a snapshot, a recorded response, the source
+  text of a module — must be something you CANNOT write: orchestrator-owned, or frozen
+  under `.swarm-loop/acceptance/`. If you can write the answer key, the metric measures
+  nothing, and it needs no bad intent: you implement, you run it, you paste the output into
+  the fixture because that IS the output, and it is green forever. **Two instances were
+  found in this repo tonight** — a taste fixture that was a paraphrase of the frozen answer
+  key (55 of 56 case ids identical to it, while its author's report claimed independence),
+  and an acceptance test grading the SOURCE TEXT of a file in the gradee's own write scope,
+  under which a four-line module containing one unconditional `pytest.skip()` scored green.
+  Before you commit any test, name the thing it compares against and check it against your
+  own ownership list. A hit is not something to work around: say so in NEEDS — "this
+  criterion has no fixture outside my ownership" — and the orchestrator supplies one.
 - **CLEAR `__pycache__` BETWEEN EVERY SABOTAGE VARIANT AND AFTER EVERY RESTORE.** A
   same-LENGTH edit made within the same second as the previous one leaves a stale `.pyc`
   that CPython **accepts as valid**: the pyc header records the source's mtime at
