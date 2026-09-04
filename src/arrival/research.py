@@ -429,7 +429,18 @@ def _person_from(entry: Any, taken: set[str]) -> PersonRef | None:
     # SPEC Q1 / contracts.PersonRef: person_id == slug(name), disambiguated by the first
     # detail on a collision. A roster may state an id explicitly; the product contract is
     # what applies when it does not.
-    person_id = declared or slug(name)
+    #
+    # A DECLARED id is slugged too, and that is a security decision rather than a tidiness
+    # one: the id becomes a filename in `build_all` (`out_dir/{person_id}.json`), a roster
+    # is hand-written YAML, and `person_id: ../../../etc/whatever` would otherwise write
+    # outside the output directory. `slug` maps every separator to "-", so a legitimate id
+    # survives it unchanged and a path does not survive it at all.
+    person_id = slug(declared) if declared else slug(name)
+    if declared and person_id != declared:
+        log.warning("roster person_id %r is not a slug; using %r", declared, person_id)
+    if not person_id:
+        log.warning("skipping %r: the name slugs to nothing, so it cannot be keyed", name)
+        return None
     if person_id in taken:
         suffix = slug(cleaned[0]) if cleaned else ""
         candidate = f"{person_id}-{suffix}" if suffix else person_id
@@ -569,6 +580,17 @@ def format_report(report: BuildReport) -> str:
 # --------------------------------------------------------------------------
 
 
+def _safe_segment(value: str) -> bool:
+    """True when `value` is usable as ONE filename component.
+
+    `RawDoc.doc_id` is contractually `sha1(url)[:16]` but the model carries no validator,
+    so a connector — ours today, someone else's tomorrow — can hand back any string, and
+    this one is about to become a path. A separator or a `..` here writes outside the
+    output directory.
+    """
+    return bool(value) and value not in (".", "..") and not set(value) & {"/", "\\", "\0"}
+
+
 def _write_json(path: Path, model: BaseModel) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(model.model_dump_json(indent=2) + "\n", encoding="utf-8")
@@ -635,6 +657,9 @@ async def build_all(
         dossier = await build_dossier(person, fan_out, client, limit, trace=trace)
         _write_json(path, dossier)
         for doc in trace.accepted_documents(dossier.resolution.accepted_doc_ids):
+            if not _safe_segment(doc.doc_id):
+                log.warning("refusing to commit %r: its doc_id is not a filename", doc.url)
+                continue
             _write_json(docs_dir / f"{doc.doc_id}.json", doc)
         rows.append(report_row(dossier, trace))
 

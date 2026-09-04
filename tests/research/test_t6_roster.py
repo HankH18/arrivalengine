@@ -115,3 +115,34 @@ def test_a_missing_or_unparsable_roster_is_a_rostererror(tmp_path):
     bad.write_text("people:\n  - name: [unclosed\n", encoding="utf-8")
     with pytest.raises(RosterError):
         load_roster(bad)
+
+
+def test_a_declared_person_id_cannot_escape_the_output_directory(tmp_path):
+    """The id becomes `out_dir/{person_id}.json`, and a roster is hand-written YAML."""
+    path = tmp_path / "roster.yaml"
+    path.write_text(
+        "people:\n"
+        "  - name: Marisol Trevino\n"
+        "    person_id: ../../../etc/passwd\n"
+        "  - name: Anselm Kettleby\n"
+        "    person_id: nested/id\n",
+        encoding="utf-8",
+    )
+
+    people = load_roster(path)
+
+    for person in people:
+        assert "/" not in person.person_id and ".." not in person.person_id
+        assert person.person_id == slug(person.person_id)
+
+
+def test_a_name_that_slugs_to_nothing_is_dropped_rather_than_keyed_as_empty(tmp_path):
+    """An empty person_id would write `.json` into the dossier directory."""
+    path = tmp_path / "roster.yaml"
+    path.write_text(
+        "people:\n  - name: '???'\n  - name: Marisol Trevino\n", encoding="utf-8"
+    )
+
+    people = load_roster(path)
+
+    assert [p.person_id for p in people] == ["marisol-trevino"]

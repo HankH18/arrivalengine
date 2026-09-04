@@ -296,3 +296,36 @@ def test_format_report_survives_a_report_with_nobody_in_it():
 
     assert "zero-result sources" in table
     assert "0 person/people: 0 resolved, 0 unresolved, 0 skipped" in table
+
+
+async def test_a_document_whose_id_is_a_path_is_refused_not_written(tmp_path):
+    """`RawDoc.doc_id` carries no validator; it is about to become a filename."""
+    from t6_corpus import FETCHED_AT, PUBLISHED_AT
+
+    hostile = RawDoc(
+        doc_id="../../escaped",
+        source_kind="search",
+        url="https://example.test/hostile",
+        text="Marisol Trevino leads the platform team at Quarrystone Labs.",
+        published_at=PUBLISHED_AT,
+        fetched_at=FETCHED_AT,
+    )
+    docs = [*docs_for("search", 2), hostile]
+    llm = LLMDouble()
+    script_verdicts(llm, docs)
+    script_extraction(llm, docs)
+    out_dir = tmp_path / "data" / "dossiers"
+
+    await build_all(
+        _roster(tmp_path),
+        out_dir,
+        connectors=[ConnectorDouble(kind="search", docs=docs)],
+        llm=llm,
+        budget=Budget(),
+    )
+
+    assert not (tmp_path / "escaped.json").exists()
+    assert not (tmp_path / "data" / "escaped.json").exists()
+    assert sorted(p.name for p in (out_dir.parent / "docs").iterdir()) == sorted(
+        f"{d.doc_id}.json" for d in docs[:2]
+    )
