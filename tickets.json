@@ -1351,6 +1351,51 @@
       "defect": "The `is_feed_url` guard exists at self_page.py:156 but is applied ONLY to crawled page links \u2014 not to seed URLs taken from person.details, and not to feed-entry target URLs at :281. The other live route that made T-039 reachable. Fix: apply the existing guard at both sites.",
       "finding_id": "9fbad621760d79237d20b791cdd3418d5789355dc3f3f914c9a49c6b9521072b",
       "reproduction": "Give a roster line a seed URL pointing at a feed. Reported by the FIX-HTTP2 lane."
+    },
+    {
+      "id": "T-062",
+      "title": "`test_propublica_says_plainly_whether_the_member_is_on_the_board` has its `conservancy` assertion inside `if conservancy is not None:` and NEVER EXECUTES. Measured: the propublica recording holds 5 entries, the connector requests 3 (q=Marisol Quennebeck, q=Thornfield Loom, organizations/814402257.json); `q=Providence` and `organizations/50912344.json` are dead. Cause: `organisation_queries` (propublica.py:82) now skips a detail for which `_is_an_address` is true, so 'Providence, Rhode Island' never becomes a query. The fixture's own note says the conservancy row 'is deliberate: it is what a CITY-name query returns' \u2014 a CORRECT product change orphaned the recording and silently disabled the assertion guarding it. This must be resolved before anyone adds a request-coverage rule ('every recorded entry must be requested'), or that rule ships with an exception list and is worth less than nothing.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "tests/connectors/test_t1_connector_fixtures.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "tests/connectors/test_t1_connector_fixtures.py",
+      "defect": "`test_propublica_says_plainly_whether_the_member_is_on_the_board` has its `conservancy` assertion inside `if conservancy is not None:` and NEVER EXECUTES. Measured: the propublica recording holds 5 entries, the connector requests 3 (q=Marisol Quennebeck, q=Thornfield Loom, organizations/814402257.json); `q=Providence` and `organizations/50912344.json` are dead. Cause: `organisation_queries` (propublica.py:82) now skips a detail for which `_is_an_address` is true, so 'Providence, Rhode Island' never becomes a query. The fixture's own note says the conservancy row 'is deliberate: it is what a CITY-name query returns' \u2014 a CORRECT product change orphaned the recording and silently disabled the assertion guarding it. This must be resolved before anyone adds a request-coverage rule ('every recorded entry must be requested'), or that rule ships with an exception list and is worth less than nothing.",
+      "finding_id": "274fdb0bbdc1bbeef0e98ceb4616ecefb3db34373b75b992f545c092443ee085",
+      "reproduction": "Instrument the propublica connector's request list against its recording. Reported by the FIX-CONN3 lane, outside its write scope."
+    },
+    {
+      "id": "T-063",
+      "title": "wikidata makes a third call \u2014 `wbgetentities?ids=Q5|Q131524&props=labels` \u2014 that the recorded corpus does not hold. Under the old path+action matching it was answered with the Q104882317 ENTITY payload: a wrong response served as if right. Output was unchanged only because no labels were found either way. With ids/props now pinned by T-042 it 404s honestly, so the label-lookup capability is unexercised by the recorded corpus rather than silently mis-exercised.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/wikidata.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/wikidata.py",
+      "defect": "wikidata makes a third call \u2014 `wbgetentities?ids=Q5|Q131524&props=labels` \u2014 that the recorded corpus does not hold. Under the old path+action matching it was answered with the Q104882317 ENTITY payload: a wrong response served as if right. Output was unchanged only because no labels were found either way. With ids/props now pinned by T-042 it 404s honestly, so the label-lookup capability is unexercised by the recorded corpus rather than silently mis-exercised.",
+      "finding_id": "d66f681e0c98e5c9dd603eca98bd35950322683787cd9af83a86ebc355b17ead",
+      "reproduction": "Run the wikidata connector against its recording and list the requests. Reported by the FIX-CONN3 lane."
+    },
+    {
+      "id": "T-064",
+      "title": "`test_every_corpus_hub_label_yields_a_speakable_why` grades with the BARE `is_speakable(why)`, but after T-052 the product path is `_speakable_match`, which additionally receives the declared noun-phrase spans from Match.contributions. So the tripwire goes red for a MULTI-WORD corpus label whose head reads as a verb ('Reuters Media Group' as a company) even though the product is now correct on that input. It is a false alarm waiting to fire the day either corpus gains such a label. Fix: grade through the same path the product takes, or declare the spans the way _speakable_match does.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "tests/graph/test_t041_spoken_hub_label.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "tests/graph/test_t041_spoken_hub_label.py:163",
+      "defect": "`test_every_corpus_hub_label_yields_a_speakable_why` grades with the BARE `is_speakable(why)`, but after T-052 the product path is `_speakable_match`, which additionally receives the declared noun-phrase spans from Match.contributions. So the tripwire goes red for a MULTI-WORD corpus label whose head reads as a verb ('Reuters Media Group' as a company) even though the product is now correct on that input. It is a false alarm waiting to fire the day either corpus gains such a label. Fix: grade through the same path the product takes, or declare the spans the way _speakable_match does.",
+      "finding_id": "dade9460c11bed920181948f3db811a5f349db03a8090b52ead64ac45c7c0a88",
+      "reproduction": "Add a multi-word hub label whose head token ends in -s to either fixture corpus. Reported by the FIX-DIGEST2 lane; the test belongs to T-5 and was outside its ownership."
     }
   ],
   "cut_list": [

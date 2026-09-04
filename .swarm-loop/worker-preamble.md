@@ -6,6 +6,9 @@ branch that modifies anything there is vetoed by `check-branch` before a human r
 
 ## Changelog
 - **2026-09-03, epoch 0** — first version, written before the T-1..T-5 build wave.
+- **2026-09-04, cycle 5** — added standing ruling 0a: each lane gets its OWN scratch
+  directory under `arrivalengine-scratch/<lane>/`; the shared session scratchpad was
+  measured corrupting concurrent lanes' sabotage rigs.
 - **2026-09-04, cycle 5** — sabotage recipe corrected: `PYTHONPATH` loses to pytest's
   own `pythonpath = ["src"]`, so a sabotage of a copied tree silently measured the
   worktree. Use `-o pythonpath=<copy>/src` and prove the path from inside `pytest_configure`.
@@ -281,6 +284,25 @@ Never trust the installer's exit code.
 ## Standing rulings for this run
 
 These are settled. Do not re-litigate them; build against them.
+
+0a. **YOUR SCRATCH DIRECTORY IS YOURS ALONE, AND IT IS NOT THE SESSION SCRATCHPAD.**
+   Use `/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-scratch/<your-lane-name>/`
+   and create it yourself. Do NOT write into the shared session scratchpad, whatever a
+   packet says — six to eight lanes run concurrently and that path is common to all of
+   them. Measured this run: one lane's `sabotage.py` was OVERWRITTEN mid-run by another
+   lane's file of the same name (the clobbered first line named a different ticket), and a
+   second lane watched its `copy/` directory lose top-level files between two consecutive
+   Bash calls, breaking a sabotage run outright. Corrupted scratch does not announce
+   itself; it produces a measurement of something you did not build.
+
+   Two more traps from the same lane, both of which passed a naive path assertion:
+   - **`cd <worktree> && git archive HEAD` inside a compound Bash command silently ran
+     from the PRIMARY CHECKOUT**, producing a "copy" of the pre-change file. Only a
+     content check on the specific change caught it. Assert your sabotage marker is in
+     the copy, not just that the path looks right.
+   - **Do build, sabotage, measure and restore inside ONE process** (a driver under
+     `tempfile.mkdtemp()`), rather than across several Bash invocations that can observe
+     different filesystem states.
 
 0. **Never check your own test diff against `main` — `main` moves under you.** Lanes run
    concurrently and the orchestrator merges siblings while you work, so
