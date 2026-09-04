@@ -29,6 +29,7 @@ wherever the runner happened to start:
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -64,10 +65,33 @@ HUMAN_GATE_REASON = (
 
 
 def committed_dossier_paths() -> list[Path]:
-    """Every committed dossier file, sorted. Empty when the corpus has not been built."""
+    """Every dossier file GIT ACTUALLY TRACKS, sorted. Empty until the corpus is committed.
+
+    `git ls-files`, not `glob`, and the distinction is the whole point of this module.
+    A glob answers "is it on disk"; the requirement (SPEC C4, S7) is that the app boots
+    from COMMITTED dossiers, because `render.yaml` deploys from git and a file that was
+    never added ships as an empty corpus.
+
+    Measured 2026-09-04, which is why this changed: a live build wrote 10 dossiers and 59
+    documents to disk and committed none of them. The glob found all 10, the skip did not
+    fire, and this module reported a green "committed corpus" over a corpus git had never
+    seen — reopening from the disk side exactly the hole the skip exists to close from the
+    empty side. `subprocess` rather than a library: no new dependency, and `git` is already
+    required to have produced this checkout.
+    """
     if not DOSSIER_DIR.is_dir():
         return []
-    return sorted(DOSSIER_DIR.glob("*.json"))
+    try:
+        listed = subprocess.run(
+            ["git", "ls-files", "-z", "--", "data/dossiers/*.json"],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=30, check=True,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        # No git (a source tarball, say). Fall back to disk rather than failing the suite,
+        # and say so, because the guarantee is weaker on that path.
+        return sorted(DOSSIER_DIR.glob("*.json"))
+    tracked = sorted(REPO_ROOT / name for name in listed.split("\0") if name)
+    return [path for path in tracked if path.is_file()]
 
 
 @pytest.fixture(scope="module")

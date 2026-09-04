@@ -1501,6 +1501,81 @@
       "defect": "`test_the_corpus_carries_an_owner_approval_line` asserts only that the line starts `# approved_by:` and has non-whitespace after the colon. MEASURED: it PASSES on `# approved_by: PENDING OWNER REVIEW`, on the literal placeholder `<name> <date>`, on `NOT APPROVED`, on `the T-4 lane`, and on `x`. It fails only on a blank. So the suite is green today with the file stating in as many words that nobody has approved it, and TASKS.md T-4.1's actual requirement \u2014 that the OWNER reviewed and approved \u2014 is not machine-checked at all. Either tighten it to a name-plus-ISO-date shape that rejects PENDING and the placeholder, or state openly in the file that the approval is a human act with no automated backstop.",
       "finding_id": "141d4c2dab0030ef9d2b27c5ec689876503bc62b132944dec7b0dd05e96b9c27",
       "reproduction": "Substitute each string above into line 1 and run the test. Measured by the TASTE-REVIEW pass."
+    },
+    {
+      "id": "T-072",
+      "title": "LIVE BUILD, 2026-09-04: `self_page` returned ZERO documents for ALL TEN people \u2014 every single one is in the zero-result list. That cannot be right: the roster hands it explicit personal-site seeds in `details` (Fred Wilson 'writes the AVC blog (avc.com)', Brad Feld 'feld.com', Nabeel Qureshi 'essays at nabeelqu.co'), and self_page is the HIGHEST-TRUST SourceKind in the whole system \u2014 the one the resolver and the digest weight most. A connector that never returns anything is not a connector. Note the log also shows `fetch got HTTP 429 for https://nabeelqu.co`, so at least one seed WAS attempted and was rate-limited rather than never requested; the shape of the failure needs measuring, not guessing. Suspect interaction with T-061 (the is_feed_url guard applied only to crawled links, not seeds) and with the T-025/T-026 cache and content-type work merged tonight.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/self_page.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "CRITICAL",
+      "location": "src/arrival/connectors/self_page.py",
+      "defect": "LIVE BUILD, 2026-09-04: `self_page` returned ZERO documents for ALL TEN people \u2014 every single one is in the zero-result list. That cannot be right: the roster hands it explicit personal-site seeds in `details` (Fred Wilson 'writes the AVC blog (avc.com)', Brad Feld 'feld.com', Nabeel Qureshi 'essays at nabeelqu.co'), and self_page is the HIGHEST-TRUST SourceKind in the whole system \u2014 the one the resolver and the digest weight most. A connector that never returns anything is not a connector. Note the log also shows `fetch got HTTP 429 for https://nabeelqu.co`, so at least one seed WAS attempted and was rate-limited rather than never requested; the shape of the failure needs measuring, not guessing. Suspect interaction with T-061 (the is_feed_url guard applied only to crawled links, not seeds) and with the T-025/T-026 cache and content-type work merged tonight.",
+      "finding_id": "df54db5e1241f0fbb720c2ff0562d51ca9b7e9187a881fc2134ac1af291adefe",
+      "reproduction": "Run `python -m arrival build --only 'Fred Wilson' --force` and read the zero-result sources column, then instrument self_page's request list. Measured on the first live ten-person build."
+    },
+    {
+      "id": "T-073",
+      "title": "LIVE BUILD, 2026-09-04: THREE of ten people resolved to `unresolved` with confidence 0.00 and produced EMPTY dossiers \u2014 Brad Feld, Josh Kopelman, Sarah Tavel. All three are prominent, heavily-documented venture capitalists with Wikipedia pages, personal sites and dense press coverage; the roster gives each of them employer, city and in Feld's case a personal domain. R2's refuse-to-guess doctrine is correct in principle, but refusing on THESE three is a false negative, not caution \u2014 the other seven resolved at 0.99. On a ten-person demo that is three blank pages. Likely coupled to the self_page defect above (their strongest disambiguating documents never arrived), but that is a hypothesis to test, not a conclusion: Josh Kopelman also drew zeros from wikipedia AND wikidata, which self_page cannot explain.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/resolve.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/resolve.py",
+      "defect": "LIVE BUILD, 2026-09-04: THREE of ten people resolved to `unresolved` with confidence 0.00 and produced EMPTY dossiers \u2014 Brad Feld, Josh Kopelman, Sarah Tavel. All three are prominent, heavily-documented venture capitalists with Wikipedia pages, personal sites and dense press coverage; the roster gives each of them employer, city and in Feld's case a personal domain. R2's refuse-to-guess doctrine is correct in principle, but refusing on THESE three is a false negative, not caution \u2014 the other seven resolved at 0.99. On a ten-person demo that is three blank pages. Likely coupled to the self_page defect above (their strongest disambiguating documents never arrived), but that is a hypothesis to test, not a conclusion: Josh Kopelman also drew zeros from wikipedia AND wikidata, which self_page cannot explain.",
+      "finding_id": "20d6a7e5dc4548b56ea5e009581d55fccb3fc30f092ed6b5c685ee4ee466fa4e",
+      "reproduction": "Read the build report table: brad-feld, josh-kopelman and sarah-tavel are `unresolved` / 0.00 / 0 facts / 0 hubs. Re-run with --only and instrument the resolver's accepted/rejected verdicts."
+    },
+    {
+      "id": "T-074",
+      "title": "LIVE BUILD, 2026-09-04: EVERY ProPublica request returns HTTP 404 \u2014 the live API answers 404 for `https://projects.propublica.org/nonprofits/api/v2/search.json?q=...` for all ten people. The recorded fixture corpus records that endpoint returning 200, so the recorded tests are green against an endpoint shape that no longer exists. This is precisely the class of defect only a live run can surface, and it means one of the ten sources has been dead the whole time while its tests passed. Either the path moved (ProPublica's Nonprofit Explorer API has changed base paths before) or the query shape is now rejected.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/propublica.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/connectors/propublica.py",
+      "defect": "LIVE BUILD, 2026-09-04: EVERY ProPublica request returns HTTP 404 \u2014 the live API answers 404 for `https://projects.propublica.org/nonprofits/api/v2/search.json?q=...` for all ten people. The recorded fixture corpus records that endpoint returning 200, so the recorded tests are green against an endpoint shape that no longer exists. This is precisely the class of defect only a live run can surface, and it means one of the ten sources has been dead the whole time while its tests passed. Either the path moved (ProPublica's Nonprofit Explorer API has changed base paths before) or the query shape is now rejected.",
+      "finding_id": "179251eb42511333c28c32873f6951398ed083362e26d91da16ea718282f6989",
+      "reproduction": "`curl -sS 'https://projects.propublica.org/nonprofits/api/v2/search.json?q=Melanie+Perkins'` and compare with tests/fixtures/http/propublica_*.json. Measured on the live ten-person build."
+    },
+    {
+      "id": "T-075",
+      "title": "The live corpus is ON DISK and UNTRACKED. Verified: 10 dossiers and 59 documents exist, `git ls-files data/dossiers/` returns 0, and nothing in .gitignore covers them \u2014 so this is untracked, not deliberately ignored. SPEC C4 requires the app to boot from COMMITTED JSON dossiers with no build-time network, and S7 requires it to boot that way on Render; render.yaml deploys from git and config.py:75 defaults dossier_dir to data/dossiers, so a deploy right now starts with an empty corpus and /building serves nothing. ESC-001's own resolution listed 'commits data/dossiers + data/docs' as a step; the files were produced and the commit did not happen. DELIBERATELY NOT COMMITTED YET: the corpus on disk is known-bad \u2014 three of ten people are empty (T-073) and self_page returned nothing for all ten (T-072), so committing it now would enshrine a broken corpus as the reviewed one. Commit AFTER the LIVEFIX lane lands and the build is re-run.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "data/dossiers"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "data/dossiers",
+      "defect": "The live corpus is ON DISK and UNTRACKED. Verified: 10 dossiers and 59 documents exist, `git ls-files data/dossiers/` returns 0, and nothing in .gitignore covers them \u2014 so this is untracked, not deliberately ignored. SPEC C4 requires the app to boot from COMMITTED JSON dossiers with no build-time network, and S7 requires it to boot that way on Render; render.yaml deploys from git and config.py:75 defaults dossier_dir to data/dossiers, so a deploy right now starts with an empty corpus and /building serves nothing. ESC-001's own resolution listed 'commits data/dossiers + data/docs' as a step; the files were produced and the commit did not happen. DELIBERATELY NOT COMMITTED YET: the corpus on disk is known-bad \u2014 three of ten people are empty (T-073) and self_page returned nothing for all ten (T-072), so committing it now would enshrine a broken corpus as the reviewed one. Commit AFTER the LIVEFIX lane lands and the build is re-run.",
+      "finding_id": "47c592ba1c6e1798e2231bb220a0c52f37c3b8a5406b64b0cef9c2f01e5785e9",
+      "reproduction": "git status --porcelain data/ ; git ls-files data/dossiers | wc -l. Found by the arrivalengine-fb gap analysis and verified independently."
+    },
+    {
+      "id": "T-076",
+      "title": "SPEC C5 names five hosts and Wikidata has no rule. HOST_RATE_PER_SEC carries sec.gov, archive.org, arxiv.org, uspto.gov and api.crossref.org; the connectors call https://www.wikidata.org and https://en.wikipedia.org, neither of which matches any suffix, so both fall to DEFAULT_RATE_PER_SEC = 2.0. C5 specifies 'Wikidata <= a few concurrent' \u2014 a per-second RATE is not a CONCURRENCY cap, and Wikipedia is not named in the table at all. Low severity: 2/s is polite and nothing is being hammered. It is the one item in C5's list with no explicit rule, and T-017 covers the Wikidata connector's candidate filtering rather than its rate limit, so it was untracked.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/ratelimit.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "LOW",
+      "location": "src/arrival/http/ratelimit.py:49",
+      "defect": "SPEC C5 names five hosts and Wikidata has no rule. HOST_RATE_PER_SEC carries sec.gov, archive.org, arxiv.org, uspto.gov and api.crossref.org; the connectors call https://www.wikidata.org and https://en.wikipedia.org, neither of which matches any suffix, so both fall to DEFAULT_RATE_PER_SEC = 2.0. C5 specifies 'Wikidata <= a few concurrent' \u2014 a per-second RATE is not a CONCURRENCY cap, and Wikipedia is not named in the table at all. Low severity: 2/s is polite and nothing is being hammered. It is the one item in C5's list with no explicit rule, and T-017 covers the Wikidata connector's candidate filtering rather than its rate limit, so it was untracked.",
+      "finding_id": "e73a3fb3870714b487b40bd3a47c110c24af5b18486ab2eac4ef69d8ef0731e0",
+      "reproduction": "Read HOST_RATE_PER_SEC against SPEC C5 and the wikidata/wikipedia connector base URLs. Found by the arrivalengine-fb gap analysis and verified independently."
     }
   ],
   "cut_list": [
