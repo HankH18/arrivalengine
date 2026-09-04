@@ -38,6 +38,7 @@ from arrival.contracts import Dossier, Match
 from arrival.digest import (
     SPOKEN_WORD_CAP,
     WHY_OF_LAST_RESORT,
+    _noun_phrase_spans,
     _speakable_match,
     _splices_a_clause,
     is_speakable,
@@ -70,16 +71,21 @@ def _load(directory: Path) -> list[Dossier]:
     return [Dossier.model_validate(json.loads(p.read_text(encoding="utf-8"))) for p in paths]
 
 
-def _every_why(directory: Path) -> list[tuple[str, str, str]]:
-    """``(arriving, other, why)`` for every ordered pair the corpus can produce."""
+def _every_match(directory: Path) -> list[tuple[str, str, Match]]:
+    """``(arriving, other, Match)`` for every ordered pair the corpus can produce."""
     dossiers = _load(directory)
     graph = build_graph(dossiers)
     ids = sorted(d.person.person_id for d in dossiers)
     return [
-        (a, m.other.person_id, m.why)
+        (a, m.other.person_id, m)
         for a in ids
         for m in match(graph, a, [p for p in ids if p != a])
     ]
+
+
+def _every_why(directory: Path) -> list[tuple[str, str, str]]:
+    """``(arriving, other, why)`` for every ordered pair, as ``graph`` emits it."""
+    return [(a, other, m.why) for a, other, m in _every_match(directory)]
 
 
 def _corpus_labels() -> list[tuple[str, str, str]]:
@@ -149,14 +155,38 @@ def test_every_why_in_a_corpus_is_speakable_by_t7s_own_judge(directory):
     ``digest._speakable_match`` replaces a why it cannot repair with ``WHY_OF_LAST_RESORT``,
     so a graph change that trips T-7's grammar rule deletes a Meet row's reasoning outright
     (R10). The judge is T-7's, calibrated before this change and not owned by this ticket.
+
+    T-064 (found while fixing the sibling tripwire below, and the same defect). Both
+    assertions here were written in 2d1ce59 against the BARE judge, and ec9ee37 ("fix(digest):
+    a hub label is a noun, so naming one stops blanking the Meet row", T-052) moved the
+    product to ``is_speakable(why, noun_phrases=labels)`` and
+    ``_splices_a_clause(words, spans)``. So both go RED on a correct product for a real pair
+    sharing a multi-word label whose head reads as a verb. Measured at HEAD, with a corpus in
+    which two people share only ``company:reuters-media-group``:
+
+        why                    'Both connected to Reuters Media Group.'
+        is_speakable(why)      False        <- assertion 1 fires
+        _splices_a_clause(...) True         <- assertion 2 fires
+        _speakable_match(m)    'Both connected to Reuters Media Group.'   NOT blanked
+
+    They now grade the judgement the product makes, which is what this test's own docstring
+    says it is for: the harm is the BLANKING, and the blanking is `_speakable_match`'s call.
     """
-    for arriving, other, why in _every_why(directory):
-        assert is_speakable(why), (
-            f"{arriving} -> {other}: T-7 would refuse to speak this and blank the Meet "
-            f"row's reasoning: {why!r}"
+    for arriving, other, row in _every_match(directory):
+        spoken = _speakable_match(row)
+        labels = [c.hub.label for c in row.contributions]
+        assert spoken.why != WHY_OF_LAST_RESORT, (
+            f"{arriving} -> {other}: T-7 refuses to speak this and blanks the Meet row's "
+            f"reasoning to {WHY_OF_LAST_RESORT!r}. graph emitted: {row.why!r}"
         )
-        assert not _splices_a_clause(why.split()), (
-            f"{arriving} -> {other}: reads as a clause spliced into a noun slot: {why!r}"
+        assert is_speakable(spoken.why, noun_phrases=labels), (
+            f"{arriving} -> {other}: the product shows {spoken.why!r}, which R18 refuses"
+        )
+        assert not _splices_a_clause(
+            spoken.why.split(), _noun_phrase_spans(spoken.why.split(), labels)
+        ), (
+            f"{arriving} -> {other}: reads as a clause spliced into a noun slot, in a span "
+            f"the matcher did NOT declare to be a hub label: {spoken.why!r}"
         )
 
 
@@ -210,7 +240,9 @@ def test_the_tripwire_still_fires_for_a_label_the_product_genuinely_cannot_speak
 
     Retargeting a tripwire at the product path is the move that quietly turns it green
     forever, so the predicate the parametrized test above asserts is exercised here on a
-    label constructed to defeat it — and it must go red.
+    label constructed to defeat it — and it must go red. It is the same predicate
+    ``test_every_why_in_a_corpus_is_speakable_by_t7s_own_judge`` now uses, so this control
+    covers both tripwires.
 
     A label of ``SPOKEN_WORD_CAP + 1`` tokens whose head reads as a verb is the case.
     ``_speakable_match`` declares the label as a noun phrase, but ``speakable`` then
