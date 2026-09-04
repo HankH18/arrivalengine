@@ -36,6 +36,14 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "ticket(id): the ticket this frozen acceptance criterion grades"
     )
+    # Excluded from acceptance_pass_rate only. See run.py HUMAN_GATE_MARK: a criterion
+    # that needs a human action outside the loop can only SKIP, and skips stay in the
+    # denominator, so leaving one scored makes a 100 target unreachable by construction.
+    config.addinivalue_line(
+        "markers",
+        "human_gate: needs a human action outside the swarm; collected and reported, "
+        "never scored in acceptance_pass_rate",
+    )
 
 
 @pytest.fixture(scope="session")
