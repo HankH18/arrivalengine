@@ -38,8 +38,12 @@ __all__ = [
     "FIXTURE_DIR",
     "KINDS",
     "Recording",
+    "RESERVED_DOMAINS",
+    "RESERVED_SUFFIXES",
+    "RESERVED_TLDS",
     "fixture_path",
     "install_transport",
+    "is_reserved_host",
     "load",
     "no_real_sleep",
     "settings_for",
@@ -85,15 +89,22 @@ ALLOWED_HOSTS = frozenset(
     }
 )
 
-#: RFC 2606 / RFC 6761 reserved names. A fixture host is one of these or `ALLOWED_HOSTS`.
-RESERVED_SUFFIXES = (
-    ".example.com",
-    ".example.org",
-    ".example.net",
-    ".example",
-    ".invalid",
-    ".test",
-)
+#: RFC 2606 §3 reserves these three second-level domains, and RFC 2606 §2 / RFC 6761
+#: reserve these TLDs. `example.org` and `www.example.org` are BOTH reserved, so the check
+#: has to accept the bare name as well as any subdomain of it.
+RESERVED_DOMAINS = ("example.com", "example.net", "example.org")
+RESERVED_TLDS = ("example", "invalid", "test", "localhost")
+
+#: Kept as the suffix forms too, for messages that show a reader what is acceptable.
+RESERVED_SUFFIXES = tuple(f".{name}" for name in (*RESERVED_DOMAINS, *RESERVED_TLDS))
+
+
+def is_reserved_host(host: str) -> bool:
+    """True when `host` can never resolve to somebody's real site."""
+    host = host.lower().rstrip(".")
+    if host in RESERVED_DOMAINS or host in RESERVED_TLDS:
+        return True
+    return host.endswith(RESERVED_SUFFIXES)
 
 
 def fixture_path(kind: str) -> Path:
