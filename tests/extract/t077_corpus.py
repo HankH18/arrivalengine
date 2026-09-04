@@ -122,3 +122,23 @@ def resolution_for(person: PersonRef, *docs: RawDoc) -> Resolution:
         rejected=[],
         confidence=0.9,
     )
+
+
+#: A member whose roster place is written in a non-Latin script. `slug` keeps only ASCII
+#: alphanumerics, so this place slugs away to nothing — and a hub id built from nothing is
+#: the same id for every such member.
+KANO = PersonRef(
+    person_id="rei-kano",
+    name="Rei Kano",
+    details=["partner, Quillmark Capital", "東京"],
+)
+
+KANO_TEXT = (
+    "Rei Kano joined Quillmark Capital in 2019 and leads its 東京 office.\n\n"
+    "She writes about developer tools for a Japanese audience."
+)
+KANO_SPAN = "Rei Kano joined Quillmark Capital in 2019 and leads its 東京 office."
+
+
+def kano_doc() -> RawDoc:
+    return _doc("https://example.test/kano", "Rei Kano", KANO_TEXT)

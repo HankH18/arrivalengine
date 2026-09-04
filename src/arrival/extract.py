@@ -1433,6 +1433,16 @@ def _roster_city_hub(
     prose the extractor did not turn into a fact.
     """
     for candidate in _place_candidates(place):
+        if not slug(candidate):
+            # `slug` keeps only ASCII alphanumerics, so a place written in a non-Latin
+            # script slugs to "" and `canonical_hub_id` yields the bare id "city:". That is
+            # not blank, so `Hub`'s non-blank constraint would pass it, and EVERY member
+            # whose roster place slugs away would then land on that one node and be joined
+            # to each other for no reason at all. `_collect_hubs` already refuses a
+            # model-proposed hub on the same test; a constructed one has to refuse too.
+            log.info("refusing the place %r: it leaves no slug to build a hub id from",
+                     candidate)
+            continue
         from_doc = [
             fact
             for fact in facts

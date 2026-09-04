@@ -426,3 +426,30 @@ async def test_a_member_with_no_roster_place_keeps_the_city_their_documents_supp
     assert "Porthaven" in {hub.label for hub in hubs if hub.type == "city"}, (
         f"roster silence deleted a documented city: {_ids(hubs)}"
     )
+
+
+async def test_a_place_that_slugs_away_to_nothing_is_refused_rather_than_shared():
+    """A hub id built from an empty slug is the SAME id for every member it happens to.
+
+    `slug` keeps only ASCII alphanumerics, so a roster place in a non-Latin script yields
+    the bare id "city:" — which is not blank, so `Hub`'s non-blank constraint passes it, and
+    every member whose place slugs away then lands on one node and is joined to the others
+    for no reason at all. `_collect_hubs` already refuses a model-proposed hub on this test;
+    a constructed one has to refuse too.
+    """
+    doc = corpus.kano_doc()
+    _facts, hubs = await _run(
+        corpus.KANO,
+        [doc],
+        ExtractionResult(
+            facts=[_fact(doc, "Rei Kano leads the Quillmark Capital office there.",
+                         corpus.KANO_SPAN, "a")],
+            hubs=[],
+            based_in="東京",
+        ),
+    )
+    for hub in hubs:
+        assert hub.hub_id.partition(":")[2], (
+            f"the hub {hub.hub_id!r} carries no identity past its type prefix"
+        )
+    assert not [hub for hub in hubs if hub.type == "city"]
