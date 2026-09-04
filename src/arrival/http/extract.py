@@ -25,6 +25,32 @@ MAX_TEXT_CHARS = 20_000
 #: Elements whose character data is machinery, not prose.
 _DROP_CONTENT = frozenset({"script", "style", "noscript", "template", "svg", "canvas"})
 
+#: Elements whose character data is page FURNITURE, not prose about the subject.
+#:
+#: This is the difference between a citation and a joke. `RawDoc.text` is what T-3 quotes
+#: verbatim (`normalize_ws(quote) in normalize_ws(doc.text)`, DESIGN Decision 5), so
+#: anything kept here is something a host can end up reading out loud. Measured on the
+#: recorded corpus before this existed: the `self_page` document for a member's own site
+#: began "Team | Subscribe | Press | We use cookies to improve your experience." -- which
+#: satisfies "non-empty text" and every other assertion in the contract, and is worthless.
+_DROP_CHROME = frozenset({"nav", "footer"})
+
+#: ARIA landmarks for the same three regions, for pages that use `<div role=...>`.
+_CHROME_ROLES = frozenset({"navigation", "banner", "contentinfo"})
+
+#: Consent/cookie notices, by class or id. Deliberately narrow: these three words are
+#: never part of an article about a person, whereas a looser pattern (`banner`, `notice`,
+#: `modal`) would start eating real content.
+_CHROME_ATTR = re.compile(r"cookie|consent|gdpr", re.IGNORECASE)
+
+#: Elements that never get an end tag, so they must not go on the open-element stack.
+_VOID = frozenset(
+    {
+        "area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta",
+        "param", "source", "track", "wbr",
+    }
+)
+
 #: Elements that imply a line break around their content.
 _BLOCK = frozenset(
     {
@@ -39,6 +65,20 @@ _MANY_NEWLINES = re.compile(r"\n{3,}")
 _SPACES = re.compile(r"[ \t\r\f\v]+")
 
 
+def _is_noise(tag: str, attrs: list[tuple[str, str | None]]) -> bool:
+    """True when this element opens a region whose text is machinery or furniture."""
+    if tag in _DROP_CONTENT or tag in _DROP_CHROME:
+        return True
+    for name, value in attrs:
+        if not value:
+            continue
+        if name == "role" and value.strip().lower() in _CHROME_ROLES:
+            return True
+        if name in ("class", "id") and _CHROME_ATTR.search(value):
+            return True
+    return False
+
+
 class _TextExtractor(HTMLParser):
     """Collect visible text and the document title.
 
@@ -50,35 +90,52 @@ class _TextExtractor(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
         self.title: str = ""
-        self._suppress = 0
+        # An open-element stack rather than a counter. A counter can only be decremented
+        # by a matching end tag, so ONE unclosed <svg> -- an icon in a page header is the
+        # common case -- suppressed every remaining character in the document and the page
+        # came back empty. With a stack, any enclosing close tag ends the suppression.
+        self._stack: list[str] = []
+        self._suppress_at: int | None = None
         self._in_title = False
+
+    @property
+    def _suppressed(self) -> bool:
+        return self._suppress_at is not None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
-        if tag in _DROP_CONTENT:
-            self._suppress += 1
-            return
         if tag == "title":
             self._in_title = True
-        if tag in _BLOCK:
+        if tag not in _VOID:
+            self._stack.append(tag)
+            if not self._suppressed and _is_noise(tag, attrs):
+                self._suppress_at = len(self._stack) - 1
+        if not self._suppressed and tag in _BLOCK:
             self.parts.append("\n")
 
     def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag.lower() in _BLOCK:
+        # `<foo/>` opens and closes in one token, so it never enters the stack and a
+        # self-closing drop tag suppresses nothing after itself.
+        if not self._suppressed and tag.lower() in _BLOCK:
             self.parts.append("\n")
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
-        if tag in _DROP_CONTENT:
-            self._suppress = max(0, self._suppress - 1)
-            return
         if tag == "title":
             self._in_title = False
-        if tag in _BLOCK:
+        if tag in self._stack:
+            # Unwind to the matching open tag, discarding anything left unclosed inside it.
+            while self._stack:
+                popped = self._stack.pop()
+                if self._suppress_at is not None and len(self._stack) <= self._suppress_at:
+                    self._suppress_at = None
+                if popped == tag:
+                    break
+        if not self._suppressed and tag in _BLOCK:
             self.parts.append("\n")
 
     def handle_data(self, data: str) -> None:
-        if self._suppress:
+        if self._suppressed:
             return
         if self._in_title:
             self.title += data

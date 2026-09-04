@@ -85,15 +85,29 @@ class _DuckDuckGoResults(HTMLParser):
 
 
 def _unwrap_redirect(href: str) -> str:
-    """DuckDuckGo wraps results in `/l/?uddg=<encoded>`; return the real destination."""
+    """DuckDuckGo wraps results in `/l/?uddg=<encoded>`; return the real destination.
+
+    The wrapper appears in three spellings and all three are live on the HTML endpoint:
+    absolute (`https://duckduckgo.com/l/?uddg=`), protocol-relative (`//duckduckgo.com/l/?`)
+    and **root-relative** (`/l/?uddg=`).  The last one has no hostname to match on, so a
+    host-only test drops it silently -- and dropping it does not fail loudly, it just
+    returns fewer results from the fallback that exists precisely for the case where there
+    is no API key.  Matching the `/l/` path covers all three.
+    """
     if not href:
         return ""
     if href.startswith("//"):
         href = "https:" + href
-    parts = urlsplit(href)
-    if "duckduckgo.com" in (parts.hostname or "") and parts.path.startswith("/l/"):
+    try:
+        parts = urlsplit(href)
+    except ValueError:  # a malformed href is not a result, it is not a crash
+        return ""
+    host = (parts.hostname or "").lower()
+    is_wrapper = parts.path.startswith("/l/") and (not host or "duckduckgo.com" in host)
+    if is_wrapper:
         target = parse_qs(parts.query).get("uddg", [""])[0]
-        return unquote(target)
+        target = unquote(target)
+        return target if target.startswith(("http://", "https://")) else ""
     return href if href.startswith(("http://", "https://")) else ""
 
 
