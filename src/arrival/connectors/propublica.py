@@ -71,10 +71,11 @@ from __future__ import annotations
 from html.parser import HTMLParser
 from typing import Any
 
-from arrival.connectors.base import BaseConnector, affiliations, text_block
+from arrival.connectors.base import BaseConnector, affiliations, names_a_job, text_block
 from arrival.connectors.identity import US_STATES, carries_name, identifies, is_an_address
 from arrival.contracts import PersonRef, RawDoc
 from arrival.http.client import fetch_record
+from arrival.resolve import asserts_negation, city_detail
 from arrival.util import normalize_ws
 
 __all__ = ["ProPublicaConnector", "officers_on_page"]
@@ -126,13 +127,51 @@ _is_an_address = is_an_address
 
 
 def organisation_queries(person: PersonRef) -> list[str]:
-    """The member's name plus the ORGANISATIONS in `details` — never the places."""
+    """The member's name plus the ORGANISATIONS in `details` — never a place, a job or a
+    denial.
+
+    Nonprofit Explorer indexes organisation NAMES, so a query that is not one is a request
+    to a courtesy API that can only return strangers. Three tests, and each was measured
+    live on 2026-09-04 against the ten-person roster:
+
+    * **A JOB TITLE is not an organisation, and it is the one that was actually going out.**
+      `affiliations` is documented as deliberately generous and returns conjoined titles on
+      purpose (`connectors.base.names_a_job` explains why: a title is noise as a query and
+      evidence as a check). `identity.best_affiliation` applies that filter and this
+      function did not, so `q=author` went out for Eric Ries — **1,260 organisations**,
+      live — alongside `q=founder and partner`, `q=co-founder and partner`,
+      `q=co-founder and CEO` and `q=writer and researcher`. This is where the wasted
+      requests were.
+
+    * **A PLACE is not an organisation, and `is_an_address` alone does not find one.** That
+      test needs a US STATE, so `Philadelphia` (10,000 organisations, live) and
+      `San Francisco` (9,267) pass it. They were not in fact being sent — `MAX_QUERIES=3`
+      truncated them away behind the job title — which means dropping the job title above
+      would have PROMOTED them into the budget and made a latent defect a live one. The two
+      halves of this fix are not independent; shipping either alone is worse than shipping
+      neither.
+
+      No gazetteer is needed and none is added. Which detail is the place is already
+      decided, structurally, by `resolve.city_detail` — it is the detail that names no role
+      and no organisation — and a second spelling of that question here would be a second
+      answer to it.
+
+    * **A DENIAL is not a query.** `"NOT the author/apologist Nabeel Qureshi who died in
+      2017"` is a roster line that says who the member is NOT, and `affiliations` hands it
+      back whole. `resolve.asserts_negation` refuses it, in the one place that question is
+      answered.
+
+    What this does NOT fix: a non-US city that is not the person's own city detail — a
+    fourth detail naming somebody else's town would still be searched. That needs a
+    gazetteer, and a gazetteer is a dependency this ticket may not add.
+    """
     queries = [person.name]
+    place = city_detail(person)
     for detail in person.details:
-        if _is_an_address(detail):
+        if _is_an_address(detail) or detail == place or asserts_negation(detail):
             continue
         for term in affiliations([detail]):
-            if normalize_ws(term) in _US_STATES or term in queries:
+            if normalize_ws(term) in _US_STATES or term in queries or names_a_job(term):
                 continue
             queries.append(term)
     return queries[:MAX_QUERIES]
