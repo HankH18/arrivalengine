@@ -15,12 +15,19 @@ place instead of ten:
   and split into two lifetimes: an answer that yielded usable text is durable, one that
   yielded nothing expires quickly so a transient failure heals instead of being frozen
   into the corpus.  See `POSITIVE_TTL_SECONDS` / `NEGATIVE_TTL_SECONDS` below.
-* **Degradation (DESIGN Decision 8).**  A 500, a timeout, a DNS failure, a body that is
-  not text — every one of them is `None`.  This function has no failure mode that reaches
-  its caller as an exception, because the build has to finish even when half the internet
-  is down.  "Not text" is decided on the decoded body as well as the declared type
-  (`_is_not_text`): `httpx` decodes any body with `errors="replace"`, so trusting the
-  label alone is how a PNG became a `RawDoc` full of U+FFFD that T-3 could quote.
+* **Size (T-043).**  The response is STREAMED and refused past `MAX_RESPONSE_BYTES`, so a
+  hostile or merely broken endpoint cannot make this process buffer an unbounded body.  A
+  cap that runs after `client.request()` — which is what every caller-side guard, including
+  `connectors/feed.py`'s `MAX_FEED_BYTES`, actually was — bounds parser cost and not memory.
+* **Degradation (DESIGN Decision 8).**  A 500, a timeout, a DNS failure, an oversized
+  response, a body that is not text — every one of them is `None`.  This function has no
+  failure mode that reaches its caller as an exception, because the build has to finish
+  even when half the internet is down.  "Not text" is decided on the decoded body as well
+  as the declared type (`_is_not_text`), and the DECODE is done against the document's own
+  declared codec (`extract.decode_body`): httpx reads only the header's `charset`, so a
+  page in a legacy encoding used to arrive as U+FFFD and be thrown away as if it were a
+  PNG (T-044).  Deciding "not text" from a decode known to have used the wrong codec is
+  how a real document gets discarded; deciding it from a correct decode is the promise.
 
 `fetch_text` takes ONE positional parameter, as DESIGN's function table writes it.  The
 keyword-only extras exist for the two things a caller genuinely knows and this module
@@ -47,6 +54,8 @@ from arrival.contracts import RawDoc, SourceKind
 from arrival.http.cache import HttpRecord, read_record, write_record
 from arrival.http.extract import (
     clip,
+    decode_body,
+    detect_encoding,
     html_title,
     html_to_text,
     is_binary_type,
@@ -60,6 +69,7 @@ from arrival.util import doc_id
 
 __all__ = [
     "DEFAULT_TIMEOUT_SECONDS",
+    "MAX_RESPONSE_BYTES",
     "NEGATIVE_TTL_SECONDS",
     "POSITIVE_TTL_SECONDS",
     "build_url",
@@ -102,6 +112,29 @@ POSITIVE_TTL_SECONDS: float | None = None
 
 #: Fifteen minutes: longer than a build run's fan-out, shorter than a working session.
 NEGATIVE_TTL_SECONDS: float | None = 900.0
+
+# --- how much of a response this process will hold (T-043) ---------------------------
+#
+# THE DEFECT.  There was no cap of any kind. `client.request()` buffers the WHOLE body
+# before returning, so every caller-side guard ran after the allocation it was meant to
+# prevent -- `connectors/feed.py`'s `MAX_FEED_BYTES` refuses an oversized feed only once it
+# is already in memory, which bounds parser cost and not memory. A hostile endpoint, or
+# merely a broken one streaming a log file, made this process buffer without limit, and a
+# fan-out runs several of these at once.
+#
+# THE FIX is to read the response as a stream and stop, rather than to measure it after the
+# fact. `Content-Length` is checked first when the origin offers one (a refusal that costs
+# no download at all), and the running total is checked as the chunks arrive, because
+# `Content-Length` is absent on every chunked response and is a claim in any case.
+#
+# The cap counts DECODED bytes -- `aiter_bytes` un-gzips as it goes -- so a small
+# compressed body that expands past the cap is refused while it expands, which is the
+# shape a decompression bomb actually has.
+#
+#: Ten megabytes: far above any page or API response these ten connectors read (the
+#: largest in the recorded corpus is under 200kB), far below a size worth buffering. An
+#: oversized response is a `None` like every other failure, per DESIGN Decision 8.
+MAX_RESPONSE_BYTES = 10_000_000
 
 _ACCEPT = "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8"
 
@@ -257,20 +290,45 @@ async def fetch_record(
         # A client per request rather than a shared one: `httpx.AsyncClient` binds to the
         # event loop it is used on, and this module is called from short-lived loops
         # (`asyncio.run` in the CLI and in tests) as well as from a long-lived server.
+        #
+        # `default_encoding` is a callable (T-044): httpx otherwise decodes a response that
+        # named no charset as UTF-8 with `errors="replace"`, never reading the document's
+        # own `<meta charset>`, which turned an ordinary legacy-encoded page into a wall of
+        # U+FFFD that `looks_binary` then discarded. The body below is decoded explicitly
+        # by `decode_body`; this keeps ANY other read of `.text` on the same policy.
         async with httpx.AsyncClient(
-            timeout=timeout, follow_redirects=True, headers=request_headers
+            timeout=timeout,
+            follow_redirects=True,
+            headers=request_headers,
+            default_encoding=detect_encoding,
         ) as client:
-            response = await client.request(method.upper(), full_url, json=json_body)
+            # `send(..., stream=True)` rather than `request(...)`: the latter buffers the
+            # whole body before it returns, so a size cap applied to its result would be
+            # measuring an allocation it was supposed to prevent (T-043).
+            request = client.build_request(method.upper(), full_url, json=json_body)
+            response = await client.send(request, stream=True)
+            try:
+                status = response.status_code
+                declared_type = response.headers.get("content-type", "")
+                charset = response.charset_encoding
+                resolved_url = str(response.url) or full_url
+                if status >= 400:
+                    # Refused before the body is read at all: a 500's body is never used.
+                    log.warning("fetch got HTTP %s for %s", status, full_url)
+                    return None
+                content = await _read_capped(response, full_url)
+            finally:
+                # Releases the connection whether or not the body was read to completion.
+                await response.aclose()
     except Exception as exc:  # noqa: BLE001 - DESIGN Decision 8: degrade, never raise
         log.warning("fetch failed for %s: %s", full_url, exc)
         return None
 
-    if response.status_code >= 400:
-        log.warning("fetch got HTTP %s for %s", response.status_code, full_url)
+    if content is None:  # over the size cap; `_read_capped` has logged why
         return None
 
     try:
-        body = response.text
+        body = decode_body(content, charset)
     except Exception as exc:  # noqa: BLE001 - an undecodable body is a miss, not a crash
         log.warning("undecodable body for %s: %s", full_url, exc)
         return None
@@ -282,8 +340,7 @@ async def fetch_record(
     # through the HTML extractor. Measured: `{"expr": "a<b and c>d"}` came back as
     # `{"expr": "ad"}`, nine characters deleted from inside a string VALUE, and the
     # document no longer parsed as itself.
-    content_type = sniff_content_type(body, response.headers.get("content-type", ""))
-    resolved_url = str(response.url) or full_url
+    content_type = sniff_content_type(body, declared_type)
 
     if _is_not_text(content_type, body):
         # The module docstring's promise, restored: "a body that is not text -- every one
@@ -317,6 +374,37 @@ async def fetch_record(
             expires_at=_expiry_for(durable=bool(text.strip())),
         )
     return record
+
+
+async def _read_capped(response: httpx.Response, url: str) -> bytes | None:
+    """The response body, or None when it is larger than `MAX_RESPONSE_BYTES` (T-043).
+
+    Read at CALL time off the module global, so an operator -- or a test -- can move the
+    cap in one place, the same way `_expiry_for` reads the TTL policy.
+    """
+    limit = MAX_RESPONSE_BYTES
+    declared = response.headers.get("content-length")
+    if declared is not None:
+        try:
+            promised = int(declared)
+        except ValueError:
+            promised = -1  # a header we cannot read is no promise; the running total wins
+        if promised > limit:
+            log.warning(
+                "refusing %s: Content-Length %s is over the %s byte cap", url, promised, limit
+            )
+            return None
+
+    # A chunked response carries no Content-Length, and one that does may be lying, so the
+    # running total is the guard that actually holds. `aiter_bytes` yields CONTENT-DECODED
+    # bytes, which is what the process must hold, so a gzip bomb is refused as it inflates.
+    buffer = bytearray()
+    async for chunk in response.aiter_bytes(chunk_size=65_536):
+        buffer += chunk
+        if len(buffer) > limit:
+            log.warning("refusing %s: body exceeded the %s byte cap", url, limit)
+            return None
+    return bytes(buffer)
 
 
 def _is_not_text(content_type: str, body: str) -> bool:

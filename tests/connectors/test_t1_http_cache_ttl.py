@@ -555,3 +555,192 @@ def test_a_naive_expiry_timestamp_is_read_as_utc_rather_than_crashing(tmp_path):
 
     record = cache_module.read_record(root, _URL)
     assert record is not None and record.body == _REAL_PAGE
+
+
+# --- 5. T-046: the fix had no effect on any cache directory that already existed -----
+#
+# T-025 shipped "an entry that yielded nothing expires in 900s, so a transient failure
+# heals". True of every entry written AFTER it, and of nothing already on disk: "no
+# `expires_at`" is the shape of BOTH a file written before expiries existed AND a pre-fix
+# negative, and the reader read every one of them as durable. So the JS-shell 200 that
+# motivated the whole ticket stayed frozen in exactly the caches that had one.
+#
+# The discriminator is the extracted text. `client._expiry_for` writes no expiry key only
+# for `durable=True`, which is precisely `bool(text.strip())` -- so absent-expiry AND
+# non-empty text is a pre-expiry SUCCESS and must stay durable, while absent-expiry and no
+# text is a pre-expiry NEGATIVE and must be a miss.
+
+
+def _write_legacy_entry(root, *, text, body=_REAL_PAGE, url=_URL):
+    """A cache file in the pre-expiry shape: an `http` envelope with no `expires_at`."""
+    root.mkdir(parents=True, exist_ok=True)
+    (root / f"{doc_id(url)}.json").write_text(
+        json.dumps(
+            {
+                "doc_id": doc_id(url),
+                "source_kind": "self_page",
+                "url": url,
+                "title": "",
+                "text": text,
+                "published_at": None,
+                "fetched_at": "2024-05-02T10:00:00+00:00",
+                "http": {"status": 200, "content_type": "text/html", "body": body},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_a_pre_expiry_negative_entry_is_a_miss_rather_than_a_permanent_answer(tmp_path):
+    """The T-025 defect, reproduced on the directory shape T-025 could not reach."""
+    root = tmp_path / "cache"
+    _write_legacy_entry(root, text="", body=_JS_SHELL)
+
+    assert cache_module.read_record(root, _URL) is None, (
+        "an envelope with no `expires_at` and no extracted text is a negative written "
+        "before expiries existed. Reading it as durable is the permanent poisoning T-025 "
+        "was raised to fix, still in force on every cache directory that predates the fix"
+    )
+
+
+def test_a_pre_expiry_negative_entry_heals_on_the_next_fetch(tmp_path, monkeypatch):
+    """The product-level consequence: the site recovered, and the build must see it."""
+    settings = settings_for(tmp_path)
+    _write_legacy_entry(settings.cache_dir, text="", body=_JS_SHELL)
+    seen = _serve(monkeypatch, _html(_REAL_PAGE))
+
+    doc = asyncio.run(fetch_text(_URL, settings=settings))
+
+    assert doc is not None and _SENTENCE in doc.text, (
+        "the site is serving prose again and the poisoned pre-fix entry still answered "
+        "for it"
+    )
+    assert len(seen) == 1, "the healed URL must actually have been re-fetched"
+
+
+def test_a_whitespace_only_pre_expiry_entry_is_a_miss_too(tmp_path):
+    """`"   "` is not a document; `bool(text.strip())` is the writer's own test."""
+    root = tmp_path / "cache"
+    _write_legacy_entry(root, text="   \n\t ", body=_JS_SHELL)
+
+    assert cache_module.read_record(root, _URL) is None
+
+
+def test_a_pre_expiry_entry_with_no_text_key_at_all_is_a_miss(tmp_path):
+    """A hand-written envelope may simply omit `text`. Absent is not a document either."""
+    root = tmp_path / "cache"
+    root.mkdir()
+    (root / f"{doc_id(_URL)}.json").write_text(
+        json.dumps({"url": _URL, "http": {"status": 200, "body": _JS_SHELL}}),
+        encoding="utf-8",
+    )
+
+    assert cache_module.read_record(root, _URL) is None
+
+
+def test_a_pre_expiry_success_is_still_durable(tmp_path):
+    """The constraint on the T-046 fix, and the reason it is keyed on the text rather than
+    on the absent key: a reader that treated every missing expiry as expired would throw
+    the entire warm cache away on its first run, which is worse than the defect."""
+    root = tmp_path / "cache"
+    _write_legacy_entry(root, text=_SENTENCE)
+
+    record = cache_module.read_record(root, _URL)
+
+    assert record is not None, (
+        "an envelope with no `expires_at` but a real extracted document was written before "
+        "expiries existed and is durable; this is the whole warm cache"
+    )
+    assert record.body == _REAL_PAGE
+
+
+def test_a_recorded_fixture_with_no_envelope_is_untouched_by_the_expiry_rule(tmp_path):
+    """DESIGN §Verification tests connectors by pointing the cache dir at recorded
+    fixtures, which are plain `RawDoc` files with no `http` envelope at all. Breaking that
+    path would break connector testing repo-wide, so it gets its own assertion."""
+    root = tmp_path / "cache"
+    root.mkdir()
+    (root / f"{doc_id(_URL)}.json").write_text(
+        json.dumps({"url": _URL, "title": "Thornfield Loom", "text": _SENTENCE}),
+        encoding="utf-8",
+    )
+
+    record = cache_module.read_record(root, _URL)
+
+    assert record is not None and record.body == _SENTENCE
+    assert record.content_type == "text/plain"
+
+
+# --- 6. T-050: the expiry belonged to a branch instead of to the envelope ------------
+
+
+def test_an_expired_envelope_is_a_miss_even_when_its_body_is_not_a_string(tmp_path):
+    """A contract hole rather than a live path -- `write_record` cannot produce this shape
+    -- but it is in the function every other answer in this module is derived from.
+
+    The expiry check used to sit INSIDE the arm that reads `envelope["body"]` as a string.
+    An envelope that was present and long expired, but whose `body` was (say) a number,
+    fell out of that arm, landed in the plain-text arm below it, and was served -- expiry
+    and all. The `text` here is a real document, so nothing else in the reader rejects it.
+    """
+    root = tmp_path / "cache"
+    root.mkdir()
+    (root / f"{doc_id(_URL)}.json").write_text(
+        json.dumps(
+            {
+                "url": _URL,
+                "text": _SENTENCE,
+                "http": {
+                    "status": 200,
+                    "content_type": "text/html",
+                    "body": 17,
+                    "expires_at": "2001-01-01T00:00:00+00:00",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert cache_module.read_record(root, _URL) is None, (
+        "an expiry is a property of the ENVELOPE; an entry that is past it may not be "
+        "served by whichever branch happens to find a body somewhere else"
+    )
+
+
+def test_an_unexpired_envelope_with_an_unusable_body_still_falls_back_to_the_text(
+    tmp_path,
+):
+    """The control on the hoist: moving the expiry check earlier must not turn every
+    odd-shaped envelope into a miss. This one is not expired, so the fallback still runs."""
+    root = tmp_path / "cache"
+    root.mkdir()
+    (root / f"{doc_id(_URL)}.json").write_text(
+        json.dumps(
+            {
+                "url": _URL,
+                "text": _SENTENCE,
+                "http": {"status": 200, "body": 17, "expires_at": "2999-01-01T00:00:00+00:00"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record = cache_module.read_record(root, _URL)
+
+    assert record is not None and record.body == _SENTENCE
+
+
+def test_an_unreadable_expiry_is_a_miss_whatever_shape_the_body_has(tmp_path):
+    """Same ruling as the unreadable status, applied at the envelope level: a file we
+    cannot read in full is a file we should not serve."""
+    root = tmp_path / "cache"
+    root.mkdir()
+    for expiry in ("not-a-date", 17, [], {"at": "soon"}):
+        (root / f"{doc_id(_URL)}.json").write_text(
+            json.dumps(
+                {"url": _URL, "text": _SENTENCE, "http": {"status": 200, "body": 17,
+                                                          "expires_at": expiry}}
+            ),
+            encoding="utf-8",
+        )
+        assert cache_module.read_record(root, _URL) is None, expiry

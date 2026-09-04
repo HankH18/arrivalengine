@@ -19,10 +19,13 @@ keeps DESIGN §Verification's "point the cache dir at recorded fixtures" honest:
 hand-written file with no `http` envelope is read back as a plain-text document.
 
 LIFETIME.  The envelope may carry an `expires_at`, and an entry past it is a MISS.  ABSENT
-means durable, never expired — that is the shape of every file written before expiries
-existed and of every hand-written fixture, and a reader that read absence as "expired"
-would throw the whole warm cache away.  This module stores the moment and compares it;
-WHICH moment is `client`'s policy decision, not this one's.
+means durable — that is the shape of every file written before expiries existed and of
+every hand-written fixture, and a reader that read absence as "expired" would throw the
+whole warm cache away — but durable ONLY FOR AN ENTRY THAT HAS A DOCUMENT.  An envelope
+with no expiry and no extracted text is a negative written before expiries existed, and
+serving it forever is the exact defect the expiry was added to fix (T-046).  This module
+stores the moment and compares it; WHICH moment is `client`'s policy decision, not this
+one's.
 
 The directory is gitignored (`.gitignore` carries `.cache/`) and is CWD-relative by
 default — that is `Settings.cache_dir`'s documented shape, and hazard: a process started
@@ -100,6 +103,25 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
         return None
 
     envelope = payload.get("http")
+    stored_text = payload.get("text")
+    has_document = isinstance(stored_text, str) and bool(stored_text.strip())
+
+    # T-050: the lifetime is a property of the ENVELOPE, so it is read BEFORE the branch
+    # that decides where the body comes from -- not inside one of them. It used to sit
+    # inside the `isinstance(envelope["body"], str)` arm, so an entry whose envelope was
+    # present and EXPIRED but whose `body` was not a string fell through to the plain-text
+    # arm below and was served past its expiry. `write_record` cannot produce that shape,
+    # so this closes a contract hole rather than a live path -- but the hole is in the one
+    # function whose answer everything else in this module is derived from.
+    raw_expiry = envelope.get("expires_at") if isinstance(envelope, dict) else None
+    if raw_expiry is not None:
+        expires_at = _parse_expiry(raw_expiry)
+        # An UNREADABLE expiry is a miss, on the same ruling as the status below: a file we
+        # cannot read in full is a file we should not serve, and a miss costs one re-fetch
+        # while a guess is wrong for the entry's whole life.
+        if expires_at is None or expires_at <= datetime.now(UTC):
+            return None
+
     if isinstance(envelope, dict) and isinstance(envelope.get("body"), str):
         body = envelope["body"]
         content_type = str(envelope.get("content_type") or "text/plain")
@@ -122,22 +144,28 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
         else:
             return None
 
-        # T-025: an entry may carry an expiry, and an expired entry is a MISS.
+        # T-025/T-046: an entry may carry an expiry, and an expired entry is a MISS. The
+        # expiry itself was checked above; what is left is what ABSENCE means.
         #
-        # ABSENT MEANS DURABLE, not expired. Every file already on disk was written before
-        # this key existed, and a reader that treated a missing expiry as "expired" would
-        # throw the entire warm cache away the first time it ran -- which is the opposite
-        # of the defect being fixed. An UNREADABLE expiry is a miss, on the same ruling as
-        # the status above: a file we cannot read in full is a file we should not serve,
-        # and a miss costs one re-fetch while a guess is wrong for the entry's whole life.
-        raw_expiry = envelope.get("expires_at")
-        if raw_expiry is not None:
-            expires_at = _parse_expiry(raw_expiry)
-            if expires_at is None or expires_at <= datetime.now(UTC):
-                return None
-    elif isinstance(payload.get("text"), str) and payload["text"].strip():
+        # ABSENT MEANS DURABLE -- but only for an entry that HAS a document. That
+        # qualification is T-046, and without it T-025's headline fix was invisible on
+        # every cache directory that already existed: "no expiry" is the shape of both a
+        # file written before expiries existed AND a pre-fix NEGATIVE, so a JS-shell 200
+        # frozen into a warm cache stayed frozen and the claim that "a transient failure
+        # heals" was true only of entries written after the fix. An envelope with no
+        # expiry and no extracted text is that pre-fix negative, and it is a MISS.
+        #
+        # This cannot reach the recorded-fixture path below: that branch already requires
+        # non-empty text, so `has_document` is true for every entry that can take it.
+        # Nor can it orphan anything `write_record` produced -- `client._expiry_for`
+        # returns None (writes no key) only for `durable=True`, which is exactly
+        # `bool(text.strip())`. The writer already held the invariant; only the reader
+        # failed to, which is why the defect survived on old directories alone.
+        if raw_expiry is None and not has_document:
+            return None
+    elif has_document:
         # A hand-written fixture in plain `RawDoc` shape: its extracted text IS the body.
-        body = payload["text"]
+        body = str(stored_text)
         content_type = "text/plain"
         status = 200
     else:
