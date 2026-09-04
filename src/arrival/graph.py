@@ -104,7 +104,10 @@ HUB_PREFIX = "hub:"
 WIKIDATA_PREFIX = "wd:"
 
 #: Deterministic, speakable phrasing per hub type (R18: read aloud, so no ids, no
-#: parentheticals, no scores). ``{label}`` is the hub's own label, verbatim.
+#: parentheticals, no scores). ``{label}`` is the hub's label as :func:`_spoken_label`
+#: renders it for MID-SENTENCE use -- which is the stored label itself in every case but
+#: the common-noun one. Nothing else in the codebase sees that rendering; see
+#: :func:`_spoken_label` for why the lower-casing happens here and not at the source.
 _WHY_PHRASE: dict[str, str] = {
     "investor": "both backed by {label}",
     "board": "both on the board at {label}",
@@ -124,6 +127,14 @@ _WHY_NOTHING_SHARED = "Nothing in common on the record yet."
 
 #: How many hubs the why names at most (T-5 acceptance 4).
 _WHY_MAX_HUBS = 2
+
+#: The hub types whose LABEL is a CATEGORY rather than the name of an entity. A topic, a
+#: technology or a cause is a common noun ("developer-tools go-to-market", "evaluation
+#: harnesses", "ocean cleanup"); a company, investor, school, board, city, event or person
+#: is a NAME ("Quarrystone Labs", "Austin", "Foundry Seed 2019"), and lower-casing one
+#: states something false about it. Only these three are candidates for :func:`_spoken_label`
+#: -- the other seven keep whatever capitalisation the extractor recorded, always.
+_COMMON_NOUN_HUB_TYPES: frozenset[str] = frozenset({"cause", "technology", "topic"})
 
 
 # --------------------------------------------------------------------- node naming
@@ -479,18 +490,94 @@ def _path(
     return [arriving, via, other]
 
 
+def _spoken_label(label: str, hub_type: str) -> str:
+    """The hub's label as it should read MID-SENTENCE inside a ``why`` (R18).
+
+    Hub labels are stored capitalised, because a label is also a heading: the R10 reasoning
+    table and ``/debug`` print it as a standalone cell where "Developer-tools go-to-market"
+    is right. Dropped into a phrase template it becomes a capitalised common noun in the
+    middle of a sentence -- the measured line was
+    ``"Both deep in Developer-tools go-to-market."`` -- and R18 exists to keep the host from
+    stumbling over exactly that.
+
+    **Why the fix is here and not at the source.** Lower-casing where the label is BORN
+    (``extract``, the canonical ``hub_id``, the elected label in :func:`_hub_identity`)
+    would change a value five other consumers read for other purposes: the graph-wide join
+    key ``_identity_key``, ``HubContribution.hub.label`` (pinned by
+    ``tests/graph/test_t5_hub_identity_election.py`` and by the frozen
+    ``test_t3_extractor.py``'s ``{h.label: h}`` lookups), and the two Jinja templates that
+    render the label as a table cell. The capitalisation is only wrong in ONE position --
+    inside this sentence -- so exactly one function knows about it, and the stored ``Hub``
+    is never touched.
+
+    **The rule, and where it errs.** A label is lower-cased only when all four hold:
+
+    1. its ``type`` is in :data:`_COMMON_NOUN_HUB_TYPES` -- a company or a school is a name;
+    2. it is at least two words -- a lone token ("Austin", "Quillmark", "Kubernetes",
+       "Rust") is far more often a name than a category, and there is nothing in a single
+       word to tell the two apart;
+    3. its first word is Capitalised-then-lowercase -- not an acronym or a CamelCase
+       product, so "AI safety", "A/B testing" and "GitHub actions" keep their heads;
+    4. no LATER word is capitalised -- English Title-Cases a multi-word proper name, so
+       "Foundry Seed 2019" and "Bank of America" are refused by their own orthography even
+       if something mistypes them as a topic.
+
+    Only the leading character changes; the rest of the label is returned byte-identical,
+    which is what keeps the already-lowercase tail of "Developer-tools go-to-market" intact.
+
+    It errs toward LEAVING CAPITALISATION ALONE, deliberately, because the two failure
+    directions are not symmetric: refusing to lower-case a common noun gives a mildly
+    awkward line, while lower-casing a proper noun makes a false claim about somebody's
+    company. So it knowingly misses a Title-Cased common noun ("Machine Learning" as a
+    topic) and a single-word one ("Sailing"), and it knowingly gets "Rust compilers" wrong
+    in the mild direction.
+
+    >>> _spoken_label("Developer-tools go-to-market", "topic")
+    'developer-tools go-to-market'
+    >>> _spoken_label("Quarrystone Labs", "company")      # a name, not a category
+    'Quarrystone Labs'
+    >>> _spoken_label("Foundry Seed 2019", "topic")       # Title Case: still a name
+    'Foundry Seed 2019'
+    >>> _spoken_label("AI safety", "topic")               # an acronym head is left alone
+    'AI safety'
+    >>> _spoken_label("Austin", "topic")                  # one word: nothing to go on
+    'Austin'
+    """
+    if hub_type not in _COMMON_NOUN_HUB_TYPES:
+        return label
+    words = label.split()
+    if len(words) < 2:
+        return label
+    head = words[0]
+    if not head[:1].isupper():
+        return label  # already lower-case, or opens on a digit or a symbol
+    if any(character.isupper() for character in head[1:]):
+        return label  # "AI", "A/B", "GitHub", "PyTorch" -- an acronym or a product name
+    if any(word[:1].isupper() for word in words[1:]):
+        return label  # Title Case, so the orthography says this is a proper name
+    stripped = label.lstrip()
+    return label[: len(label) - len(stripped)] + stripped[:1].lower() + stripped[1:]
+
+
 def _why(components: Sequence[HubContribution]) -> str:
     """A deterministic sentence naming up to two top hubs by LABEL. No LLM, ever.
 
     R18: this is read aloud to a host in a lobby, so it is a plain sentence -- no hub ids, no
     parentheticals, no scores. Only hubs that actually contributed are named: citing a hub the
     clamp zeroed would claim credit for a connection worth nothing.
+
+    The label is rendered for mid-sentence use by :func:`_spoken_label`; the sentence-initial
+    capital is applied here, AFTER the clauses are joined, and every phrase in
+    :data:`_WHY_PHRASE` opens on "both", so a label is never the word that gets capitalised.
     """
     named = [c for c in components if c.contribution > 0][:_WHY_MAX_HUBS]
     if not named:
         return _WHY_NOTHING_SHARED
     clauses = [
-        _WHY_PHRASE.get(c.hub.type, _WHY_FALLBACK).format(label=c.hub.label) for c in named
+        _WHY_PHRASE.get(c.hub.type, _WHY_FALLBACK).format(
+            label=_spoken_label(c.hub.label, c.hub.type)
+        )
+        for c in named
     ]
     sentence = "; ".join(clauses)
     return sentence[:1].upper() + sentence[1:] + "."
