@@ -75,6 +75,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 __all__ = [
     "REPORT_COLUMNS",
+    "BuildError",
     "BuildTrace",
     "RosterError",
     "build_all",
@@ -104,9 +105,28 @@ REPORT_COLUMNS: tuple[str, ...] = (
     "zero_result_sources",
 )
 
+#: The CLI table, derived from `REPORT_COLUMNS` plus the one diagnostic worth a column, so
+#: the documented row keys and the printed table cannot drift into two sources of truth.
+_TABLE_COLUMNS: tuple[str, ...] = (*REPORT_COLUMNS, "failed_sources")
+
+_COLUMN_LABELS: dict[str, str] = {
+    "person_id": "person",
+    "status": "status",
+    "confidence": "conf",
+    "facts_kept": "kept",
+    "facts_excluded": "excl",
+    "hubs": "hubs",
+    "zero_result_sources": "zero-result sources",
+    "failed_sources": "failed sources",
+}
+
 
 class RosterError(Exception):
     """The roster file is missing, unreadable, or does not describe any people."""
+
+
+class BuildError(Exception):
+    """The build cannot be run as asked — a bad output layout, not a bad roster."""
 
 
 def _now() -> datetime:
@@ -284,7 +304,17 @@ async def _search_one(
         trace.connector_errors[kind] = f"{type(exc).__name__}: {exc}"
         log.warning("connector %s failed for %s: %s", kind or connector, person.name, exc)
         return []
-    docs = [doc for doc in (found or []) if isinstance(doc, RawDoc)]
+    returned = list(found or [])
+    docs = [doc for doc in returned if isinstance(doc, RawDoc)]
+    if len(docs) != len(returned):
+        # Silent partial loss otherwise: a connector whose parser regresses hands back
+        # dicts, contributes fewer documents, and looks exactly like a quiet source.
+        log.warning(
+            "connector %s returned %d item(s) that are not RawDocs for %s; dropping them",
+            kind,
+            len(returned) - len(docs),
+            person.name,
+        )
     if len(docs) > ask:
         # The double, and a real connector under a generous API, can both hand back more
         # than they were asked for. The budget is ours to enforce, not theirs to honour.
@@ -420,6 +450,11 @@ async def build_dossier(
     trace: BuildTrace | None = None,
 ) -> Dossier:
     """Research one person end to end and assemble their `Dossier`.
+
+    EVERY BUDGET IS PER PERSON, including `max_llm_calls`: a ten-person roster on the
+    defaults is authorised for ten times these numbers. `_BudgetedClient` is constructed
+    here, once per person, which is what makes that true — `contracts.Budget` does not say
+    it and a roster-wide reading of the same numbers is the natural misreading.
 
     Fans out over `connectors` concurrently (each asked for at most
     `budget.docs_per_connector`, the person capped at `budget.max_docs_total`), resolves
@@ -598,14 +633,31 @@ def report_row(
     if len(zero) != len(sources):
         log.warning("dropped non-SourceKind entries from zero_result_sources: %s", sources)
 
+    confidence = float(dossier.resolution.confidence)
+    if not 0.0 <= confidence <= 1.0:
+        # Clamped AND reported. `Resolution.confidence` is an unconstrained float, so a
+        # resolver bug yielding 1.7 would otherwise print 1.00 in the report while the
+        # dossier on disk still held 1.7 — the report and the artefact disagreeing, with
+        # the bug the coercion exists to catch concealed by the coercion.
+        log.warning(
+            "%s has an out-of-range resolution confidence %r; clamping it for the report",
+            dossier.person.person_id,
+            dossier.resolution.confidence,
+        )
+        confidence = min(1.0, max(0.0, confidence))
+
     row: dict[str, Any] = {
         "person_id": str(dossier.person.person_id),
         "status": str(dossier.resolution.status),
-        "confidence": min(1.0, max(0.0, float(dossier.resolution.confidence))),
+        "confidence": confidence,
         "facts_kept": int(kept),
         "facts_excluded": int(excluded),
         "hubs": int(len(dossier.hubs)),
         "zero_result_sources": zero,
+        # A source that EXPLODED, as distinct from one that had nothing. DESIGN Decision
+        # 8's whole point is that difference, and it was being computed into
+        # `trace.connector_errors` and then read by nobody.
+        "failed_sources": sorted(trace.connector_errors) if trace is not None else [],
         # Diagnostics. Additive, and nothing downstream may require them.
         "name": str(dossier.person.name),
         "documents": int(len(trace.documents)) if trace is not None else 0,
@@ -615,24 +667,36 @@ def report_row(
     return row
 
 
+def _cell(row: dict[str, Any], key: str) -> str:
+    """One table cell. Every read is `.get`-with-a-default AND None-tolerant.
+
+    `BuildReport.people` is `list[dict]` that pydantic does not validate, and `.get(k, d)`
+    only covers a MISSING key — a key present with the value `None` still reaches the
+    formatter, where `f"{float(None):.2f}"` is a TypeError that kills the whole report
+    over one bad row.
+    """
+    value = row.get(key)
+    if key == "person_id":
+        marker = " (skipped)" if row.get("skipped") else ""
+        return f"{value if value is not None else '?'}{marker}"
+    if key == "confidence":
+        try:
+            return f"{float(value):.2f}"
+        except (TypeError, ValueError):
+            return "?"
+    if key in ("zero_result_sources", "failed_sources"):
+        return ", ".join(str(item) for item in (value or [])) or "-"
+    if key in ("facts_kept", "facts_excluded", "hubs"):
+        return "?" if value is None else str(value)
+    return "?" if value is None else str(value)
+
+
 def format_report(report: BuildReport) -> str:
     """The report table the CLI prints. Also the shape a human reads at T-9."""
-    headers = ("person", "status", "conf", "kept", "excl", "hubs", "zero-result sources")
-    rows: list[tuple[str, ...]] = []
-    for row in report.people:
-        zero = ", ".join(str(kind) for kind in row.get("zero_result_sources") or []) or "-"
-        marker = " (skipped)" if row.get("skipped") else ""
-        rows.append(
-            (
-                f"{row.get('person_id', '?')}{marker}",
-                str(row.get("status", "?")),
-                f"{float(row.get('confidence', 0.0)):.2f}",
-                str(row.get("facts_kept", 0)),
-                str(row.get("facts_excluded", 0)),
-                str(row.get("hubs", 0)),
-                zero,
-            )
-        )
+    headers = tuple(_COLUMN_LABELS[key] for key in _TABLE_COLUMNS)
+    rows: list[tuple[str, ...]] = [
+        tuple(_cell(row, key) for key in _TABLE_COLUMNS) for row in report.people
+    ]
 
     widths = [len(h) for h in headers]
     for row in rows:
@@ -739,6 +803,7 @@ def _failed_row(person: PersonRef, trace: BuildTrace, reason: str) -> dict[str, 
         "facts_excluded": 0,
         "hubs": 0,
         "zero_result_sources": [k for k in trace.zero_result_sources if k in _SOURCE_KINDS],
+        "failed_sources": sorted(trace.connector_errors),
         "name": str(person.name),
         "documents": len(trace.documents),
         "llm_calls": int(trace.llm_calls),
@@ -777,6 +842,14 @@ async def build_all(
 
     out = Path(out_dir)
     docs_dir = out.parent / "docs"
+    if out.resolve() == docs_dir.resolve():
+        # DESIGN pins the docs directory as `out_dir/../docs`, so `--out docs` makes the
+        # two ONE directory and `{person_id}.json` and `{doc_id}.json` co-mingle in it.
+        # Refusing is the only honest option: the location is not ours to move.
+        raise BuildError(
+            f"--out {out} would put dossiers and their documents in the same directory "
+            f"({docs_dir}); the documents go to out_dir/../docs, so pick another --out"
+        )
     out.mkdir(parents=True, exist_ok=True)
     docs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -868,7 +941,26 @@ def build_command(
     parser.add_argument("--roster", default=None, help="roster YAML (default: data/roster.yaml)")
     parser.add_argument("--out", default=None, help="dossier output dir (default: DOSSIER_DIR)")
     parser.add_argument("--force", action="store_true", help="rebuild dossiers that exist")
-    parser.add_argument("--only", default=None, help="build just this person_id")
+    # PER PERSON, all three — see `build_dossier`. Without a lever here the only way to
+    # change what a build costs against a paid API is to edit the source.
+    parser.add_argument(
+        "--docs-per-connector", type=int, default=None,
+        help=(
+            "documents to ask each source for, per person "
+            f"(default {Budget().docs_per_connector})"
+        ),
+    )
+    parser.add_argument(
+        "--max-docs", type=int, default=None,
+        help=f"documents to research per person (default {Budget().max_docs_total})",
+    )
+    parser.add_argument(
+        "--max-llm-calls", type=int, default=None,
+        help=f"model calls per person (default {Budget().max_llm_calls})",
+    )
+    parser.add_argument(
+        "--only", default=None, help="build just this person_id (a name is accepted too)"
+    )
     try:
         opts = parser.parse_args(list(args))
     except SystemExit as exc:  # --help exits 0; a usage error exits 2
@@ -878,6 +970,17 @@ def build_command(
     roster = Path(opts.roster) if opts.roster else Path("data/roster.yaml")
     out_dir = Path(opts.out) if opts.out else Path(settings.dossier_dir)
 
+    overrides = {
+        "docs_per_connector": opts.docs_per_connector,
+        "max_docs_total": opts.max_docs,
+        "max_llm_calls": opts.max_llm_calls,
+    }
+    try:
+        budget = Budget(**{k: v for k, v in overrides.items() if v is not None})
+    except ValidationError as exc:
+        print(f"arrival: bad budget: {exc}", file=sys.stderr)
+        return 2
+
     try:
         report = asyncio.run(
             build_all(
@@ -885,11 +988,12 @@ def build_command(
                 out_dir,
                 connectors=connectors,
                 llm=llm,
+                budget=budget,
                 force=opts.force,
                 only=opts.only,
             )
         )
-    except RosterError as exc:
+    except (RosterError, BuildError) as exc:
         print(f"arrival: {exc}", file=sys.stderr)
         return 2
     except Exception as exc:  # a CLI reports; it does not traceback at an operator
