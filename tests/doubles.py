@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import sys
 import typing
 from collections import deque
 from collections.abc import Iterable, Mapping
@@ -66,15 +67,43 @@ def protocol_members(protocol: type) -> frozenset[str]:
     return frozenset(getattr(protocol, "__protocol_attrs__", ()))
 
 
-def _resolved_signature(func: Any) -> inspect.Signature | str:
-    """``inspect.Signature`` with annotations evaluated, or the raw string form."""
+def _signature_forms(
+    func: Any, extra_globals: Mapping[str, Any] | None = None
+) -> tuple[inspect.Signature | None, str]:
+    """``(resolved signature | None, unresolved string form)`` for ``func``.
+
+    Two forms, because the two sides of a conformance comparison do not always resolve.
+    The Protocol's own methods always do (their module holds every name they mention),
+    while a candidate written the ordinary way::
+
+        from __future__ import annotations
+        if TYPE_CHECKING:
+            from arrival.contracts import PersonRef, RawDoc
+
+    has NOTHING to resolve against at runtime — ``PersonRef`` is simply not in its
+    globals. This used to return an ``inspect.Signature`` in the first case and a plain
+    ``str`` in the second, and the caller compared them with ``!=``: a guaranteed mismatch
+    for every correct T-1 connector and T-2 client, reported as two lines that differ only
+    in quoting. Returning BOTH forms lets the caller compare like with like.
+
+    ``extra_globals`` (the Protocol's own module namespace) is consulted only for names the
+    candidate's own globals do not define, so a candidate that shadows ``PersonRef`` with
+    something else is still measured against ITS name, not the Protocol's.
+    """
+    namespace: dict[str, Any] | None = None
+    if extra_globals is not None:
+        namespace = {**extra_globals, **getattr(func, "__globals__", {})}
     try:
-        return inspect.signature(func, eval_str=True)
-    except Exception:  # unresolvable forward ref — compare the strings instead
-        try:
-            return str(inspect.signature(func))
-        except (TypeError, ValueError):  # pragma: no cover - not a callable
-            return "<no signature>"
+        resolved: inspect.Signature | None = inspect.signature(
+            func, globals=namespace, eval_str=True
+        )
+    except Exception:  # still unresolvable: fall back to the textual comparison
+        resolved = None
+    try:
+        raw = str(inspect.signature(func))
+    except (TypeError, ValueError):  # pragma: no cover - not a callable
+        raw = "<no signature>"
+    return resolved, raw
 
 
 def _declares(candidate: Any, name: str) -> bool:
@@ -107,6 +136,7 @@ def protocol_mismatches(candidate: Any, protocol: type) -> list[str]:
     owner = candidate if isinstance(candidate, type) else type(candidate)
     hints = typing.get_type_hints(protocol)
     members = protocol_members(protocol)
+    protocol_globals = vars(sys.modules.get(protocol.__module__, sys.modules[__name__]))
 
     problems: list[str] = []
     for name in sorted(members):
@@ -147,9 +177,19 @@ def protocol_mismatches(candidate: Any, protocol: type) -> list[str]:
                 f"{'async' if got_async else 'sync'}"
             )
 
-        want_sig, got_sig = _resolved_signature(expected), _resolved_signature(actual)
-        if want_sig != got_sig:
-            problems.append(f"{name}{got_sig} does not match the protocol's {name}{want_sig}")
+        # The Protocol's module namespace fills in names a candidate only imports under
+        # `if TYPE_CHECKING:` — see `_signature_forms`. Both sides are then compared in the
+        # SAME form: resolved against resolved when both resolve, text against text when
+        # either does not. Comparing a Signature against a str (what this used to do) is
+        # always unequal, so a correct implementation was reported as drift.
+        want_sig, want_raw = _signature_forms(expected, protocol_globals)
+        got_sig, got_raw = _signature_forms(actual, protocol_globals)
+        if want_sig is not None and got_sig is not None:
+            drifted, want_shown, got_shown = want_sig != got_sig, want_sig, got_sig
+        else:
+            drifted, want_shown, got_shown = want_raw != got_raw, want_raw, got_raw
+        if drifted:
+            problems.append(f"{name}{got_shown} does not match the protocol's {name}{want_shown}")
 
     return problems
 
@@ -181,21 +221,47 @@ class LLMCall:
 
     FIELD ORDER IS PART OF THE CONTRACT and downstream tickets construct these
     positionally, so it is ``schema_name`` first and ``user`` second — the two fields a
-    test actually asserts on. ``system``, ``max_tokens`` and ``cache_prefix`` follow and
-    all carry defaults::
+    test actually asserts on. ``max_tokens`` and ``cache_prefix`` follow, and ``system`` is
+    keyword-only (see below); all three carry defaults::
 
         LLMCall("ExtractionResult", "…prompt text…")
         LLMCall("Verdict", "…", system="you are…", max_tokens=512, cache_prefix=True)
 
     Note this is NOT the argument order of ``LLMClient.structured``, which is
     keyword-only.
+
+    ``system`` is KEYWORD-ONLY, and the remaining fields are type-checked on construction.
+    Both guards exist for one reason: ``user`` and ``system`` are both ``str``, so
+    ``LLMCall("Verdict", system_text, user_text)`` — the other order, which circulated in
+    the ticket briefs — used to store the two prompts REVERSED with no error at all, and
+    ``calls_for()`` output still looked plausible. Six downstream tickets assert on
+    recorded calls; a silent swap makes those assertions compare the wrong two strings and
+    pass. Keeping ``schema_name`` and ``user`` positional keeps the documented two-argument
+    form (and every existing keyword form) working.
     """
 
     schema_name: str
     user: str
-    system: str = ""
     max_tokens: int = 2000
     cache_prefix: bool = True
+    system: str = field(default="", kw_only=True)
+
+    def __post_init__(self) -> None:
+        for name, expected in (
+            ("schema_name", str),
+            ("user", str),
+            ("system", str),
+            ("max_tokens", int),
+            ("cache_prefix", bool),
+        ):
+            value = getattr(self, name)
+            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
+                raise TypeError(
+                    f"LLMCall.{name} must be {expected.__name__}, got "
+                    f"{type(value).__name__} ({value!r}). Positional order is "
+                    "(schema_name, user, max_tokens, cache_prefix); `system` is "
+                    "keyword-only so the system and user prompts cannot be swapped."
+                )
 
 
 @dataclass
@@ -386,10 +452,15 @@ class ConnectorDouble:
 
     async def search(self, person: PersonRef, budget: int) -> list[RawDoc]:
         self.calls.append((person, budget))
-        if self.raises is not None:
-            raise self.raises
+        # The delay is awaited BEFORE the raise, not after the check: a source that dies
+        # realistically hangs first and fails second (a timeout IS the common death), and
+        # T-6's headline requirement is that the pipeline degrades when a source dies.
+        # Raising instantly made "we handled the failure" and "we never waited"
+        # indistinguishable on the wall clock, which is the only way to tell them apart.
         if self.delay:
             await asyncio.sleep(self.delay)
+        if self.raises is not None:
+            raise self.raises
         # max(0, ...) because docs[:-1] is len(docs)-1 documents, not zero: an underflowed
         # per-connector budget in T-6 would otherwise hand back nearly the FULL corpus and
         # a real over-fetch bug would read as green.

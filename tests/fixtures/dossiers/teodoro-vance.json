@@ -1,6 +1,6 @@
 {
   "person": {
-    "person_id": "alpha",
+    "person_id": "teodoro-vance",
     "name": "Teodoro Vance",
     "details": [
       "CTO of Northgate Labs",
@@ -8,7 +8,7 @@
     ]
   },
   "resolution": {
-    "person_id": "alpha",
+    "person_id": "teodoro-vance",
     "status": "resolved",
     "strong_keys": {
       "company_domain": "northgatelabs.example",
@@ -157,8 +157,8 @@
       ]
     },
     {
-      "hub_id": "topic:ai",
-      "label": "AI",
+      "hub_id": "topic:machine-learning",
+      "label": "Machine learning",
       "type": "topic",
       "recency": 1.0,
       "evidence_fact_ids": [

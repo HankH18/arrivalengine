@@ -1,6 +1,6 @@
 {
   "person": {
-    "person_id": "bravo",
+    "person_id": "nadia-ellingsworth",
     "name": "Nadia Ellingsworth",
     "details": [
       "Head of ML at Harborline Freight",
@@ -8,7 +8,7 @@
     ]
   },
   "resolution": {
-    "person_id": "bravo",
+    "person_id": "nadia-ellingsworth",
     "status": "resolved",
     "strong_keys": {
       "company_domain": "harborline.example"
@@ -98,8 +98,8 @@
       ]
     },
     {
-      "hub_id": "topic:ai",
-      "label": "AI",
+      "hub_id": "topic:machine-learning",
+      "label": "Machine learning",
       "type": "topic",
       "recency": 1.0,
       "evidence_fact_ids": [

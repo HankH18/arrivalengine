@@ -1,6 +1,6 @@
 {
   "person": {
-    "person_id": "charlie",
+    "person_id": "selin-ardahan",
     "name": "Selin Ardahan",
     "details": [
       "Founder of Quillmark",
@@ -8,7 +8,7 @@
     ]
   },
   "resolution": {
-    "person_id": "charlie",
+    "person_id": "selin-ardahan",
     "status": "resolved",
     "strong_keys": {
       "company_domain": "quillmark.example"
@@ -16,9 +16,18 @@
     "accepted_doc_ids": [
       "11a9e0f5729d3a9c",
       "973de989c73ee7e2",
-      "74b92917b32266cd"
+      "74b92917b32266cd",
+      "7162c265599ceeb5"
     ],
-    "rejected": [],
+    "rejected": [
+      {
+        "doc_id": "871afa0f93fafb75",
+        "match": "no",
+        "confidence": 0.94,
+        "evidence": "Selin Ardahan has conducted the Coastal Choral Society in Gulfport since 2011 and teaches voice at the community college.",
+        "disambiguator": "occupation and city conflict with founder of Quillmark, Austin"
+      }
+    ],
     "confidence": 0.9
   },
   "facts": [
@@ -85,6 +94,54 @@
       },
       "excluded": false,
       "exclusion_reason": null
+    },
+    {
+      "fact_id": "charlie-nonobvious",
+      "text": "Quillmark threw its entire first model away before the review tone came out right.",
+      "category": "non_obvious",
+      "provenance": {
+        "doc_id": "74b92917b32266cd",
+        "url": "https://devtoolsradio.example/episodes/117",
+        "source_kind": "podcast",
+        "quote": "We threw away the first model entirely.",
+        "published_at": "2026-05-28",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.82
+      },
+      "excluded": false,
+      "exclusion_reason": null
+    },
+    {
+      "fact_id": "charlie-excluded-address",
+      "text": "She owns a house at 214 Mockingbird Terrace that is being extended with a rear studio.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "7162c265599ceeb5",
+        "url": "https://hillcrestledger.example/2026/04/mockingbird-terrace-permit",
+        "source_kind": "search",
+        "quote": "The addition at 214 Mockingbird Terrace was approved by the board in March.",
+        "published_at": "2026-04-08",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.9
+      },
+      "excluded": true,
+      "exclusion_reason": "home_or_property"
+    },
+    {
+      "fact_id": "charlie-excluded-family",
+      "text": "She is extending the house with her husband Emre Bagci, who is named on the permit.",
+      "category": "affiliation",
+      "provenance": {
+        "doc_id": "7162c265599ceeb5",
+        "url": "https://hillcrestledger.example/2026/04/mockingbird-terrace-permit",
+        "source_kind": "search",
+        "quote": "The owners, Selin Ardahan and her husband Emre Bagci, plan a rear studio and a new porch.",
+        "published_at": "2026-04-08",
+        "retrieved_at": "2026-08-30T15:04:11Z",
+        "confidence": 0.9
+      },
+      "excluded": true,
+      "exclusion_reason": "family"
     }
   ],
   "hubs": [
@@ -98,8 +155,8 @@
       ]
     },
     {
-      "hub_id": "topic:ai",
-      "label": "AI",
+      "hub_id": "topic:machine-learning",
+      "label": "Machine learning",
       "type": "topic",
       "recency": 1.0,
       "evidence_fact_ids": [

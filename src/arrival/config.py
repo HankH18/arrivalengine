@@ -18,6 +18,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 __all__ = ["Settings", "get_settings"]
 
 
+def _repo_root() -> Path:
+    """The directory holding `pyproject.toml`, found from this file rather than the CWD.
+
+    Used only for `dossier_dir`'s default. Anchoring on `__file__` is what makes that
+    default independent of where the process was started: `python -m arrival` from a
+    subdirectory, `uvicorn` from anywhere, and a test that `chdir`s all resolve to the
+    same committed corpus. The walk (rather than a fixed `parents[2]`) keeps that true if
+    the package is ever imported from an installed copy inside the tree.
+    """
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    return here.parents[2]  # pragma: no cover - src/arrival/config.py -> repo root
+
+
 class Settings(BaseSettings):
     """Runtime configuration. Secrets default to None so the app boots without them."""
 
@@ -39,6 +55,20 @@ class Settings(BaseSettings):
 
     # --- surfaces
     debug_views: bool = False  # R15: /debug/{person_id} is 404 unless this is on
+
+    # Where the committed dossiers live: DESIGN §Data models pins
+    # `data/dossiers/{person_id}.json`, which is what T-6's build writes and what T-9
+    # ships. The web app (T-8) boots from this directory, and the acceptance harness
+    # points it at its own corpus with the `DOSSIER_DIR` env var, so the key has to exist
+    # on Settings rather than being read straight from os.environ by one module.
+    #
+    # ABSOLUTE ON PURPOSE, unlike `cache_dir` above: a relative default is resolved
+    # against the process working directory by every consumer, so `python -m arrival`
+    # from a subdirectory, or a server started from elsewhere, silently reads a different
+    # (usually empty) corpus and the digest surface just has nobody in it. Setting
+    # DOSSIER_DIR to a relative path is still allowed — that is then the operator's
+    # explicit choice, not a default that changes underfoot.
+    dossier_dir: Path = _repo_root() / "data" / "dossiers"
 
     # --- model ids ------------------------------------------------------------------
     # These are SETTINGS, not constants (DESIGN Decision 9): the cheap model does
