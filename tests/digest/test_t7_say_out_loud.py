@@ -35,13 +35,32 @@ GOOD_LINE = "Ask about the nine months of rubric work before the first line of c
 
 
 def _templated(dossier, fact_id="alpha-hook"):
-    """The documented fallback, `f"Ask about {hook.text}"`, read off the fixture.
+    """The documented fallback, `f"Ask about this: {hook.text}"`, read off the fixture.
 
     Read rather than transcribed on purpose: a hand-copied sentence in a test grades the
     transcription, and the assertion that matters here is WHICH fact was chosen, which the
     `fact_id` argument still pins exactly.
+
+    justify-test-edit (T-029). The expected value here was `f"Ask about {hook.text}"` and it
+    was wrong INDEPENDENTLY of the change that turned it red — it pinned a defect as the
+    contract. `Fact.text` is a sentence, so splicing it into the object slot of "about"
+    yields no English: on this very fixture it asserted the product must say "Ask about He
+    spent nine months on the scoring rubric before writing a line of the eval runner.", and
+    on the frozen grading corpus the same rule produces "Ask about Argues that
+    developer-tools pricing should be published in full on a public page." — reproduced
+    end-to-end on all five graded people, and through a live boot with no API key. R14 wants
+    an invitation the host reads ALOUD and R18 exists to stop the host stumbling, so a value
+    the host cannot read is a value neither requirement permits. The requirement this test
+    encodes (DESIGN Decision 12: timeout, transport error and a rejected model line all land
+    on the ONE documented template, quoting the chosen hook verbatim) is unchanged and still
+    graded here; only the template's own wording was at fault, and the colon fixes it without
+    editing a character of the fact.
+
+    Still a hand-written literal, deliberately. Building this out of `digest.OPENER_TEMPLATE`
+    would make the assertion vacuous — the module under test would be supplying its own
+    answer key, and any future template, grammatical or not, would pass.
     """
-    return f"Ask about {fact_of(dossier, fact_id).text}"
+    return f"Ask about this: {fact_of(dossier, fact_id).text}"
 
 
 @pytest.fixture

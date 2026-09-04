@@ -25,7 +25,10 @@ rewrites one. Where R18's speakability rules collide with a fact's own wording t
 ``llm.structured`` call bounded by :data:`SAY_OUT_LOUD_TIMEOUT_SECONDS`, its output
 validated as an invitation (R14 — "Ask about...", never "I saw that you..."). Timeout,
 transport failure and a model that ignored the brief all land on the same documented
-fallback, ``f"Ask about {hook.text}"``, so R3's latency bound holds whatever the API does.
+fallback, :data:`OPENER_TEMPLATE`, so R3's latency bound holds whatever the API does. That
+template carries the fact through a COLON rather than splicing it into the object slot of
+"about", because a fact sentence is a clause and "Ask about <clause>" is not English —
+see :data:`OPENER_TEMPLATE` and :func:`is_speakable`'s sixth clause.
 
 **Citations are a list, not a sentence.** R18 keeps URLs, ``[n]`` markers, parentheticals
 and numbers-as-scores out of the three spoken lines; R9 puts every shown fact's provenance
@@ -48,11 +51,13 @@ from arrival.contracts import Digest, Dossier, Fact, LLMClient, Match, Provenanc
 from arrival.taste import is_displayable
 
 __all__ = [
+    "IRREGULAR_VERB_FORMS",
     "LATELY_CAP",
     "LATELY_FALLBACK_CATEGORIES",
     "LATELY_PRIMARY_CATEGORIES",
     "MEET_CAP",
     "NON_OBVIOUS_KINDS",
+    "NOUN_PHRASE_OPENERS",
     "OPENER_OF_LAST_RESORT",
     "OPENER_PREFIXES",
     "OPENER_TEMPLATE",
@@ -127,7 +132,25 @@ OPENER_PREFIXES: tuple[str, ...] = ("Ask", "Curious")
 SURVEILLANCE_PHRASES: tuple[str, ...] = ("i saw", "we noticed", "our records")
 
 #: The template DESIGN Decision 12 falls back to. Formatted with the hook fact's text.
-OPENER_TEMPLATE = "Ask about {text}"
+#:
+#: The colon is the whole point, and it is not decoration. ``Fact.text`` is a SENTENCE — the
+#: extractor writes "one sentence about the person", and in practice a subject-elided
+#: predicate: "Argues that developer-tools pricing should be published in full on a public
+#: page." A preposition opens a NOUN-PHRASE slot, so the earlier ``"Ask about {text}"``
+#: produced "Ask about Argues that developer-tools pricing should be published in full on a
+#: public page." — ungrammatical, and R18's whole job is to keep the host from stumbling.
+#: This is the fallback path, so that line was what the product SAID on every timeout, every
+#: transport error, every rejected model line, and on any deploy with no API key at all.
+#:
+#: Three fixes were on the table and only one keeps this module's other invariant. Selecting
+#: a noun phrase out of the sentence, and lower-casing it to embed it, both REWRITE a fact —
+#: and "facts are shown verbatim, skipped rather than edited" is the rule the citation beside
+#: them depends on. A per-:class:`~arrival.contracts.FactCategory` template does not help
+#: either: the shapes vary WITHIN a category ("Argues that…" and "Quarrystone Labs took…" are
+#: both single-sentence facts about the same person). Giving "about" its own object and
+#: letting the colon introduce the fact as an elaboration is grammatical for an ARBITRARY
+#: string, including a fragment, and touches not one character of the fact.
+OPENER_TEMPLATE = "Ask about this: {text}"
 
 #: Used only when a dossier carries no displayable fact at all — or none whose own wording
 #: survives R18 — so there is nothing to invite a question about. Still an invitation.
@@ -198,8 +221,164 @@ SCORE_WORDS: frozenset[str] = frozenset(
 )
 
 
+#: R18's sixth clause. A preposition or an article opens a NOUN-PHRASE slot: what follows it
+#: is a name or a thing, never a clause. These are the ones a spliced sentence lands after.
+#: Conjunctions are deliberately absent — "and" joins like with like, so a capitalised word
+#: after it says nothing about whether a clause was spliced, and including it only cost
+#: precision when this was measured.
+NOUN_PHRASE_OPENERS: frozenset[str] = frozenset(
+    {
+        "a",
+        "about",
+        "after",
+        "against",
+        "an",
+        "at",
+        "before",
+        "by",
+        "during",
+        "for",
+        "from",
+        "in",
+        "into",
+        "of",
+        "on",
+        "onto",
+        "over",
+        "the",
+        "through",
+        "to",
+        "toward",
+        "towards",
+        "under",
+        "with",
+        "within",
+        "without",
+    }
+)
+
+#: Finite verb forms no suffix rule reaches. Kept small on purpose: every entry earns its
+#: place by appearing sentence-initially in a real extracted fact ("Led the Foundry Seed 2019
+#: fund…", "Took four months away…", "Has lived in Austin since 2014.", "Spent six years…").
+IRREGULAR_VERB_FORMS: frozenset[str] = frozenset(
+    {
+        "am",
+        "are",
+        "became",
+        "began",
+        "bought",
+        "broke",
+        "brought",
+        "built",
+        "chose",
+        "drew",
+        "drove",
+        "fell",
+        "felt",
+        "found",
+        "gave",
+        "got",
+        "grew",
+        "had",
+        "has",
+        "have",
+        "held",
+        "is",
+        "kept",
+        "knew",
+        "left",
+        "led",
+        "lost",
+        "made",
+        "met",
+        "paid",
+        "put",
+        "ran",
+        "read",
+        "said",
+        "sat",
+        "saw",
+        "sent",
+        "set",
+        "sold",
+        "spent",
+        "spoke",
+        "stood",
+        "taught",
+        "thought",
+        "told",
+        "took",
+        "was",
+        "went",
+        "were",
+        "won",
+        "wore",
+        "wrote",
+    }
+)
+
+
 def _bare(word: str) -> str:
     return word.strip(".,;:!?'\"")
+
+
+def _reads_as_a_verb(word: str) -> bool:
+    """Does this token read as a finite verb rather than as a name?
+
+    Morphology plus a short irregular list, and no dictionary — which is the honest
+    accuracy available without a tagger. Two calibrations were measured against this
+    project's own corpus rather than guessed:
+
+    * A capitalised HYPHENATED compound is a product or a hub label far more often than a
+      verb. ``graph._why`` emits "Both deep in Developer-tools go-to-market." — a real
+      ``Match.why`` in the grading corpus — and a bare "ends in -s" rule reads
+      "Developer-tools" as a verb and blanks the Meet row's reasoning. So a hyphenated word
+      only counts in its participial form, which still catches "Co-founded…" and
+      "Co-authored…", the two hyphenated sentence-openers the corpus actually has.
+    * An ALL-CAPS token is an acronym ("AI", "CEO"), never an inflected verb.
+
+    Across all 35 facts in the frozen corpus this flags 21 of 21 subject-elided predicates
+    and none of the six sentences that open with a real subject.
+    """
+    lowered = word.casefold()
+    if lowered in IRREGULAR_VERB_FORMS:
+        return True
+    if "-" in lowered:
+        return lowered.endswith(("ed", "ing"))
+    return len(lowered) >= 4 and lowered.endswith(("s", "ed", "ing"))
+
+
+def _splices_a_clause(words: Sequence[str]) -> bool:
+    """R18: was a sentence pasted into a slot that wanted a noun phrase?
+
+    This is the property that "Ask about Argues that developer-tools pricing should be
+    published in full on a public page." fails and the five older clauses miss: it carries no
+    URL, no citation marker, no parenthesis, no score and only sixteen words, so it read as
+    speakable while being unreadable aloud.
+
+    A capitalised word is a splice when it stands directly after a bare
+    :data:`NOUN_PHRASE_OPENERS` token — bare meaning no trailing punctuation, so a colon,
+    dash, comma or full stop before it is a boundary and licenses the new clause — and reads
+    as a verb. That is why :data:`OPENER_TEMPLATE`'s "this:" is accepted while the old
+    template is not: the preposition has its object, and the colon introduces the rest.
+
+    It errs toward rejection: a one-word company name ending in -s directly after a
+    preposition ("…at Reuters on the data team") is refused. That direction is the safe one
+    here and matches what the rest of this module already does — an unspeakable candidate is
+    SKIPPED, never rewritten, so the cost is the next fact instead of a stumble.
+    """
+    for index in range(1, len(words)):
+        previous = words[index - 1]
+        if previous != _bare(previous):
+            continue  # punctuation ends the phrase, so what follows may start a clause
+        if previous.casefold() not in NOUN_PHRASE_OPENERS:
+            continue
+        word = _bare(words[index])
+        if not word or not word[0].isupper() or word.isupper():
+            continue
+        if _reads_as_a_verb(word):
+            return True
+    return False
 
 
 def _score_positions(words: Sequence[str]) -> set[int]:
@@ -227,7 +406,14 @@ def is_speakable(text: str) -> bool:
     """R18: can a host read this line aloud, as written, without stumbling?
 
     No URLs, no ``[n]`` citation markers, no parentheses, no numbers-as-scores, at most
-    :data:`SPOKEN_WORD_CAP` words, and not blank.
+    :data:`SPOKEN_WORD_CAP` words, not blank — and no sentence spliced into a slot that
+    wanted a noun phrase (:func:`_splices_a_clause`).
+
+    That last clause is here because the first five graded only the MECHANICAL hazards and
+    left the grammatical one unguarded, which let the fallback opener ship "Ask about Argues
+    that…" on the path every failure mode takes. A rule that lives only in the template
+    regresses the moment someone edits the template; a rule that lives here fails the line
+    instead, and the caller falls through to the next candidate.
     """
     if not text.strip():
         return False
@@ -240,6 +426,8 @@ def is_speakable(text: str) -> bool:
     words = text.split()
     if len(words) > SPOKEN_WORD_CAP:
         return False
+    if _splices_a_clause(words):
+        return False
     return not _score_positions(words)
 
 
@@ -250,6 +438,12 @@ def speakable(text: str) -> str:
     the matcher and is shown as a Meet row, so R18 binds even when the matcher was careless.
     It is never used on a :class:`~arrival.contracts.Fact`: a fact is shown verbatim or not
     at all (see :func:`who_line_for`, which skips rather than edits).
+
+    It repairs the five MECHANICAL clauses of :func:`is_speakable` and deliberately not the
+    sixth: a spliced clause is a grammar problem, and the only "repair" available — deleting
+    the verb, or lower-casing it — changes what the sentence says. So the result of this
+    function is not guaranteed speakable, and its one caller checks (see
+    :func:`_speakable_match`).
     """
     cleaned = _CITATION_MARKER.sub(" ", text)
     cleaned = _PARENTHETICAL.sub(" ", cleaned)
@@ -417,19 +611,44 @@ def pick_opener_hook(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> Fact 
     return candidates[0] if candidates else None
 
 
+def _raw_contribution(match: Match) -> float:
+    """The unrounded score behind ``Match.score``, recovered from its own components.
+
+    ``graph.match`` computes ``score = min(100, round(100 * raw / ref))`` from
+    ``raw = sum(c.contribution for c in components)`` and hands both back on the Match, so
+    this is a reconstruction of its input rather than a second opinion about it.
+    """
+    return sum(contribution.contribution for contribution in match.contributions)
+
+
 def _capped_meet(matches: Sequence[Match]) -> list[Match]:
     """R7 + R8: the top three by score, and NOTHING when nobody else is present.
 
-    ``sorted(..., reverse=True)`` is stable, so peers on an equal score keep the order the
-    matcher emitted them in rather than being reshuffled here. The cap selects whole rows;
-    it never invents one to reach three.
+    The sort key is TOTAL, and that is the fix for a real defect rather than tidiness.
+    ``Match.score`` is ``round(100 * raw / ref)``, so ties are the normal case and not the
+    edge one: on the grading corpus two of the four present peers score exactly 0.0. This
+    function's own contract says matches arrive "in any order", and until the key became
+    total that promise was false — a plain ``sorted(key=score, reverse=True)`` is stable, so
+    which of the two zero-scorers took the third Meet row was decided by the order
+    ``graph.match`` happened to return. Measured before the fix: over the 24 permutations of
+    the corpus's four matches, 12 produced a Meet ending in ``mira-hollowell`` and 12 one
+    ending in ``theo-baptiste``. T-7 was reading a guarantee out of T-5's list order that
+    T-5 never made to it, and T-8 renders whichever row this picks.
+
+    So ties fall back to the raw contribution sum the rounding threw away, and then to
+    ``person_id``, which is total. Both recover what ``graph.match``'s own ordering means
+    (``-raw``, then ``person_id``) without DEPENDING on it: the same input set now yields the
+    same Meet whatever order it arrives in. The cap selects whole rows; it never invents one
+    to reach three.
 
     One person occupies at most one row. R7 caps Meet at "three present people", not three
     Match objects, and a host reading the same name twice has been handed a padded section
     with extra steps. The highest-scoring row for a person wins, which is the first one the
     sort reaches.
     """
-    ranked = sorted(matches, key=lambda m: m.score, reverse=True)
+    ranked = sorted(
+        matches, key=lambda m: (-m.score, -_raw_contribution(m), m.other.person_id)
+    )
     seen: set[str] = set()
     kept: list[Match] = []
     for match in ranked:
@@ -454,10 +673,15 @@ def _speakable_match(match: Match) -> Match:
     if is_speakable(why):
         return match if why == match.why else match.model_copy(update={"why": why})
     repaired = speakable(why)
-    if not repaired:
-        # Nothing survived the repair, so there is no shared thing left to name. R7 wants a
-        # why that names one; when the input carried none this module will NOT invent it —
-        # a fabricated connection is worse on this product than an admitted blank.
+    if not repaired or not is_speakable(repaired):
+        # Nothing survived the repair, or what survived still cannot be read aloud (a
+        # spliced clause is a grammar fault, and `speakable` repairs only the mechanical
+        # five). Either way there is no shared thing left to name that a host can say. R7
+        # wants a why that names one; when the input carried none this module will NOT
+        # invent it — a fabricated connection is worse on this product than an admitted
+        # blank. Checking the repair rather than trusting it is what keeps "every spoken
+        # line on the page satisfies R18" true clause-by-clause instead of only for the
+        # clauses `speakable` happens to know how to fix.
         repaired = WHY_OF_LAST_RESORT
     return match.model_copy(update={"why": repaired})
 
@@ -482,17 +706,52 @@ def _hub_evidence(dossier: Dossier, meet: Sequence[Match]) -> Iterator[Fact]:
                     yield fact
 
 
+def _stronger(candidate: tuple[float, str], holder: tuple[float, str]) -> bool:
+    """Higher confidence wins a document's one slot; an exact tie goes to the lower id."""
+    return candidate[0] > holder[0] or (candidate[0] == holder[0] and candidate[1] < holder[1])
+
+
 def _sources(facts: Iterable[Fact]) -> list[Provenance]:
-    """R9/S6: one entry per document, in the order the page first leans on it."""
-    seen: set[str] = set()
-    out: list[Provenance] = []
+    """R9/S6: one entry per document, in the order the page first leans on it.
+
+    Two separate decisions live here, and only the first is R9's.
+
+    **Position** is first-use order and stays that way: T-8 numbers a citation by a
+    document's index in this list, so moving an entry renumbers the page.
+
+    **Which of a document's provenances fills that slot** used to be a side effect of
+    assembly order, and that was the defect. ``Provenance`` is PER FACT — it carries the
+    fact's own ``quote`` and ``confidence``, not the document's — while this list holds one
+    entry per ``doc_id``, so several facts compete for one slot whenever they were extracted
+    from the same document, which on the grading corpus is most of them. Taking whichever
+    arrived first meant the winner was decided by which SECTION reached the document first,
+    and the visible result was a citation whose quote does not support the claim above it.
+    Measured on ``runa-okonkwo``: the Meet row "Both backed by Foundry Seed 2019" cited a
+    source displaying "I co-founded Quarrystone Labs in 2016 and I run the platform team
+    there" — a quote that never mentions Foundry Seed — because the Who line reached that
+    document three sections earlier. Two more rows did the same.
+
+    One entry per document is frozen (the acceptance suite asserts the list is deduped by
+    ``doc_id``), so no rule can give every citing fact its own quote. What a rule CAN do is
+    stop the answer depending on page structure and state what it is: the slot holds the
+    STRONGEST evidence the page has from that document — highest ``confidence``, ties to the
+    lower ``fact_id``. That is the best single answer to "why should I believe this document
+    is about this person", it is what the entry's own rendered confidence number then
+    honestly describes, and it is identical whatever order the sections are assembled in.
+    """
+    order: list[str] = []
+    winner: dict[str, tuple[float, str, Provenance]] = {}
     for fact in facts:
         provenance = fact.provenance
-        if provenance.doc_id in seen:
-            continue
-        seen.add(provenance.doc_id)
-        out.append(provenance)
-    return out
+        doc_id = provenance.doc_id
+        candidate = (provenance.confidence, fact.fact_id)
+        holder = winner.get(doc_id)
+        if holder is None:
+            order.append(doc_id)
+            winner[doc_id] = (*candidate, provenance)
+        elif _stronger(candidate, holder[:2]):
+            winner[doc_id] = (*candidate, provenance)
+    return [winner[doc_id][2] for doc_id in order]
 
 
 # --------------------------------------------------------------------------- R14 say out loud
@@ -515,7 +774,7 @@ def _validate_opener(line: str) -> str | None:
 def _fallback_opener(candidates: Sequence[Fact]) -> tuple[str, Fact | None]:
     """DESIGN Decision 12's template, held to the SAME R18 bar as the model's line.
 
-    ``f"Ask about {hook.text}"`` interpolates a fact verbatim, and a fact's own wording is
+    :data:`OPENER_TEMPLATE` interpolates a fact verbatim, and a fact's own wording is
     not guaranteed speakable: facts run to 200 characters and nothing stops one carrying a
     parenthetical or a URL. Validating only the model's line and not the template's leaves
     R18 unenforced on the path taken by EVERY failure mode — timeout, transport error,
