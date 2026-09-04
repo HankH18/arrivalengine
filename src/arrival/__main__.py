@@ -47,17 +47,13 @@ def main(argv: list[str], *, connectors=None, llm=None) -> int:
         return 0
 
     if command == "build":
-        # ------------------------------------------------------------------
-        # T-6 DISPATCH POINT — fill this in.
-        #   from .research import build_all
-        #   parse `args` (--roster/--out/--force/--only), then:
-        #   report = asyncio.run(build_all(roster, out, connectors=connectors, llm=llm, ...))
-        #   print the report table; return 0.
-        # `connectors` and `llm` above are the injected doubles under test.
-        # ------------------------------------------------------------------
-        del args, connectors, llm  # placeholder: consumed by T-6
-        print("arrival: 'build' is not implemented yet (ticket T-6).", file=sys.stderr)
-        return 2
+        # T-6 DISPATCH POINT. The verb itself lives in `arrival.research.build_command`,
+        # imported HERE rather than at module scope: `python -m arrival --help` must not
+        # pay for yaml, httpx and ten connector modules, and T-0's CLI tests import this
+        # module before any of those necessarily exist.
+        from .research import build_command
+
+        return build_command(args, connectors=connectors, llm=llm)
 
     print(f"arrival: unknown command {command!r}", file=sys.stderr)
     print(USAGE, file=sys.stderr)
