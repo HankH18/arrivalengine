@@ -131,3 +131,35 @@ Concretely:
 4. Once T-1/T-2/T-4 land, T-6 becomes dispatchable; once T-5 clears rung-2,
    T-7 becomes dispatchable (pending T-4 too); T-8 stays blocked until T-5
    and T-7 are both in.
+
+## Push gate — DECLINED, and this is the gate working
+
+`push-gate --cycle 1` scored its five mechanical conditions and refused on exactly one:
+
+| condition | result |
+|---|---|
+| `verify` passed this epoch | PASS — frozen manifest re-hashed and authenticated, intact |
+| `analyze` did not exit 1, no metric stale | PASS — cycle-1.json records cycle 1, harness_integrity intact |
+| tracked-file count is not an unexplained drop | PASS — 115 -> 130 since cycle 0, no sharp drop |
+| **every rung-2 verifier for this epoch has returned** | **FAIL — `verify-batch-1` still open** |
+| everything `.swarm-loop/` holds is committed | PASS — clean at HEAD |
+
+**Nothing is pushed this epoch.** The adversarial verifier on the T-3 + T-5 batch was
+dispatched concurrently with the measurement, by design, so that verification costs no
+wall-clock — and the consequence is that it was still running when the gate ran. A
+verdict still outstanding is an unmet condition, not a pass: the push carries to cycle
+2's gate rather than racing the verification it exists to wait for. The finding that
+most often arrives late from rung 2 is resolution provenance — greens that executed some
+other tree's source — which is precisely the class no per-branch check can see.
+
+Two further conditions the command deliberately refuses to score, and which are the
+operator's:
+- *this epoch's integrations landed green on `main`* — they did (suite 343 passed, ruff
+  clean, frozen metrics re-measured on `main` after both merges), but that ran in the
+  primary checkout and left no artifact the command can read, and re-reading a green out
+  of a log is not the same claim as having watched it.
+- *no rung-2 finding invalidates a merged branch* — unanswerable until the verifier
+  returns, which is the failing condition above.
+
+No remote has been pushed at any point in this run. Nothing is lost by the delay: `main`
+is committed locally and the next epoch's gate re-scores everything from scratch.
