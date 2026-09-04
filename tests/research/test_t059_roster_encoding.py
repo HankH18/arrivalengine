@@ -129,3 +129,37 @@ def test_the_cli_rejects_a_mis_encoded_roster_with_the_input_error_code(tmp_path
     assert str(path) in err, f"the operator was not told which file to fix:\n{err}"
     assert "Traceback" not in err, f"a CLI reports; it does not traceback at an operator:\n{err}"
 
+
+def test_the_cli_reports_a_mis_encoded_env_file_instead_of_a_dotenv_traceback(
+    tmp_path, capsys, monkeypatch
+):
+    """The same bug class one layer out, found by sweeping rather than by the ticket.
+
+    `Settings` is configured with `env_file=".env"`, which python-dotenv opens in text mode
+    under a strict utf-8 codec, so a latin-1 `.env` raises `UnicodeDecodeError` -- again a
+    `ValueError`, not an `OSError`. `build_command`'s `get_settings()` call sat between the
+    argparse `try` and the budget `try`, in no handler at all. Measured before the fix::
+
+        File ".../dotenv/parser.py", line 73, in __init__
+        UnicodeDecodeError: 'utf-8' codec can't decode byte 0xe9 in position 25 ...
+        exit 1
+
+    `env_file=".env"` is relative, so the file is resolved against the process CWD -- which
+    is why this test `chdir`s rather than writing into the repo. The roster is valid UTF-8
+    so that an exit of 2 can only have come from the configuration read.
+    """
+    roster = tmp_path / "roster.yaml"
+    roster.write_text(ROSTER_TEXT, encoding="utf-8")
+    (tmp_path / ".env").write_bytes(b'ANTHROPIC_API_KEY="sk-caf\xe9"\n')
+    monkeypatch.chdir(tmp_path)
+
+    rc = main(
+        ["build", "--roster", str(roster), "--out", str(tmp_path / "dossiers")],
+        connectors=[ConnectorDouble(kind="self_page")],
+        llm=LLMDouble(),
+    )
+
+    assert rc == 2, f"an unreadable .env is bad input, not an internal failure; got exit {rc}"
+    err = capsys.readouterr().err
+    assert ".env" in err, f"the operator was not told which file to fix:\n{err}"
+    assert "Traceback" not in err, f"a CLI reports; it does not traceback at an operator:\n{err}"
