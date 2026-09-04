@@ -51,14 +51,56 @@ def test_path_runs_person_hub_person_through_the_rare_hub(graph):
 
 
 def test_path_always_passes_through_the_top_contributing_hub(graph):
+    # justify-test-edit (T-016). The quantifier was "every pair"; it is now "every pair
+    # that HAS a contributing hub", and the pairs it used to cover wrongly are asserted
+    # directly below instead. The old form was wrong independently of any implementation:
+    # it contradicted `test_why_never_names_a_hub_that_contributed_nothing` in this same
+    # file -- `why` refuses to name a hub the clamp zeroed, while this demanded `path` run
+    # through exactly such a hub whenever it happened to sort first. Both cannot be "the
+    # picture of the why" (T-5 acceptance 3). Reproduced on the FROZEN corpus, so the
+    # contradiction is in the product and not in this fixture: runa-okonkwo ->
+    # mira-hollowell answered why='Nothing in common on the record yet.' beside
+    # path=['person:runa-okonkwo', 'hub:city:austin', 'person:mira-hollowell'].
+    covered = 0
     for arriving in ("alpha", "bravo", "charlie", "delta"):
         others = [p for p in ("alpha", "bravo", "charlie", "delta") if p != arriving]
         for m in match(graph, arriving, others):
+            if not any(c.contribution > 0 for c in m.contributions):
+                continue
+            covered += 1
             assert m.path[0] == person_node(arriving)
             assert m.path[-1] == person_node(m.other.person_id)
             assert m.path[1] == hub_node(m.contributions[0].hub.hub_id), (
                 f"{arriving} -> {m.other.person_id}: path {m.path} skips the top hub"
             )
+    assert covered == 2, (
+        "the corpus must still contain a scoring pair in both directions, or the assertion "
+        f"above is vacuous; covered {covered}"
+    )
+
+
+def test_path_is_empty_when_no_shared_hub_contributed_anything(graph):
+    """T-016: the path is the picture of the why, so it may not name what the why denies.
+
+    The complement of the assertion above, added with it. alpha and bravo share Austin and
+    Machine learning, both carried by all four people and both clamped to 0 -- `why` says so
+    ("Nothing in common on the record yet."), and the path must not then contradict it by
+    routing through Austin.
+    """
+    covered = 0
+    for arriving in ("alpha", "bravo", "charlie", "delta"):
+        others = [p for p in ("alpha", "bravo", "charlie", "delta") if p != arriving]
+        for m in match(graph, arriving, others):
+            if any(c.contribution > 0 for c in m.contributions):
+                continue
+            covered += 1
+            assert m.contributions, "this pair is only interesting if it DOES share hubs"
+            assert m.path == [], (
+                f"{arriving} -> {m.other.person_id}: why={m.why!r} names nothing, but "
+                f"path={m.path} names {m.path[1] if len(m.path) > 1 else '?'}"
+            )
+            assert "Austin" not in m.why and "Machine learning" not in m.why
+    assert covered == 10, f"expected 10 zero-scoring ordered pairs in this corpus, got {covered}"
 
 
 def test_path_is_the_cheapest_route_under_the_cost_weight(graph):
