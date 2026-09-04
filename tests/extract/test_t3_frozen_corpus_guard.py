@@ -219,3 +219,27 @@ async def test_every_quote_extract_emits_is_verbatim_in_its_frozen_source(frozen
         )
         checked += 1
     assert checked >= 10
+
+
+async def test_the_prompt_carries_the_frozen_documents_own_text(frozen):
+    """T-012, graded on prose this ticket cannot write.
+
+    `test_t3_prompt_and_counters.py` asserts the same thing against documents built by
+    `t3_corpus.py`, which this ticket owns. The property is an identity between the objects
+    handed IN and the prompt handed OUT, so the answer key is the input itself either way —
+    but running it over the orchestrator's corpus removes the last thing an author could
+    have shaped. `_document_block` -> `return ""` fails here as well.
+    """
+    batch = frozen[:3]
+    llm = LLMDouble()
+    llm.queue(ExtractionResult(facts=[]))
+    await extract(corpus.PERSON, corpus.resolution_for(*batch), list(batch), llm)
+
+    assert llm.call_count == 1
+    prompt = llm.calls[0].user
+    for doc in batch:
+        assert doc.text in prompt, f"the model was never shown {doc.doc_id}'s frozen text"
+        assert doc.doc_id in prompt and doc.url in prompt
+    # And a document NOT in this batch is not smuggled in.
+    for doc in frozen[3:]:
+        assert doc.text not in prompt
