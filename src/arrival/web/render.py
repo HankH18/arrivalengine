@@ -22,6 +22,38 @@ higher citation number than a Lately bullet below it; footnote numbering in a do
 whose sections are read out of order does the same thing, and it is the honest half of the
 trade.
 
+**A citation marker backs the sentence it hangs off — T-055, and the rule that settles it
+for both surfaces.** The measured line, on `runa-okonkwo` with all five present: the Mira
+Hollowell Meet row scores 0.0, reads "Nothing in common on the record yet.", and carried a
+`[1]` marker anyway — because the row still holds `city:austin` and `topic:remote-work`,
+whose IDF clamped to zero on a corpus where all five people share them. A host with ninety
+seconds reads a sentence that says nothing is shared and a footnote offering to prove it.
+
+The evidence is real, so this is not a correctness leak; it is a question about which
+surface owes which answer, and the page has three:
+
+* **the spoken `why` and its `<sup>` markers.** R18 material. `graph._why` already decided
+  what this sentence may claim — it names only hubs with `contribution > 0`, "citing a hub
+  the clamp zeroed would claim credit for a connection worth nothing" — so the markers
+  follow the same predicate (`_counted_hubs`). A sentence that claims no shared hub cites
+  no document for one.
+* **the R10 reasoning table**, behind `<details>`. It shows the ARITHMETIC, so it keeps
+  EVERY shared hub including the zeroes; `digest.html` says so at its own `data-reasoning`
+  block and that comment stands unchanged. Hiding a zero row would make the sum stop
+  adding up.
+* **"Why we know this"**, the numbered evidence list. An audit surface like the table, so
+  it also stays complete: `_page_claims` still passes `row.contributions` in full, and the
+  Austin quote is still rendered under source [1] reading "supports Meet: Sil Vantorre, Jem
+  Arrowood, Mira Hollowell". That is what keeps the table's zero rows CHECKABLE from the
+  page — the objection against suppressing anything — and it is why this needed no change
+  to `digest.html`.
+
+One rule, three surfaces: **each cites exactly what it claims.** The zero-score row is not
+the only thing it fixes. Jem Arrowood's row reads "Both deep in developer-tools
+go-to-market." and cited `[3]` AND `[1]`, where [1] is the self-page whose quotes are about
+Austin and remote work — the document-level twin of the defect `digest._sources` was written
+to kill. It now cites [3] alone, the document that actually carries the sentence's evidence.
+
 **`/debug` asks `resolve` what a verdict turned on; it does not read the label.** The
 rejected-candidates table used to print `verdict.disambiguator` straight out of the
 contract, which is the model's own free-text word — the word T-031 spent two tickets
@@ -44,7 +76,15 @@ from typing import Any
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from arrival.contracts import Digest, Dossier, Fact, Match, PersonRef, Verdict
+from arrival.contracts import (
+    Digest,
+    Dossier,
+    Fact,
+    HubContribution,
+    Match,
+    PersonRef,
+    Verdict,
+)
 from arrival.digest import OPENER_TEMPLATE, opener_hook_candidates, who_line_for
 from arrival.resolve import attribute_family, verdict_attribute, verdict_attributes
 from arrival.taste import CONFIDENCE_FLOOR, DISPLAYABLE_KINDS, is_displayable
@@ -147,27 +187,48 @@ def _citations(facts: list[Fact], numbers: dict[str, int]) -> list[int]:
     return out
 
 
-def _hub_evidence_facts(dossier: Dossier, row: Match) -> list[Fact]:
-    """The arriving person's displayable facts behind a Meet row's shared hubs.
+def _hub_evidence_facts(
+    dossier: Dossier, contributions: Sequence[HubContribution]
+) -> list[Fact]:
+    """The arriving person's displayable facts behind these shared-hub contributions.
 
     `HubContribution.hub` is the ARRIVING person's Hub by contract, so its
     `evidence_fact_ids` resolve in this dossier. `is_displayable` is applied here for the
     same reason `digest.py` applies it: `graph.py` deliberately does not filter hubs,
     because matching is not display, so a hub whose evidence was taste-excluded can
     legitimately score a match and must still never be cited — nor, now, quoted.
+
+    Takes the contributions rather than the `Match` because the page asks two different
+    questions of them — see `_counted_hubs`.
     """
     by_id = {f.fact_id: f for f in dossier.facts}
     return [
         by_id[fact_id]
-        for contribution in row.contributions
+        for contribution in contributions
         for fact_id in contribution.hub.evidence_fact_ids
         if fact_id in by_id and is_displayable(by_id[fact_id])
     ]
 
 
+def _counted_hubs(row: Match) -> list[HubContribution]:
+    """The shared hubs the row's `why` sentence was actually built from.
+
+    `graph._why` opens with `[c for c in components if c.contribution > 0]` and returns
+    `_WHY_NOTHING_SHARED` — "Nothing in common on the record yet." — when that list is
+    empty, on the stated ground that "citing a hub the clamp zeroed would claim credit for
+    a connection worth nothing". This is that same predicate, applied to the CITATION
+    MARKERS that hang off the sentence, and it is a predicate rather than a restatement of
+    the matcher's rule: which of the counted hubs `_why` then names (at most two) stays
+    graph.py's business, exactly as `digest._speakable_match` leaves it there.
+
+    See the module docstring for the product judgement this implements.
+    """
+    return [contribution for contribution in row.contributions if contribution.contribution > 0]
+
+
 def _hub_evidence(dossier: Dossier, row: Match, numbers: dict[str, int]) -> list[int]:
-    """Citations for the arriving person's facts behind a Meet row's shared hubs."""
-    return _citations(_hub_evidence_facts(dossier, row), numbers)
+    """Citations for the facts behind the hubs a Meet row's `why` actually claims."""
+    return _citations(_hub_evidence_facts(dossier, _counted_hubs(row)), numbers)
 
 
 def _opener_quoted_fact(digest: Digest, dossier: Dossier) -> Fact | None:
@@ -217,7 +278,15 @@ def _page_claims(
     if dossier is not None:
         for row in digest.meet:
             claims.append(
-                ("meet", SECTION_LABELS["meet"], row.other.name, _hub_evidence_facts(dossier, row))
+                (
+                    "meet",
+                    SECTION_LABELS["meet"],
+                    row.other.name,
+                    # EVERY shared hub, zeroes included — the audit surfaces stay complete.
+                    # See the module docstring: this is the half of the T-055 rule that is
+                    # not the citation marker.
+                    _hub_evidence_facts(dossier, row.contributions),
+                )
             )
     for fact in digest.lately:
         claims.append(("lately", SECTION_LABELS["lately"], "", [fact]))
