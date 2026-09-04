@@ -518,7 +518,11 @@ def test_a_dangling_evidence_fact_id_degrades_and_does_not_corrupt():
         path=["person:a", "hub:investor:rare", "person:b"],
         why="You both know Rare.",
     )
-    resolved = _hub_evidence_facts(dossier, row)
+    # `row.contributions`, not `row`: T-055 narrowed this helper to take the contributions
+    # themselves, because the page asks two different questions of them — the citation
+    # markers follow `graph._why`'s exclusive predicate while the reasoning table stays
+    # complete. Passing the Match silently iterated it into tuples.
+    resolved = _hub_evidence_facts(dossier, row.contributions)
     assert [f.fact_id for f in resolved] == ["real-fact"], (
         "a dangling id is skipped, not raised on -- the whole basis of the decline"
     )
