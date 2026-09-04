@@ -67,6 +67,49 @@
 #      podcast episode, as a management lesson -> keep). The axis is who disclosed it and
 #      where, never the topic word.
 #
+# ---------------------------------------------------------------------------
+# HOW THE TWO STAGES DIVIDE THE CORPUS  (read alongside `rule_layer`)
+# ---------------------------------------------------------------------------
+# Stated here rather than left to be guessed, because `rule_layer` is GRADED in both
+# directions: every `deterministic` case must be settled by apply_taste_rules alone
+# with no LLM call, and every `llm` case must actually REACH the LLM stage. The line
+# this corpus is built to:
+#
+#   deterministic EXCLUDE  an unambiguous R11 surface marker whose subject can only be
+#                          the person -- a street address, a named relative, a
+#                          diagnosis, a court filing about them, a dollar figure
+#                          attached to them, a campaign contribution.
+#   deterministic KEEP     a DOMINANT professional marker -- "Series B", "keynoted",
+#                          "amicus brief", "board of", "donated a patent", "angel
+#                          investor", "board officer" -- and any category-shaped word
+#                          in the sentence is a known exemption attached to that
+#                          marker ("children's hospital", a 990 filing, a "salary"
+#                          used as a budget yardstick). Eleven of the eighteen
+#                          deterministic keeps carry no category vocabulary at all;
+#                          the other seven are near-misses that need those exemptions.
+#   llm                    a category-shaped word fires and NOTHING exempts it, so the
+#                          ruling turns on WHO the sentence is about (person vs.
+#                          company) or on WHO disclosed it -- neither of which a
+#                          keyword can see.
+#   fail-closed            a subset of `llm`. The sentence says outright that the
+#                          source does not resolve the question: "does not say why",
+#                          "no source says whether", "declined to describe". All three
+#                          fail-closed cases carry that cue and no deterministic keep
+#                          carries it, so the rule layer has a signal to DEFER on
+#                          rather than three sentences to memorise.
+#
+# ---------------------------------------------------------------------------
+# THIS FILE PUBLISHES ITS OWN ANSWERS -- SEE `held_back:` AT THE BOTTOM
+# ---------------------------------------------------------------------------
+# Every case below carries its `expect` and `reason` in plaintext, and T-4's ticket
+# points the worker at this file. A dict from `text` to (excluded, exclusion_reason)
+# therefore scores 100% on the outcome tests and generalises to nothing. The frozen
+# suite defends the property, not the answers: it rewrites every case here at RUN TIME
+# (renamed entities and years, re-framed sentences) and requires the same ruling; it
+# requires a pure rename to stay in the deterministic stage; and it grades the
+# `held_back:` minimal pairs at the bottom of this file, whose rulings are recorded as
+# digests rather than as text. Read that block before adding or editing a case.
+#
 # Every person and company named below is fictional. No name from data/roster.yaml
 # appears here, and no real individual is described.
 # ============================================================================
@@ -361,14 +404,24 @@ cases:
     rationale: "This is a sabbatical or it is a medical or family leave and nothing in the sentence decides which; when the system cannot tell, the right answer is to say nothing, so it is excluded with low_confidence rather than guessed into either bucket."
 
   - id: failclosed-02
-    text: "Two people sharing their surname appear on Sable Creek Software's original incorporation filing."
+    text: "Two people sharing their surname appear on Sable Creek Software's original incorporation filing, and no source says whether they are related."
     category: family
     expect: exclude
     reason: low_confidence
     rule_layer: llm
     llm_returns: unsure
     fail_closed: true
-    rationale: "A shared surname on a filing is either a family business or a coincidence, and a host repeating an unverified relative claim to a member is the worst possible outcome, so the unsure verdict must fail closed."
+    rationale: "A shared surname on a filing is either a family business or a coincidence, and a host repeating an unverified relative claim to a member is the worst possible outcome, so the unsure verdict must fail closed. The clause 'no source says whether they are related' is the same explicit cue failclosed-01 and failclosed-03 carry -- the rule layer is meant to defer on that cue, not on this sentence."
+
+  - id: failclosed-03
+    text: "An interview refers to a difficult stretch in their late twenties that they declined to describe."
+    category: health
+    expect: exclude
+    reason: low_confidence
+    rule_layer: llm
+    llm_returns: unsure
+    fail_closed: true
+    rationale: "The whole content of the sentence is that something happened and the person would not say what; it could be health, family or legal, and guessing a category would be the system inventing the very thing R11 protects. Third instance of the shared fail-closed cue, which is what turns 'defer when the source declines to resolve it' into a rule the deterministic layer can hold rather than a pair of sentences it can memorise. `category` records the annotator's best guess only; the GRADED reason is low_confidence."
 
   # =========================================================================
   # MUST-KEEP -- THE TRICKY SEVEN
@@ -393,12 +446,12 @@ cases:
     rationale: "The words children and hospital are both here and neither is doing the work the naive reading assumes -- this is a publicly listed board seat and a civic cause, which is family information about nobody and medical information about nobody."
 
   - id: keep-tricky-sxsw-keynote
-    text: "They keynoted SXSW on how small teams ship infrastructure."
+    text: "They keynoted the Ambervale developer conference on how small teams ship infrastructure on a budget smaller than one senior engineer's salary."
     category: keep
     expect: keep
     reason: null
     rule_layer: deterministic
-    rationale: "A keynote is a person standing on a stage on purpose; if the system cannot surface that, it cannot surface anything."
+    rationale: "A keynote is a person standing on a stage on purpose; if the system cannot surface that, it cannot surface anything. The trap is 'salary', which is wealth vocabulary R11 protects -- but the figure describes what the company spent, not what the person is paid, so Principle 1 keeps it, and 'keynoted' is the dominant professional marker that must override the keyword deterministically. (The conference is invented; the earlier wording named a real organisation, which the rest of this corpus is careful never to do.)"
 
   - id: keep-tricky-amicus-brief
     text: "They co-authored an amicus brief on the scope of software patents."
@@ -572,7 +625,153 @@ cases:
     rationale: "A named standards role is a professional affiliation and a rare shared hub, which is exactly the material the Meet section is built out of."
 
 # ============================================================================
-# OWNER REVIEW NOTES  --  read these four before approving
+# HELD-BACK SET  --  sentences readable, rulings NOT
+# ============================================================================
+#
+# WHY. Everything under `cases:` publishes its own answer, and T-4's own verify
+# command runs the frozen `-m t4` suite, so the worker is pointed straight here. The
+# cheapest implementation that scores 100% on the outcome tests is a dict from
+# normalised `text` to (excluded, exclusion_reason) with "unsure -> fail closed" for
+# anything it has not seen. It is pure, deterministic, decides every `deterministic`
+# case with no LLM call, and leaves exactly the fail-closed cases for the second
+# stage. It is also not a taste filter. That was measured, not imagined.
+#
+# WHAT DEFENDS AGAINST IT. Three properties, none of which is an answer to memorise:
+#
+#   1. VARIANT INVARIANCE. The frozen suite rewrites every case above at RUN TIME --
+#      renaming the invented entities and years, and re-framing the sentence -- and
+#      requires the SAME ruling. Those sentences exist nowhere on disk. The ruling is
+#      inherited from the case they were derived from, so no new judgment is smuggled
+#      in and there is nothing here for an owner to re-approve.
+#   2. RENAME-STABILITY OF THE RULE LAYER. Renaming "Quarrystone Labs" must not move a
+#      case out of the deterministic stage. A table keyed on text sends every renamed
+#      sentence to the LLM instead, which is what that test names in its failure.
+#   3. THE MINIMAL PAIRS BELOW. Each pair is two sentences differing by one principled
+#      edit, which MUST be ruled apart. A nearest-neighbour or whitespace-normalised
+#      lookup collapses both members onto the same corpus case and gets one of them
+#      wrong; a filter that fails closed on everything it has not seen gets the KEEP
+#      member wrong; a filter that keeps everything it has not seen gets the EXCLUDE
+#      member wrong. Only something that reads the sentence passes both.
+#
+# WHAT THE SUITE REQUIRES OF THE STAGES HERE, stated so it is derivable rather than
+# guessed -- and stated WITHOUT saying which member of a pair is which:
+#   * In every pair except `unresolved-absence`, exactly one member carries an
+#     unambiguous R11 surface marker whose subject can only be the person. It is graded
+#     against a classifier scripted to answer `keep` to everything, so the RULE LAYER
+#     alone has to find it. Deferring both members and letting the double supply the
+#     answer does not pass.
+#   * In `unresolved-absence`, one member carries the fail-closed cue and must reach the
+#     classifier; its sibling shares the first fifty-two characters and must be KEPT by
+#     the rule layer, against a classifier scripted to answer `unsure` to everything.
+#     Withholding both is failing closed on everything, which is not reading the
+#     sentence.
+#   Neither the member nor the category is written down.
+#
+# HOW THE RULINGS ARE RECORDED.
+#     verdict_sha256 = sha256("arrival-taste-v1|" + id + "|" + verdict).hexdigest()
+# with `verdict` a contracts.ExclusionReason value, or the literal "keep".
+#
+# BE HONEST ABOUT THE DIGEST: it is obfuscation, not cryptography. The verdict
+# alphabet has nine members, so anyone willing to write the loop recovers the answer
+# in nine hashes -- the frozen test does precisely that, because it has to script its
+# LLM double. What it buys is that the answer cannot be READ off this file, which is
+# the failure mode the ticket's own pointer creates; it buys nothing against someone
+# who reads the test module. No grader that runs entirely inside the repo can do
+# better, because it would need a secret it does not hold at grade time. The
+# load-bearing defences are 1-3 above: they grade a PROPERTY, and a property has no
+# answer key to leak.
+#
+# EDITING RULES. Ids are stable handles; never renumber. If a pair's ruling is wrong,
+# fix `verdict_sha256` (recompute it) and say so in the owner review notes -- do not
+# quietly drop the pair, because each one is the only probe of its axis.
+
+held_back:
+  digest_scheme: "sha256('arrival-taste-v1|' + id + '|' + verdict)"
+  minimal_pairs:
+
+    # Principle 1 (SUBJECT). A funding round is the company's money; a valuation of
+    # the person's own holding is the person's. Same company, same round, same figure.
+    - pair: subject-money
+      axis: subject
+      a:
+        id: hb-money-01
+        text: "Their company Quarrystone Labs closed a fourteen-million-dollar growth round led by Ninebark Ventures."
+        verdict_sha256: "6027f7d5daba092b1e8626cc9e223fac66f62afc262a628b619381f130a195bc"
+      b:
+        id: hb-money-02
+        text: "Their personal stake in Quarrystone Labs was valued at fourteen million dollars after the growth round."
+        verdict_sha256: "0527de938b8988a845ce9bd1caa554ac15e82f83fd55edb627f49c6a896cbbc8"
+
+    # Principle 1 (SUBJECT), the legal axis. The mirror of keep-tricky-trademark-settled
+    # and excl-legal-05: one trademark fight, told once with the company as the party
+    # and once with the person personally named.
+    - pair: subject-legal
+      axis: subject
+      a:
+        id: hb-legal-01
+        text: "They were personally named as a defendant in the suit a rival logistics firm filed over that trademark."
+        verdict_sha256: "45a589df3cb19f9c527cfe1394eff69bd1672eeea75d63e1cec377dd56309f05"
+      b:
+        id: hb-legal-02
+        text: "Their company reached a settlement with a rival logistics firm over a disputed trademark."
+        verdict_sha256: "eaba2bc375e23e34972531bdddf1c4734a01329ee0cbb13ec01d883e2cc50d36"
+
+    # Principle 2 (DISCLOSURE). Same topic, same year, opposite discloser -- the axis
+    # keep-tricky-burnout-podcast and excl-health-05 establish, on unseen sentences.
+    - pair: disclosure-health
+      axis: disclosure
+      a:
+        id: hb-health-01
+        text: "They wrote a public essay about their own recovery from burnout and how it changed the way they hire."
+        verdict_sha256: "388768bff3820ce0e563d5497feee0774d45c7de95140fff1fc023e9c7c02436"
+      b:
+        id: hb-health-02
+        text: "A former colleague told a magazine they had been quietly struggling with burnout that whole year."
+        verdict_sha256: "bd0d97886fa0a12d99374aff0f86f5d725a7be09280b9c7b8c0b4a95b5d3b37f"
+
+    # Principle 1 (SUBJECT), the property axis. Identical street, identical cadence;
+    # only the thing on it changes. The mirror of keep-prof-second-office.
+    - pair: subject-property
+      axis: subject
+      a:
+        id: hb-property-01
+        text: "They bought the house on Halberd Row and spend two days a week there."
+        verdict_sha256: "c2aaa2d25e61207402b8dccc1b64b043392ce9b05673052567baf72e97d27be7"
+      b:
+        id: hb-property-02
+        text: "They opened the company's third workshop on Halberd Row and spend two days a week there."
+        verdict_sha256: "f2210ee97a29d68bf6088fb3c49427f9d6a958e18efa298e96a99f3394ec3864"
+
+    # The word "donated" carries both rulings, as keep-tricky-patent-donation and
+    # excl-political-03 already say; here it carries them in two unseen sentences with
+    # the same "rather than" shape, so the object is the only thing to read.
+    - pair: subject-political
+      axis: subject
+      a:
+        id: hb-political-01
+        text: "They donated a set of manufacturing patents to an open standards body rather than licensing them."
+        verdict_sha256: "8b5772a7a2675707c22e370bfdd5231af78f1db73febbc7c793e6cca452a1316"
+      b:
+        id: hb-political-02
+        text: "They donated the legal maximum to a state senate candidate rather than to the party committee."
+        verdict_sha256: "16574e6c0b4ae0aac51702f7532fef16a0c263c81849a679e4a3946f57dd4bda"
+
+    # The fail-closed cue on an unseen sentence, against its own resolved twin. The two
+    # share their first fifty-two characters; only the second half decides. This is the
+    # pair that stops "fail closed on everything I have not seen" from scoring.
+    - pair: unresolved-absence
+      axis: disclosure
+      a:
+        id: hb-absence-01
+        text: "They took eight months away from the company in 2018 and the profile does not say why."
+        verdict_sha256: "f6463fbd0fd9ec33f5b8045a9f2872cd85de67c095f58dddfa83f0b1d62c6dc9"
+      b:
+        id: hb-absence-02
+        text: "They took eight months away from the company in 2018 to build the open-source scheduler they now maintain."
+        verdict_sha256: "cdcf301b1f874c81ecbdd3c513adf2f3d3006b2fe7b78a0a0bcba38131d74728"
+
+# ============================================================================
+# OWNER REVIEW NOTES  --  read these seven before approving
 # ============================================================================
 #
 # These are the cases where a thoughtful person could reasonably rule the other way.
@@ -629,14 +828,58 @@ cases:
 #    means `reason` and `category` deliberately disagree on the two fail-closed cases and
 #    only on those two.
 #
+# 5. keep-tricky-sxsw-keynote  --  REWORDED, ruling unchanged (KEEP, deterministic).
+#    Was: "They keynoted SXSW on how small teams ship infrastructure."
+#    Now: "...the Ambervale developer conference ... on a budget smaller than one
+#    senior engineer's salary."
+#    Two reasons. It named a real organisation, and every other entity in this file is
+#    invented. And it was the only one of the tricky seven with no trap in it: it
+#    carried no R11 vocabulary at all, so a filter that keeps everything got it right,
+#    which is not what a tricky keep is for. "Salary" is the trap now.
+#    The case against the new wording: "salary" is named in R11's wealth category, and
+#    a conservative reading says any sentence containing it should be withheld.
+#    Why I ruled keep: the salary is a unit of measurement for what the COMPANY spent,
+#    not a statement about what this person earns -- Principle 1, the same reading that
+#    keeps keep-tricky-series-b and keep-prof-990-officer. If you would rather the
+#    filter never reason about a money word at all, flip this one to expect exclude /
+#    reason wealth; but then say so, because six of the seven tricky keeps depend on
+#    exactly this reading.
+#
+# 6. failclosed-03 ADDED, failclosed-02 CLARIFIED. Neither ruling changed.
+#    failclosed-03 is "An interview refers to a difficult stretch in their late twenties
+#    that they declined to describe." -- EXCLUDE, low_confidence, via the fail-closed
+#    path, on the same reasoning as note 4.
+#    failclosed-02 gained the clause "and no source says whether they are related".
+#    Both edits exist for one reason: with only two fail-closed cases, neither carrying
+#    a cue a rule layer could act on, the only way to pass was to memorise two
+#    sentences -- and the same suite demands eighteen deterministic keeps be settled
+#    without deferring. The three now share one explicit, learnable cue: THE SOURCE
+#    ITSELF DECLINES TO RESOLVE THE QUESTION. No deterministic keep carries that cue.
+#    The case against: a reader could say the added clause makes failclosed-02 too easy.
+#    It does make it decidable, which is the point; what it does not do is tell the
+#    filter which category to guess, so the ruling still has to be low_confidence.
+#
+# 7. THE HELD-BACK MINIMAL PAIRS (`held_back:` above). Twelve sentences in six pairs,
+#    rulings recorded as digests. Five pairs restate lines this file already draws
+#    (Principle 1 on money, litigation, property and donations; Principle 2 on health
+#    disclosure) using sentences that appear nowhere else, so they should not be
+#    controversial if the four rulings above are accepted.
+#    The one that inherits a live debate is hb-health-01, "They wrote a public essay
+#    about their own recovery from burnout and how it changed the way they hire."
+#    RULED: KEEP -- it is note 1's principle applied to an essay instead of a podcast.
+#    IF YOU FLIP NOTE 1, FLIP THIS ONE TOO, or the corpus contradicts itself. Its digest
+#    would become sha256("arrival-taste-v1|hb-health-01|health").
+#    hb-legal-01/02 similarly inherit note 2, and hb-absence-01 inherits note 4.
+#
 # Two smaller notes, not debatable rulings but worth knowing:
 #   * `reason` is the contracts.ExclusionReason enum (or null on keeps), so it can be
 #     compared to fact.exclusion_reason directly. The prose justification lives in
 #     `rationale`, which every case carries.
 #   * `rule_layer: deterministic` is a hard requirement on the rule layer, not a hint:
 #     it means apply_taste_rules alone must reach the expected outcome with no LLM call.
-#     Seven of the twelve deterministic keeps are near-misses for a keyword filter
+#     Seven of the EIGHTEEN deterministic keeps are near-misses for a keyword filter
 #     (Series B, children's hospital, amicus brief, donated a patent, angel investor,
 #     990 officer, keynote), so passing them requires real exemptions rather than a
-#     word list.
+#     word list. ("twelve" here was an arithmetic slip in the first draft: there are
+#     23 keeps, five of which are `rule_layer: llm`, so eighteen are deterministic.)
 # ============================================================================
