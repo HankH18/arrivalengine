@@ -215,12 +215,38 @@ def write_record(
         "fetched_at": record.fetched_at.isoformat(),
         "http": envelope,
     }
+    # Write-then-rename: a killed process leaves either the old file or the new one,
+    # never a truncated one that every later run has to re-diagnose. Named OUTSIDE the
+    # try so the handler can always clean it up.
+    temporary = path.with_suffix(".json.tmp")
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        # Write-then-rename: a killed process leaves either the old file or the new one,
-        # never a truncated one that every later run has to re-diagnose.
-        temporary = path.with_suffix(".json.tmp")
         temporary.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         temporary.replace(path)
-    except OSError:
+    # BOTH arms are load-bearing, and this docstring's promise -- "a cache that cannot be
+    # written is not an error" -- was only ever true of the first (T-066). `OSError` is
+    # the I/O failure: a full disk, a read-only cache root. `UnicodeEncodeError` is the
+    # ENCODING failure, and it subclasses `ValueError`, NOT `OSError`, so it escaped this
+    # handler entirely and came out of `fetch_record` -- the one function whose module
+    # docstring promises a never-raising door to the network.
+    #
+    # The chain is not hypothetical; it was measured end to end. A remote JSON body may
+    # contain the escape `"\ud800"`, which is pure ASCII on the wire and decodes cleanly.
+    # `json.loads` turns it into a real lone surrogate, `extract.json_to_text` re-emits it
+    # as one because it serialises with `ensure_ascii=False` (extract.py:210), and that
+    # string arrives here as `text`. `write_text(encoding="utf-8")` is strict, so it
+    # raises `UnicodeEncodeError: surrogates not allowed`.
+    #
+    # A miss is the right answer, not a sanitised write: a body rewritten to get past the
+    # codec would answer differently warm than cold, which `read_record` above calls a
+    # worse defect than the one being fixed. The cost is one re-fetch per affected url.
+    except (OSError, ValueError):
+        # `write_text` opens with "w", so a mid-write failure leaves a TRUNCATED .tmp on
+        # disk. It is never read (readers only open `{doc_id}.json`), but it would
+        # accumulate one file per failure forever. `research.py:_write_json` cleans up the
+        # same way. The unlink is itself guarded: failing to tidy up is not an error either.
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
         return
