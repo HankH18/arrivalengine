@@ -44,6 +44,12 @@ Decision 4 is the rule:
    identifying details a verbatim span actually names, so that is what is counted, with
    `attribute_family` left to canonicalise the leftovers.
 
+   Which of the person's details — ALL of them, one attribute apiece. The employer and the
+   city are two of the things a roster writes down and not the only two, and a resolver
+   that can read only those refuses people it has ten corroborating documents for. See
+   `_corroborable_attributes`, which is where T-080 was measured and where the reason a
+   phrase-split cannot mint independence out of one detail is written down.
+
 The strong-key arm is the part that invites a shortcut, and the shortcut
 ("the document is a wikidata/github/edgar page and the verdict is `yes`, so take the key")
 is wrong in a way that only shows up on the cases that matter: a Wikidata item can match a
@@ -95,8 +101,10 @@ __all__ = [
     "RESOLVE_SYSTEM",
     "STRONG_KEY_PRIORITY",
     "DocVerdict",
+    "asserts_negation",
     "attribute_family",
     "cites_document",
+    "city_detail",
     "conflicting_identity_claim",
     "negative_evidence_veto",
     "resolve",
@@ -192,11 +200,66 @@ _KNOWN_FAMILIES = frozenset(family for family, _ in _FAMILY_WORDS)
 # labels this module cannot name are not two attributes, they are two unknowns.
 _UNRECOGNISED_FAMILY = "other"
 
-# The two families a document can positively CORROBORATE, because they are the only two the
-# person carries in `PersonRef.details`. Ordered: an evidence span naming both is filed
-# under the first, so one document contributes exactly one attribute and can never resolve
-# a person by itself.
+# The two families the NEGATIVE-evidence veto can read, and the two `_details_matched`
+# scores a strong key on. Both are questions about a CONTRADICTION, and only these two are
+# ever contradicted: `negative_evidence_veto` asks whether a `no` asserts a different
+# employer or a different city, and `conflicting_identity_claim` asks the same of a
+# structured `Employer:`/`Location:` claim. Widening this tuple would widen the veto, which
+# is a different change from widening what a span may CORROBORATE — see
+# `_corroborable_attributes`, which is the one this module counts for independence.
 _CORROBORABLE = ("employer", "city")
+
+# The prefix every attribute derived from a roster detail beyond the employer and the city
+# carries. It exists so such an attribute can never collide with `_KNOWN_FAMILIES`, with
+# `_UNRECOGNISED_FAMILY`, or with `employer`/`city` — a collision would silently MERGE two
+# attributes into one, and while that only ever under-counts, an attribute name that says
+# where it came from is what makes `/debug` readable.
+_DETAIL_PREFIX = "detail:"
+
+# Words that make a detail a NEGATIVE assertion. The live roster carries one —
+# `"NOT the author/apologist Nabeel Qureshi who died in 2017"` — and it names, on purpose,
+# the person this member is NOT. Deriving a corroborable attribute from it would let a
+# document about the WRONG human being corroborate the right one, which is the exact SPEC
+# S4 failure this module exists to prevent, arriving through the roster instead of through
+# the internet. There is no way to tell which half of a negated sentence is negated without
+# parsing English, so the whole detail is refused: no attribute, no employer, no city, and
+# (in `connectors.propublica`) no query. Failing closed costs a disambiguator; failing open
+# costs the person's identity.
+_NEGATIONS = frozenset({"not", "never", "nor", "isnt", "arent", "wasnt", "werent", "dont"})
+
+# `;` joins two INDEPENDENT clauses of a detail; the same reading `connectors.base`
+# already gives one. Spelled here rather than imported for the reason `_names_a_role` is:
+# `research` imports this module at module scope and is deliberately free of httpx, which
+# every module under `connectors` pulls in.
+_DETAIL_CLAUSE = re.compile(r"\s*;\s*")
+
+# Where one organisation-shaped phrase ends and the next begins. `connectors.base`'s
+# `_SPLIT_AFFILIATION` plus ` and ` and `/`, because a leftover detail is written as prose
+# — `"formerly Greylock and Pinterest"` names TWO former employers and a rule that cannot
+# see the conjunction demands a span quoting both of them.
+_DETAIL_PHRASE = re.compile(r"\s+(?:of|at|for|with|and)\s+|\s*[,/&|@]\s*", re.IGNORECASE)
+
+# A parenthetical annotates the phrase beside it: `"OpenAI (Nov 2023)"` names OpenAI in
+# November 2023, and demanding a span that quotes the date makes the disambiguator
+# unmatchable. The outside is read without it; the inside is read separately only when it
+# is a single word, which is the shape of an acronym (`"(LTSE)"`) and not of a date.
+_PARENTHETICAL = re.compile(r"\(([^)]*)\)")
+
+# A web address sitting in a detail, in either spelling `connectors.base` recognises. The
+# whole CLAUSE carrying one is dropped, exactly as `affiliations` drops it: what is left of
+# `"essays at nabeelqu.co"` once the address goes is the word "essays".
+_WEB_ADDRESS = re.compile(
+    r"https?://"
+    r"|\b[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*"
+    r"\.(?:com|org|net|edu|gov|io|co|ai|dev|app|me|xyz|blog|news|tech|info|biz|so|to)\b",
+    re.IGNORECASE,
+)
+
+# The shortest word that may carry a phrase on its own. A phrase whose every word is job
+# vocabulary or three letters long is not a disambiguator — `"co-founder and partner"` and
+# `"Ben"` both fail here — and an attribute a common word can corroborate is an attribute
+# the wrong document earns.
+_DISTINCTIVE_CHARS = 4
 
 # Structured `Label: value` claims an identity document makes about employer and city.
 # `conflicting_identity_claim` reads these; a document that makes none of them asserts no
@@ -588,12 +651,15 @@ def verdict_attributes(person: PersonRef, verdict: Verdict) -> frozenset[str]:
 
     1. If the evidence corroborates any of the person's own details, those ARE the
        attributes and the label is not consulted. The span is checked against the document
-       (Decision 5); the label is checked against nothing.
+       (Decision 5); the label is checked against nothing. EVERY detail is read, not only
+       the employer and the city — see `_corroborable_attributes` for the measurement that
+       forced that (T-080) and for the one-detail-one-attribute rule that keeps the T-047
+       attack closed underneath it.
     2. Otherwise fall back to the canonical family of the label — the only path for
-       `role`, `handle`, `school` and `coauthor`, none of which `PersonRef.details` carries
-       anything to corroborate against — and an off-contract label becomes `other`, one
-       bucket for everything the system prompt did not ask for, so invented words cannot
-       add up to independence.
+       `role`, `handle`, `school` and `coauthor`, which `PersonRef.details` typically
+       carries nothing to corroborate against — and an off-contract label becomes `other`,
+       one bucket for everything the system prompt did not ask for, so invented words
+       cannot add up to independence.
 
     **Step 1 costs real resolutions and is kept anyway; this is the trade.** The
     disambiguating detail a model quotes is overwhelmingly the employer, so a span
@@ -635,8 +701,8 @@ def verdict_attribute(person: PersonRef, verdict: Verdict) -> str:
 
     `verdict_attributes` is what `resolve` counts; this is the one-word summary of the same
     rule. It agrees with the label when the evidence bears the label out, and otherwise
-    names the most contradiction-bearing detail the span corroborates — `employer` before
-    `city`, the order `_CORROBORABLE` is written in.
+    names the first detail the span corroborates in canonical order — `employer`, then
+    `city`, then the remaining roster details in the order the roster wrote them.
 
     It has no product caller today, and that is a gap in a file this module does not own
     rather than a spare part: `web/templates/debug.html` renders `verdict.disambiguator`
@@ -651,18 +717,146 @@ def verdict_attribute(person: PersonRef, verdict: Verdict) -> str:
     family = attribute_family(verdict.disambiguator)
     if family in attributes:
         return family
-    for corroborable in _CORROBORABLE:
-        if corroborable in attributes:
-            return corroborable
-    return next(iter(attributes))
+    for corroborated in _corroborated_details(verdict.evidence, person):
+        if corroborated in attributes:
+            return corroborated
+    # `sorted(...)[0]` rather than `next(iter(...))`: the argument is a frozenset, so the
+    # old line returned a value chosen by `PYTHONHASHSEED` — the same verdict could name a
+    # different attribute on `/debug` between two runs of the same build.
+    return sorted(attributes)[0]
 
 
 def _corroborated_details(evidence: str, person: PersonRef) -> tuple[str, ...]:
-    """Which of `_CORROBORABLE` this evidence span actually names, in that order."""
+    """Which of the person's own details this evidence span names, in canonical order.
+
+    `employer` first, then `city`, then one attribute per REMAINING detail in roster order.
+    """
     return tuple(
-        family
-        for family in _CORROBORABLE
-        if _mentions(evidence, _employer(person) if family == "employer" else _city(person))
+        name
+        for name, groups in _corroborable_attributes(person)
+        if any(_mentions(evidence, list(tokens)) for tokens in groups)
+    )
+
+
+#: One corroborable attribute: its name, and the alternative token groups any ONE of which
+#: an evidence span may quote to corroborate it.
+_Attribute = tuple[str, tuple[tuple[str, ...], ...]]
+
+
+def _corroborable_attributes(person: PersonRef) -> tuple[_Attribute, ...]:
+    """`(attribute, alternative token groups)` for every detail this person carries.
+
+    **ONE DETAIL, ONE ATTRIBUTE — and that invariant is the whole safety argument.**
+
+    T-080, measured live on 2026-09-04: `_CORROBORABLE` was `("employer", "city")` and the
+    code comment justified it as *"the only two the person carries in `PersonRef.details`"*.
+    That premise is false for seven of the ten people on the live roster, who carry a third
+    detail. Sarah Tavel's is `"formerly Greylock and Pinterest"`; three of her ten accepted
+    documents quote it verbatim, one of them TechCrunch's *"Tavel joined Benchmark in 2017
+    after spending one and a half years as a partner at Greylock and three years as a
+    product manager at Pinterest."* — and the resolver could not count a single one of them.
+    Ten corroborating documents, one countable attribute, `unresolved`. The roster author
+    supplied the disambiguator and the resolver was structurally unable to read it.
+
+    What this does NOT do is raise or lower a threshold. `resolve` still demands two
+    accepted `yes` verdicts, `_verdict_from` still demands a verbatim span, and
+    `verdict_attributes` still asks the EVIDENCE first and the model's label second (T-031,
+    T-047). The vocabulary of countable attributes is what widened, and only by the details
+    the roster already wrote down.
+
+    THE ATTACK THAT WIDENING COULD REOPEN, AND WHY IT DOES NOT. T-047 closed
+    manufactured independence: two spans that both quote the employer are one fact however
+    the model labels them, because the span outranks the label. A phrase-split re-opens the
+    same shape one level down if it is allowed to mint TWO attributes out of ONE detail —
+    `"formerly Ben and Jerry's"` split on ` and ` would make two accepted documents quoting
+    that single employer look like two independent facts, which is the closed attack with
+    punctuation standing in for the label. So the split happens BELOW the attribute: a
+    detail's phrases are ALTERNATIVES (any one of them corroborates it) and never separate
+    attributes. A person therefore has at most as many corroborable attributes as the
+    roster gave them details, one apiece, whatever the punctuation.
+
+    Measured consequence, live verdicts held fixed: Sarah Tavel goes from `{employer}` to
+    `{employer, detail:formerly-greylock-and-pinterest}` and resolves; Josh Kopelman, whose
+    two details are both already spent on the employer and the city and none of whose
+    accepted spans quotes Philadelphia, stays `unresolved` — which is correct, not a
+    shortfall.
+    """
+    attributes: list[_Attribute] = []
+    spent: set[int] = set()
+    for name, found in (("employer", _employer_detail(person)), ("city", _city_detail(person))):
+        if found is None:
+            continue
+        index, tokens = found
+        spent.add(index)
+        attributes.append((name, (tuple(tokens),)))
+    for index, detail in enumerate(person.details):
+        if index in spent:
+            continue
+        groups = _detail_phrases(detail)
+        if groups:
+            attributes.append((_DETAIL_PREFIX + slug(detail), groups))
+    return tuple(attributes)
+
+
+def asserts_negation(detail: str) -> bool:
+    """True when this roster detail says who the person is NOT. See `_NEGATIONS`.
+
+    Public because `connectors.propublica` asks the same question of the same strings: a
+    detail that negates something is not an organisation to search Nonprofit Explorer for
+    either, and one spelling of the test is one answer to it.
+    """
+    return any(token in _NEGATIONS for token in _tokens(detail))
+
+
+def _detail_phrases(detail: str) -> tuple[tuple[str, ...], ...]:
+    """Token groups a span may quote to corroborate `detail`. ANY one group is enough.
+
+    Alternatives rather than attributes — see `_corroborable_attributes` for why that
+    distinction is the safety property and not a detail of the implementation.
+    """
+    if asserts_negation(detail):
+        return ()
+    groups: list[tuple[str, ...]] = []
+    for clause in _DETAIL_CLAUSE.split(detail):
+        if _WEB_ADDRESS.search(clause):
+            # An address is not an affiliation, and what is left of the clause once it is
+            # removed is worse than nothing. `connectors.base.affiliations` drops the same
+            # clause for the same reason, and drops only the clause: a `;` can join a
+            # company to a website (`"formerly Palantir; essays at nabeelqu.co"`).
+            continue
+        for fragment in _annotation_free(clause):
+            for phrase in _DETAIL_PHRASE.split(fragment):
+                tokens = _phrase_tokens(phrase)
+                if _is_distinctive(tokens) and tokens not in groups:
+                    groups.append(tokens)
+    return tuple(groups)
+
+
+def _annotation_free(clause: str) -> list[str]:
+    """`clause` without its parentheticals, plus each parenthetical that is one word."""
+    fragments = [_PARENTHETICAL.sub(" ", clause)]
+    fragments.extend(inner for inner in _PARENTHETICAL.findall(clause) if len(_tokens(inner)) == 1)
+    return fragments
+
+
+def _phrase_tokens(phrase: str) -> tuple[str, ...]:
+    """The words a span has to quote for `phrase` to count — every one of them.
+
+    Role GLUE is dropped rather than demanded: `_mentions` requires every token, so keeping
+    `formerly` in `"formerly Greylock"` would demand a span that says "formerly", and the
+    documents that actually quote the disambiguator do not.
+    """
+    return tuple(
+        token
+        for token in _tokens(phrase)
+        if token not in _ORG_SUFFIXES and token not in _ROLE_GLUE
+    )
+
+
+def _is_distinctive(tokens: tuple[str, ...]) -> bool:
+    """Is a word here specific enough to identify anybody? See `_DISTINCTIVE_CHARS`."""
+    return any(
+        len(token) >= _DISTINCTIVE_CHARS and token not in _ROLE_TOKENS for token in tokens
     )
 
 
@@ -920,8 +1114,8 @@ def _tokens(text: str) -> list[str]:
     return [token for token in slug(text).split("-") if token]
 
 
-def _employer(person: PersonRef) -> list[str]:
-    """The distinctive tokens of the person's employer, from their details.
+def _employer_detail(person: PersonRef) -> tuple[int, list[str]] | None:
+    """`(detail index, distinctive tokens)` of the person's employer, or None.
 
     `"CFO at Ambervale Grain Co."` -> `["ambervale", "grain"]`;
     `"co-founder, Quarrystone Labs"` -> `["quarrystone", "labs"]`. The role half is dropped
@@ -934,8 +1128,14 @@ def _employer(person: PersonRef) -> list[str]:
     real document about Brad Feld puts together, which made his employer permanently
     uncorroborable. A second `;` clause is a second affiliation, not more of the first
     one's name.
+
+    The INDEX is returned, not just the tokens, because `_corroborable_attributes` has to
+    know which details are already spent before it may read the rest of them.
     """
-    for detail in person.details:
+    for index, detail in enumerate(person.details):
+        if asserts_negation(detail):
+            # A detail naming who she is NOT never names where she works. See `_NEGATIONS`.
+            continue
         organisation = _organisation_part(detail, person)
         if organisation is None:
             continue
@@ -945,19 +1145,46 @@ def _employer(person: PersonRef) -> list[str]:
             if token not in _ORG_SUFFIXES
         ]
         if tokens:
-            return tokens
-    return []
+            return index, tokens
+    return None
 
 
-def _city(person: PersonRef) -> list[str]:
-    """The distinctive tokens of the person's city detail: the detail naming no role."""
-    for detail in person.details:
+def _city_detail(person: PersonRef) -> tuple[int, list[str]] | None:
+    """`(detail index, distinctive tokens)` of the city detail: the one naming no role."""
+    for index, detail in enumerate(person.details):
+        if asserts_negation(detail):
+            continue
         if _organisation_part(detail, person) is not None:
             continue
         tokens = [token for token in _tokens(detail) if token not in _ORG_SUFFIXES]
         if tokens:
-            return tokens
-    return []
+            return index, tokens
+    return None
+
+
+def _employer(person: PersonRef) -> list[str]:
+    """The distinctive tokens of the person's employer. See `_employer_detail`."""
+    found = _employer_detail(person)
+    return found[1] if found else []
+
+
+def _city(person: PersonRef) -> list[str]:
+    """The distinctive tokens of the person's city detail. See `_city_detail`."""
+    found = _city_detail(person)
+    return found[1] if found else []
+
+
+def city_detail(person: PersonRef) -> str:
+    """The raw detail this module reads as the person's CITY, or `""`.
+
+    Public for `connectors.propublica`, which must not send a city to an index of
+    organisation NAMES and has no gazetteer to recognise one with. It does not need one:
+    which detail is the place is already decided here, structurally — it is the detail that
+    names no role and no organisation — and a second spelling of that question in the
+    connector would be a second answer to it.
+    """
+    found = _city_detail(person)
+    return person.details[found[0]] if found else ""
 
 
 def _names_a_role(head: str) -> bool:
