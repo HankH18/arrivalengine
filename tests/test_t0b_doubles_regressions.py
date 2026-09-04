@@ -134,6 +134,46 @@ def test_real_drift_is_still_rejected_under_the_same_idiom():
         assert_conforms(ForwardRefDriftedLLM(), LLMClient)
 
 
+#: A module that defines its OWN `PersonRef` — the drift EXECUTION §4 forbids ("never
+#: redefine a model that lives in contracts.py"). It is built by exec rather than written
+#: as a class here because this module must keep `PersonRef` out of its own globals (see
+#: the note above), and because the hazard is precisely about whose globals win.
+_SHADOW_SOURCE = """
+from __future__ import annotations
+
+
+class PersonRef:
+    "Not contracts.PersonRef. Same name, different class."
+
+
+class ShadowingConnector:
+    kind = "github"
+
+    # `RawDoc` is deliberately NOT defined here: it must resolve through the fallback, so
+    # that the ONLY difference from the Protocol is whose `PersonRef` wins.
+    async def search(self, person: PersonRef, budget: int) -> list[RawDoc]:
+        return []
+"""
+
+
+def test_a_candidate_that_shadows_a_contract_type_is_still_drift():
+    """The D1 repair offers the Protocol's namespace as a FALLBACK, never as an override.
+
+    If the merge went the other way, `PersonRef` here would silently resolve to
+    `contracts.PersonRef` and a connector taking an entirely different model would be
+    reported as conforming — laundering the one kind of drift the check exists to catch.
+    """
+    import types
+
+    module = types.ModuleType("t0b_shadow_probe")
+    exec(compile(_SHADOW_SOURCE, "<t0b_shadow_probe>", "exec"), module.__dict__)  # noqa: S102
+
+    assert module.PersonRef is not _person().__class__, "the probe is not shadowing anything"
+    assert not conforms(module.ShadowingConnector(), Connector)
+    with pytest.raises(TypeError, match="does not match"):
+        assert_conforms(module.ShadowingConnector(), Connector)
+
+
 def test_the_mismatch_message_shows_both_sides_in_the_same_form():
     """The D1 message was `Signature` vs `str`, so the two halves looked identical.
 
