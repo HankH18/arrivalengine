@@ -11,6 +11,12 @@
 # with their name and the date once they have read the rulings below. Every case carries
 # a `rationale` because that is the field a human actually reads.
 #
+# WHAT THE OWNER IS ACTUALLY SIGNING. 104 cases, in three provenance classes: 50
+# independent judgments, 32 derived from the implementation's marker list, and 22
+# written by the lane that repaired the filter. Only the first 50 are independent
+# judgments; the `provenance` field on every other case says so, so that a signature
+# on this file cannot be read as approval of 104 of them.
+#
 # HOW THESE SENTENCES WERE WRITTEN, AND WHY IT MATTERS. This corpus is NOT the grader.
 # The graded corpus is the orchestrator-owned frozen one, which this lane cannot write.
 # These fifty sentences were authored by an agent that was forbidden to read the frozen
@@ -44,8 +50,31 @@
 #   id           Stable handle. Never renumber.
 #   text         The fact sentence as an extractor would emit it (one sentence,
 #                <= 200 chars, matching contracts.Fact.text).
-#   category     What the sentence is ABOUT: one of the six R11 categories, or `keep`
-#                for a professional fact the digest exists to surface.
+#   category     What the sentence is ABOUT: one of the six R11 categories, `keep`
+#                for a professional fact the digest exists to surface, or
+#                `unresolved` on a fail-closed case. `unresolved` was added because
+#                the five fail-closed cases previously carried an R11 category that
+#                their own sentences do not support -- and one of them says in its
+#                rationale that inferring a category from a refusal is the invention
+#                the rule forbids, while its category field did exactly that. Those
+#                five now assert nothing, and the composition test no longer counts
+#                them toward "the corpus spans all six R11 categories".
+#   provenance   HOW THE CASE WAS WRITTEN, and the only field here that is about the
+#                corpus rather than about the sentence. Three values:
+#                  (absent)  one of the fifty independently authored cases -- written
+#                            by an agent forbidden to read the frozen corpus, the
+#                            previous draft, or the implementation.
+#                  derived_from_implementation
+#                            written from `src/arrival/taste.py`'s marker list. The
+#                            REGRESSION COVERAGE block is all of these; each is a real
+#                            ruling a reviewer can check, but none of them is an
+#                            independent judgment and the owner's signature should not
+#                            read as though it were.
+#                  same_author_as_filter
+#                            written by the lane that also wrote the filter, reasoning
+#                            from SPEC R11's text and BEFORE the filter was changed --
+#                            every one of them was red when it was written. Independent
+#                            of the implementation, not of the author.
 #   expect       `exclude` or `keep`. After apply_taste(), fact.excluded MUST equal
 #                (expect == "exclude"). This is the taste judgment, and it is the field
 #                the owner is being asked to approve.
@@ -132,7 +161,7 @@ cases:
     expect: exclude
     reason: home_or_property
     rule_layer: deterministic
-    rationale: "A street address printed next to a person's name is withheld whether or not the directory says it is a residence; the annotator first read this as unresolvable, and the named category is the stricter of the two withholdings."
+    rationale: "This is NOT the unexplained-absence shape: the address itself is published and concrete, and only the building's USE is unknown. R11 forbids 'home/property addresses' for a person, so a street address printed against their name is a property fact whichever door it opens, and low_confidence would be the weaker of the two withholdings because a classifier can reopen it."
 
   # =========================================================================
   # family — spouses, children, relatives, personal relationships.
@@ -168,7 +197,7 @@ cases:
     expect: exclude
     reason: family
     rule_layer: deterministic
-    rationale: "The framing is a funding story, but the load-bearing content is a sibling relationship, so a classifier must see past the business wrapper to the family fact inside it."
+    rationale: "The possessive relative term 'their brother' is the marker; the funding framing around it changes nothing, because a named sibling is a family fact wherever in the sentence it sits."
 
   # =========================================================================
   # health — diagnoses, treatment, medical history, addiction and recovery.
@@ -204,11 +233,11 @@ cases:
     expect: exclude
     reason: health
     rule_layer: deterministic
-    rationale: "The anecdote is framed as a work-ethic compliment, so only a classifier reading the framing will notice it is colleagues disclosing the member's surgery."
+    rationale: "The marker is the word 'surgery'; the work-ethic framing does not soften it, and teammates on a podcast are the disclosure principle's exclude side rather than the member's own account."
 
   - id: health-unexplained-eight-month-absence
     text: "They stepped back from all public work for eight months in 2023 and no public source says why."
-    category: health
+    category: unresolved
     expect: exclude
     reason: low_confidence
     rule_layer: llm
@@ -256,7 +285,7 @@ cases:
 
   - id: legal-sealed-docket-unclear-role
     text: "A sealed docket carries both their name and their employer's in the caption, and no filing says in what capacity either party appears."
-    category: legal
+    category: unresolved
     expect: exclude
     reason: low_confidence
     rule_layer: llm
@@ -290,7 +319,7 @@ cases:
     expect: exclude
     reason: wealth
     rule_layer: deterministic
-    rationale: "An acquisition is normally a keepable company milestone, so the classifier has to notice the money lands in the member's pocket and not on the company's balance sheet."
+    rationale: "The marker is 'personally cleared': the adverb is what moves the money from the company's balance sheet to the member's pocket, which is why the acquisition beside it stays a keep."
 
   - id: wealth-remaining-equity-stake
     text: "A cap-table analysis in Terrace Quarterly puts their remaining stake in Kestrelwork at just under nine percent."
@@ -302,7 +331,7 @@ cases:
 
   - id: wealth-came-out-well-unclear
     text: "An industry newsletter said they came out well from the Norwood Anvil sale without saying whether they held any equity."
-    category: wealth
+    category: unresolved
     expect: exclude
     reason: low_confidence
     rule_layer: llm
@@ -553,6 +582,7 @@ cases:
     expect: exclude
     reason: health
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A hospital stay reported by a newsletter is a medical fact disclosed by somebody else; nothing about greeting a member needs it."
 
   - id: cover-health-hospitalised
@@ -561,6 +591,7 @@ cases:
     expect: exclude
     reason: health
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "An accident and its treatment are health, and a member who did not publish it did not choose to share it."
 
   - id: cover-health-prescription
@@ -569,6 +600,7 @@ cases:
     expect: exclude
     reason: health
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A prescription named by a third party is the clearest kind of medical disclosure the member never made."
 
   - id: cover-health-named-condition
@@ -577,6 +609,7 @@ cases:
     expect: exclude
     reason: health
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A named diagnosis is health however briefly a profile mentions it."
 
   - id: cover-health-medical-leave
@@ -585,6 +618,7 @@ cases:
     expect: exclude
     reason: health
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A filing can be public and still be a medical record; the disclosure was the company's, not the member's."
 
   - id: cover-family-married-since
@@ -593,6 +627,7 @@ cases:
     expect: exclude
     reason: family
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A spouse is named outright, and a spouse is never something staff need in order to say hello."
 
   - id: cover-family-marriage-to
@@ -601,6 +636,7 @@ cases:
     expect: exclude
     reason: family
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "The same fact in the noun form; the category must not depend on which part of speech the sentence used."
 
   - id: cover-family-two-daughters
@@ -609,6 +645,7 @@ cases:
     expect: exclude
     reason: family
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "Children, and the school they attend, are the sharpest edge of the family rule."
 
   - id: cover-legal-named-plaintiff
@@ -617,6 +654,7 @@ cases:
     expect: exclude
     reason: legal
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "The member is a named party to a case; plaintiff and defendant are equally personal court records."
 
   - id: cover-legal-restraining-order
@@ -625,6 +663,7 @@ cases:
     expect: exclude
     reason: legal
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A protective order is a court record about a private conflict and has no place in a greeting."
 
   - id: cover-legal-sued-personally
@@ -633,6 +672,7 @@ cases:
     expect: exclude
     reason: legal
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "Suing them personally puts the member, not the company, in the caption; the subject test settles it."
 
   - id: cover-home-resides-in
@@ -641,6 +681,7 @@ cases:
     expect: exclude
     reason: home_or_property
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A dwelling described precisely enough to find is where the member sleeps, whatever the bio calls it."
 
   - id: cover-home-purchased-farmhouse
@@ -649,6 +690,7 @@ cases:
     expect: exclude
     reason: home_or_property
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A flattering feature about a house is still a record of which house is theirs."
 
   - id: cover-home-real-estate-listing
@@ -657,6 +699,7 @@ cases:
     expect: exclude
     reason: home_or_property
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A listing is trivially findable and shows the inside of a member's home; ease of access is not permission."
 
   - id: cover-wealth-vested-shares
@@ -665,6 +708,7 @@ cases:
     expect: exclude
     reason: wealth
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A personal shareholding is the member's own wealth even when an analyst, not the member, worked it out."
 
   - id: cover-wealth-rich-list
@@ -673,6 +717,7 @@ cases:
     expect: exclude
     reason: wealth
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A rich list is a net-worth estimate with a friendlier layout."
 
   - id: cover-wealth-paid-most
@@ -681,6 +726,7 @@ cases:
     expect: exclude
     reason: wealth
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "Compensation is named outright, and comparing it to colleagues does not make it less personal."
 
   - id: cover-wealth-bonus-figure
@@ -689,6 +735,7 @@ cases:
     expect: exclude
     reason: wealth
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "The money case for 'earned'. It sits beside keep-graduate-degree on purpose: the verb is identical and only the object differs, so a filter that keeps a master's degree must still lose this."
 
   - id: cover-political-party-affiliation
@@ -697,6 +744,7 @@ cases:
     expect: exclude
     reason: political
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "Party affiliation is named in the policy and is exactly the kind of fact a member never agreed to have read aloud."
 
   - id: cover-political-campaign-contribution
@@ -705,6 +753,7 @@ cases:
     expect: exclude
     reason: political
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "Campaign giving is public by law and private by taste; the rule exists because the two differ."
 
   - id: cover-political-donor-list
@@ -713,6 +762,7 @@ cases:
     expect: exclude
     reason: political
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A donor list is a political affiliation with a citation attached."
 
   - id: cover-keep-business-school-teaching
@@ -721,6 +771,7 @@ cases:
     expect: keep
     reason: null
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "Teaching is a professional fact; the word 'school' must not drag it into the family rule, which is about a child's school."
 
   - id: cover-keep-family-office-advisor
@@ -729,6 +780,7 @@ cases:
     expect: keep
     reason: null
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "A family office is a kind of investor, not a member's family; a filter that cannot tell them apart deletes an entire professional world."
 
   - id: cover-keep-pay-transparency-talk
@@ -737,6 +789,7 @@ cases:
     expect: keep
     reason: null
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "The salary belongs to somebody else and is being used as a yardstick in the member's own public argument."
 
   - id: cover-keep-museum-board-officer
@@ -745,24 +798,27 @@ cases:
     expect: keep
     reason: null
     rule_layer: deterministic
+    provenance: derived_from_implementation
     rationale: "An unpaid board seat disclosed in a charity's own filing is civic service, and it is one of the better things a digest can mention."
 
   - id: cover-fail-closed-declined-to-describe
     text: "In an interview they declined to describe what they were doing during the two years between roles."
-    category: health
+    category: unresolved
     expect: exclude
     reason: low_confidence
     rule_layer: llm
+    provenance: derived_from_implementation
     llm_returns: unsure
     fail_closed: true
     rationale: "The member was asked and chose not to answer; inferring a category from a refusal is precisely the invention the rule forbids."
 
   - id: cover-fail-closed-unclear-why
     text: "It is unclear why they left Kestrelwork after four months, and no filing explains it."
-    category: legal
+    category: unresolved
     expect: exclude
     reason: low_confidence
     rule_layer: llm
+    provenance: derived_from_implementation
     llm_returns: unsure
     fail_closed: true
     rationale: "A short unexplained tenure could be a firing, an illness, a lawsuit or a better offer; withholding it is the only honest answer."
@@ -773,6 +829,7 @@ cases:
     expect: keep
     reason: null
     rule_layer: llm
+    provenance: derived_from_implementation
     llm_returns: keep
     rationale: "The insolvency belongs to the company, and the member had already gone; the subject test keeps it despite the legal vocabulary."
 
@@ -782,6 +839,7 @@ cases:
     expect: keep
     reason: null
     rule_layer: llm
+    provenance: derived_from_implementation
     llm_returns: keep
     rationale: "A city is a legitimate thing to know about a member; only a dwelling is not, and this sentence names no dwelling."
 
@@ -791,6 +849,7 @@ cases:
     expect: keep
     reason: null
     rule_layer: llm
+    provenance: derived_from_implementation
     llm_returns: keep
     rationale: "The member chose a stage and a subject; this is the disclosure principle's keep side, and refusing to mention it would be the filter mistaking silence for respect."
 
@@ -800,14 +859,251 @@ cases:
     expect: keep
     reason: null
     rule_layer: llm
+    provenance: derived_from_implementation
     llm_returns: keep
     rationale: "Professional policy work done in the open is a keep, in the same family as the testimony cases and squarely apart from personal political giving."
 
   - id: cover-supplier-wedding-photo
     text: "A trade magazine photo caption placed them at a supplier's wedding in Port Ludwick."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: llm
+    llm_returns: keep
+    provenance: derived_from_implementation
+    rationale: "RULING CORRECTED. The wedding is the SUPPLIER'S, and R11 protects the member's own relationships; a third party's possessive is somebody else's fact, exactly as it is in cover-keep-pay-transparency-talk (a junior engineer's salary) and cover-keep-family-office-advisor. All the sentence says about the member is that a trade magazine photographed them at a business contact's event. The earlier rationale described 'a private weekend', which is not in the sentence."
+
+  # =========================================================================
+  # AXIS A — SUBJECT MATTER (added for T-070/F5, provenance: same_author_as_filter)
+  # -------------------------------------------------------------------------
+  # Every decoy in the eighty-two cases above is LEXICAL: a forbidden word
+  # dropped into an otherwise neutral sentence, where the sentence is still
+  # about the member. Not one case asked the other question R11 raises for
+  # this roster. SPEC Q4 says the ten are INVESTORS AND WRITERS, and R11's six
+  # nouns -- health, family, legal, property, money, politics -- are the
+  # markets they invest in and the beats they write about. So a forbidden word
+  # appears in their professional vocabulary constantly, in a grammatically
+  # different job: not predicated of the member, but naming the subject matter
+  # of their work.
+  #
+  # R11 forbids displaying "health/medical information" ABOUT A MEMBER. It does
+  # not forbid saying that a member builds imaging hardware. Every case below
+  # is a keep for that reason and for no other, and the reason is R11's own
+  # wording, not anything src/arrival/taste.py happens to do.
+  #
+  # These sentences WERE red against the filter when they were written: all
+  # twelve were excluded, ten of them deterministically, which is the class no
+  # classifier can reopen. That is the point of adding them.
+  # =========================================================================
+
+  - id: axis-keep-cancer-imaging-startup
+    text: "They founded a cancer-imaging startup that shipped its first scanner in March."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 protects a member's health information. The word cancer here names the company's market; the sentence says nothing whatever about the member's own health, and withholding it deletes the single most interesting thing a host could ask about."
+
+  - id: axis-keep-medical-records-software
+    text: "They built medical records software used by forty rural clinics."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Medical records is an attributive modifier of software: it names whose records the product handles, and they are patients', not the member's. R11's health clause is about the member."
+
+  - id: axis-keep-mortgage-analytics-firm
+    text: "They run a mortgage analytics startup serving regional credit unions."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 forbids the member's property records. A mortgage analytics startup is a line of business; no mortgage of the member's is named or implied."
+
+  - id: axis-keep-equity-research-desk
+    text: "Their equity research desk published a note on sensor suppliers."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11's wealth clause names net worth, compensation and wealth figures. An equity research desk is a department, and the sentence carries no figure about the member at all."
+
+  - id: axis-keep-portfolio-companies-seed
+    text: "They led the seed round for three of their portfolio companies this year."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "For an investor this IS the job. Portfolio companies are the companies the fund backed, not a statement of what the member is worth, and R11's wealth clause is about the latter."
+
+  - id: axis-keep-divorce-mediation-tool
+    text: "They built a divorce-mediation scheduling tool for family law firms."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 forbids the member's own divorce or court records. This sentence says they sell software to lawyers, and both forbidden words are naming the customer."
+
+  - id: axis-keep-childrens-media-studio
+    text: "Their children's-media studio raised a round from Marram Ventures."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 protects a member's children. Children's media is a genre; no child of the member's exists anywhere in this sentence."
+
+  - id: axis-keep-sister-company-lisbon
+    text: "Their sister company in Lisbon handles European distribution."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Sister company is a term of corporate structure. Reading it as a sibling withholds an ordinary business fact and tells the host nothing true about the member's family."
+
+  - id: axis-keep-registered-independent-contractor
+    text: "They are a registered independent contractor for two agencies."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 forbids party affiliation. Registered independent contractor is an employment status; the word independent here modifies contractor, not a ballot."
+
+  - id: axis-keep-charged-with-rebuilding
+    text: "They were charged with rebuilding the platform team after the merger."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Charged with in the ordinary sense of tasked with. R11 forbids a criminal record, and there is no offence here -- only a promotion, which is exactly the kind of fact the digest exists to surface."
+
+  - id: axis-keep-court-records-product
+    text: "Their product is used by public defenders to track court records."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "The court records are the product's data, belonging to whoever the defenders represent. R11 forbids the member's own court records, and none is named."
+
+  - id: axis-keep-company-warehouse-estate
+    text: "Their company purchased a warehouse estate outside Grantsmere."
+    category: keep
+    expect: keep
+    reason: null
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "The buyer is the company and the building is a warehouse. R11's property clause covers where the MEMBER lives; a commercial acquisition is the subject principle's plainest keep, like keep-regional-office-opening."
+
+  # =========================================================================
+  # AXIS B — EXCLUDES THAT DO NOT NAME THEIR OWN CATEGORY (T-070/F6)
+  # -------------------------------------------------------------------------
+  # The mirror hole. Almost every exclude above announces itself: the divorce
+  # case contains "divorce", the salary case contains "salary", the party case
+  # contains "party". A corpus made only of those grades a dictionary. R11
+  # names CATEGORIES, not words, and the sentences a real source produces
+  # rarely use the category's own name.
+  #
+  # Each sentence below is an R11 fact whose category word is absent from it.
+  # They were ALL kept by the filter when they were written -- displayed, on a
+  # host-facing page -- and each is a leak that a lexical corpus cannot see.
+  # =========================================================================
+
+  - id: axis-legal-offender-registry
+    text: "They are on the sex-offender registry in two states."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 forbids criminal records. A conviction register IS the record, and the sentence contains none of the words court, criminal, charge, conviction or legal -- which is why a corpus of self-announcing excludes never caught it."
+
+  - id: axis-family-custody-arrangement
+    text: "A custody arrangement was agreed after the separation."
     category: family
     expect: exclude
     reason: family
-    rule_layer: llm
-    llm_returns: family
-    rationale: "Who a member spends a private weekend with is a personal relationship, even when the person is a business contact and the photo is public."
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 forbids family relationships and children. A custody arrangement is both, and the sentence never says family, spouse, marriage or child."
+
+  - id: axis-family-partner-of-twenty-years
+    text: "They and their partner of twenty years opened a bakery together."
+    category: family
+    expect: exclude
+    reason: family
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "A twenty-year partner is a personal relationship under R11 however commercial the bakery is. The QUALIFIER is what makes it one: a partner at a venture firm is a job title, which is why the bare word alone must never rule."
+
+  - id: axis-health-named-psychiatrist
+    text: "Their psychiatrist of nine years spoke to a podcast about them."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Naming a member's psychiatrist conveys the diagnosis by implication, and the disclosure came from the clinician rather than the member. The sentence contains neither health nor medical nor any illness."
+
+  - id: axis-health-ivf-feature
+    text: "Their IVF journey was the subject of a magazine feature."
+    category: health
+    expect: exclude
+    reason: health
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11's health clause is not limited to illness; fertility treatment is medical information about the member. Nothing in the sentence spells health, and the whole category was invisible to the corpus before this case."
+
+  - id: axis-home-manor-wing-restored
+    text: "A profile described the wing of the manor they restored."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "A dwelling described precisely enough to find is where the member lives, and R11 forbids that whether the sentence uses the word home, house, address or property -- this one uses none of them."
+
+  - id: axis-home-listing-portal
+    text: "Zillow shows the six-bedroom place they closed on last spring."
+    category: home_or_property
+    expect: exclude
+    reason: home_or_property
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "A property portal listing with a bedroom count is a property record in everything but name. The ease of looking it up is not the member's permission to read it aloud."
+
+  - id: axis-wealth-carried-interest
+    text: "Their annual carried interest last year was reported at $9 million."
+    category: wealth
+    expect: exclude
+    reason: wealth
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "Carried interest is how a fund partner is paid, so this is a compensation figure in R11's own words. It contains neither salary, nor pay, nor wealth, nor net worth."
+
+  - id: axis-legal-police-custody
+    text: "Police stopped them on the coast road in 2015 and took them into custody."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "An arrest is a criminal record under R11 whether or not anything followed it, and the sentence uses no word from the legal category's vocabulary."
+
+  - id: axis-political-ballot-measure-gift
+    text: "They gave $250,000 to a ballot measure on rent control."
+    category: political
+    expect: exclude
+    reason: political
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "R11 forbids political donations. A ballot-measure contribution is one, and the sentence contains neither political, nor donation, nor party, nor campaign -- only a verb and an object that together mean it."
