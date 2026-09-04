@@ -1816,6 +1816,81 @@
       "defect": "THE DEMO'S WORST MOMENT: with all ten in the building, FIVE MEMBERS GET AN IDENTICAL, EMPTY MEET SECTION \u2014 Brad Feld, Emmett Shear, Eric Ries and others, alphabetical tie-break at score 0, each reading 'Nothing in common on the record yet.' Four consecutive arrivals produce a byte-identical empty Meet. R8 is scoped to 'nobody else is present', so this is spec-legal and no test was written \u2014 it is a product failure rather than a defect. Related: 'Both connected to A16Z.' scores 50 for Fred Wilson and Emmett Shear and is the TOP match for both, when Wilson is a USV partner whose only a16z link is that a friend runs their crypto fund. Reading that sentence to those two men is the worst line in the demo.",
       "finding_id": "050ad72c03881d87a39fcd02da0f2d0a3efd3c503c2324a34a0b83dac004d9d1",
       "reproduction": "Arrive all ten and read each digest's Meet section. Reported by the adversarial lane."
+    },
+    {
+      "id": "T-093",
+      "title": "WCAG 2.1 SC 4.1.2 \u2014 the roster's 20 form buttons carry exactly TWO distinct accessible names, 'Arrive' x10 and 'Leave' x10. There is no aria-label, no aria-labelledby and no visually-hidden text; the only differentiator is `<input type='hidden' name='person_id'>`, which assistive technology never announces. Tab order is four nav links followed by twenty indistinguishable buttons, so a screen-reader user cannot tell which member they are about to admit to the building. Measured on production with Chrome's accessibility tree. Fix: an aria-label naming the member on each button, e.g. aria-label='Arrive: Brad Feld'.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/templates/index.html"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/web/templates/index.html",
+      "defect": "WCAG 2.1 SC 4.1.2 \u2014 the roster's 20 form buttons carry exactly TWO distinct accessible names, 'Arrive' x10 and 'Leave' x10. There is no aria-label, no aria-labelledby and no visually-hidden text; the only differentiator is `<input type='hidden' name='person_id'>`, which assistive technology never announces. Tab order is four nav links followed by twenty indistinguishable buttons, so a screen-reader user cannot tell which member they are about to admit to the building. Measured on production with Chrome's accessibility tree. Fix: an aria-label naming the member on each button, e.g. aria-label='Arrive: Brad Feld'.",
+      "finding_id": "28c1090bdd9a3b01e01c60407ccd3672a0dfeec605e72e9566b66dd7fd3dd7ea",
+      "reproduction": "read_page filter=interactive on https://arrival-engine.onrender.com/ \u2014 20 buttons, 2 distinct names. Reported by the TESTBROWSER lane."
+    },
+    {
+      "id": "T-094",
+      "title": "The /graph SVG's screen-reader text does not pluralise and DISAGREES WITH THE VISIBLE TEXT. With one shared hub the aria-label and <title> read 'An interest graph of 3 people joined by 1 shared hubs' while the visible caption fifteen lines away correctly reads '1 shared hub'. graph.html:126 pluralises and corpus.html:243 pluralises; this one function does not. A screen-reader user gets both an ungrammatical string and a different claim from the sighted user.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/graph_view.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/web/graph_view.py:741",
+      "defect": "The /graph SVG's screen-reader text does not pluralise and DISAGREES WITH THE VISIBLE TEXT. With one shared hub the aria-label and <title> read 'An interest graph of 3 people joined by 1 shared hubs' while the visible caption fifteen lines away correctly reads '1 shared hub'. graph.html:126 pluralises and corpus.html:243 pluralises; this one function does not. A screen-reader user gets both an ungrammatical string and a different claim from the sighted user.",
+      "finding_id": "647e90d61f97b49ec234b677683d3b6f7af8635fb1305667c4659e6b99a908df",
+      "reproduction": "Arrive two people sharing exactly one hub and read the SVG aria-label against the figcaption. Reported by the TESTBROWSER lane."
+    },
+    {
+      "id": "T-095",
+      "title": "225px OF HORIZONTAL PAGE SCROLL AT 390px, and 295px at 320px, on / and /corpus. Document scrollWidth 615 against a client width of 390. The @media (max-width: 40rem) block fires correctly \u2014 body drops to 18px, h1 to 30px \u2014 so the breakpoint is not the problem: `code` inherits `overflow-wrap: normal` and an absolute DOSSIER_DIR path is one unbreakable token. Latent on production only because /opt/render/project/src/data/dossiers happens to fit at 320px with about 12px to spare; it reproduces with the DOSSIER_DIR the project's own docs use. Fix: overflow-wrap/anywhere on `code`.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/templates/base.html"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/web/templates/base.html",
+      "defect": "225px OF HORIZONTAL PAGE SCROLL AT 390px, and 295px at 320px, on / and /corpus. Document scrollWidth 615 against a client width of 390. The @media (max-width: 40rem) block fires correctly \u2014 body drops to 18px, h1 to 30px \u2014 so the breakpoint is not the problem: `code` inherits `overflow-wrap: normal` and an absolute DOSSIER_DIR path is one unbreakable token. Latent on production only because /opt/render/project/src/data/dossiers happens to fit at 320px with about 12px to spare; it reproduces with the DOSSIER_DIR the project's own docs use. Fix: overflow-wrap/anywhere on `code`.",
+      "finding_id": "430955238feac66de30a6318c79b97c62e05ad35f87488021b579281c298672d",
+      "reproduction": "Load / in a 390px same-origin iframe with matchMedia('(max-width: 40rem)').matches verified true, then read document.scrollWidth. Reported by the TESTBROWSER lane, which discarded a resize_window result that reported success while innerWidth stayed 1512."
+    },
+    {
+      "id": "T-096",
+      "title": "A BROWSER FORM POST of an off-roster name lands the host on RAW JSON. `POST /arrive` form-encoded with an unknown name returns 404 with `Content-Type: application/json` and a bare {\"error\":\"not on roster\"} body, rather than the styled not_found.html. Every other form path 303-redirects to a page. In a demo a typo'd name shows a JSON blob. Related minor findings: HEAD returns 405 on every route (FastAPI's APIRoute does not auto-add it), and /favicon.ico and /robots.txt both 404.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/app.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/web/app.py",
+      "defect": "A BROWSER FORM POST of an off-roster name lands the host on RAW JSON. `POST /arrive` form-encoded with an unknown name returns 404 with `Content-Type: application/json` and a bare {\"error\":\"not on roster\"} body, rather than the styled not_found.html. Every other form path 303-redirects to a page. In a demo a typo'd name shows a JSON blob. Related minor findings: HEAD returns 405 on every route (FastAPI's APIRoute does not auto-add it), and /favicon.ico and /robots.txt both 404.",
+      "finding_id": "75c04796c8f6b4c727ebef0982dce65b565fc3838f8e2e8f655fd52efb2d6cda",
+      "reproduction": "curl -X POST -d 'person_id=nobody' https://arrival-engine.onrender.com/arrive. Reported by the TESTBROWSER lane."
+    },
+    {
+      "id": "T-097",
+      "title": "THE MEET SECTION IS ALMOST ALWAYS EMPTY ON PRODUCTION, and this is what a demo audience will see. Of six arrivals driven through the live site, exactly ONE produced a real match ('Both came through MIT', score 27); every other Meet row scored 0 with 'Nothing in common on the record yet.' The cause is corpus shape rather than code: 121 OF 125 HUBS ARE SINGLETONS, so only 4 hubs are held by more than one person and 42 of the 45 possible pairs can only ever score 0. Screenshot on file of Melanie Perkins arriving to two venture capitalists and being told she has nothing in common with either. This is documented behaviour and pinned by tests, but it sits against R8's stated intent that an empty Meet is 'a stated absence, never a list padded with people who share nothing'. Compounding it: sarah-tavel and josh-kopelman are unresolved, so store.py filters them out of the graph entirely \u2014 they can arrive and get a digest but are structurally unmatchable, and nothing on the roster says so.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "data/dossiers"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "data/dossiers",
+      "defect": "THE MEET SECTION IS ALMOST ALWAYS EMPTY ON PRODUCTION, and this is what a demo audience will see. Of six arrivals driven through the live site, exactly ONE produced a real match ('Both came through MIT', score 27); every other Meet row scored 0 with 'Nothing in common on the record yet.' The cause is corpus shape rather than code: 121 OF 125 HUBS ARE SINGLETONS, so only 4 hubs are held by more than one person and 42 of the 45 possible pairs can only ever score 0. Screenshot on file of Melanie Perkins arriving to two venture capitalists and being told she has nothing in common with either. This is documented behaviour and pinned by tests, but it sits against R8's stated intent that an empty Meet is 'a stated absence, never a list padded with people who share nothing'. Compounding it: sarah-tavel and josh-kopelman are unresolved, so store.py filters them out of the graph entirely \u2014 they can arrive and get a digest but are structurally unmatchable, and nothing on the roster says so.",
+      "finding_id": "d47bde27378b9540991358fd90c7b047cdc08d2906e105f580b001412cbb1636",
+      "reproduction": "Arrive six people on production and read each Meet section. Measured by the TESTBROWSER lane; independently consistent with T-077's own measurement."
     }
   ],
   "cut_list": [
