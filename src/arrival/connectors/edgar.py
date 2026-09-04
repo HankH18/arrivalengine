@@ -6,11 +6,31 @@ officer of a company that raised in 2019, or a Form 3 filed the week they joined
 is public record that no amount of Googling a name surfaces — it is exactly the fact that
 makes a host sound like they were paying attention rather than reading a search page.
 
-TASTE, EXPLICITLY.  Forms 3/4/5 and D are *role and affiliation* filings: who is an
-officer, director or beneficial owner of what.  This connector reads them for the
-affiliation and deliberately does not go near the dollar amounts on the same page — R11
-and T-4's `wealth` exclusion mean a share count is never displayable, so fetching it would
-be collecting something the product has already promised not to say.
+TASTE, EXPLICITLY, AND WHY 13F IS IN THE LIST AFTER ALL (T-023).  Forms 3/4/5 and D are
+*role and affiliation* filings: who is an officer, director or beneficial owner of what.
+This connector reads them for the affiliation and deliberately does not go near the dollar
+amounts on the same page — R11 and T-4's `wealth` exclusion mean a share count is never
+displayable, so fetching it would be collecting something the product has already promised
+not to say.
+
+TASKS T-1 acceptance 2 names "Form D/4/13F hits as text", and an earlier version of this
+module dropped 13F with the argument that a 13F is holdings data and therefore excluded by
+R11.  That argument confuses the FILING with the FIELDS THIS CONNECTOR READS.  A 13F's
+holdings live in an attached information table at a different URL that nothing here
+fetches; what this connector reads is the full-text-search hit — `adsh`, `display_names`,
+`form`, `file_date`, `file_description` — and none of those is a dollar amount.  What a
+13F contributes is exactly what the other four contribute: an affiliation, in this case
+"this person is named on an institutional manager's quarterly filing", which is a role
+fact of the same shape as "is an officer of".  Excluding a whole form class to avoid data
+the code never requests is a policy applied in the wrong place: R11 governs DISPLAY, and
+T-4's exclusion filter is where a wealth-shaped fact is stopped, with the whole corpus in
+front of it rather than one connector guessing on its behalf.  So 13F is fetched, and the
+one thing that stays out of the request is the information table.
+
+`13F` is spelled as its two root forms because EDGAR's full-text index has no form type
+literally called "13F": a quarterly holdings report is `13F-HR` and a notice filing is
+`13F-NT`.  A `forms=13F` filter matches neither and would have satisfied the criterion in
+the query string while returning nothing.
 
 `efts.sec.gov/LATEST/search-index` is EDGAR's own full-text endpoint.  SEC's fair-access
 policy requires a declared User-Agent with a contact address (the client sends one) and
@@ -30,9 +50,12 @@ __all__ = ["EdgarConnector"]
 FULL_TEXT_SEARCH = "https://efts.sec.gov/LATEST/search-index"
 FILING_INDEX = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}/{adsh}-index.htm"
 
-#: Ownership and exempt-offering filings: they name people and their roles. Deliberately
-#: NOT 10-K/10-Q, which are company financials and say nothing a host should repeat.
-FORMS = "3,4,5,D"
+#: Ownership, exempt-offering and institutional-manager filings: they name people and
+#: their roles. TASKS T-1 acceptance 2 names D, 4 and 13F; 3 and 5 are 4's siblings in the
+#: same ownership family (initial statement and annual statement of the same relationship)
+#: and cost nothing to include. Deliberately NOT 10-K/10-Q, which are company financials
+#: and say nothing a host should repeat. See the module docstring for the 13F reasoning.
+FORMS = "3,4,5,D,13F-HR,13F-NT"
 
 
 def _first_str(value: Any) -> str:
@@ -131,7 +154,11 @@ class EdgarConnector(BaseConnector):
         cik = _first_str(source.get("ciks")).lstrip("0") or _first_str(source.get("ciks"))
         names = source.get("display_names")
         who = ", ".join(names) if isinstance(names, list) else str(names or "")
-        form = str(source.get("form") or source.get("root_forms") or "")
+        # `_first_str` on BOTH, and not `str(...)` on either: EDGAR returns `form` as a
+        # string and `root_forms` as a LIST, so the fallback rendered `SEC Form ['4']` in a
+        # title and `, form ['4']` in the body of every hit whose `form` was absent — which
+        # the recorded corpus does not contain, so nothing ever showed it.
+        form = _first_str(source.get("form")) or _first_str(source.get("root_forms"))
         filed = str(source.get("file_date") or "")
 
         url = FILING_INDEX.format(

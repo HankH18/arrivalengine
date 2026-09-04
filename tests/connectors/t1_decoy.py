@@ -445,6 +445,129 @@ def _edgar() -> dict[str, Any]:
     }
 
 
+def _github_events(login: str) -> list[dict[str, Any]]:
+    """The activity feed for one login (T-022).
+
+    ADDED BECAUSE AN UNANSWERED ENDPOINT PASSES THE CONTRACT VACUOUSLY. This module's own
+    docstring says why the generic fallback is load-bearing: a connector reaching an
+    endpoint the router does not recognise gets HTML, parses nothing, returns [] and is
+    scored as having declined a stranger it never saw. `/users/{login}/events/public` fell
+    into `_github_user` and received a user OBJECT, so the events half of the github
+    connector was ungraded the day it was written. It is answered in kind here, and — like
+    everything else in this world — it is keyed on WHICH person the login belongs to, so
+    the mirror roster inverts the correct answer.
+    """
+    stranger = login == STRANGER_LOGIN
+    repo = "dock-scheduler" if stranger else "loom-scheduler"
+    line = STRANGER_LINE if stranger else HER_LINE
+    return [
+        {
+            "id": "38295012001",
+            "type": "WatchEvent",
+            "actor": {"login": login, "display_login": login},
+            "repo": {"id": 1, "name": f"{login}/somebody-elses-tool"},
+            "payload": {"action": "started"},
+            "public": True,
+            "created_at": "2024-06-11T08:30:00Z",
+        },
+        {
+            "id": "38295012002",
+            "type": "PushEvent",
+            "actor": {"login": login, "display_login": login},
+            "repo": {"id": 2, "name": f"{login}/{repo}"},
+            "payload": {"size": 3, "commits": [{"sha": "deadbeef", "message": line}]},
+            "public": True,
+            "created_at": "2024-06-11T08:30:00Z",
+        },
+    ]
+
+
+def _hn_user(handle: str) -> dict[str, Any] | None:
+    """The Algolia user profile, which is where a HANDLE becomes a person (T-024).
+
+    The two profiles are indistinguishable in shape and comparable in richness; they
+    differ only in which roster their `about` echoes. That is the whole discrimination the
+    author half of the hn connector rests on.
+    """
+    if handle == HER_LOGIN:
+        return {"username": HER_LOGIN, "about": f"{HER_LINE} {HER_SITE}", "karma": 812}
+    if handle == STRANGER_LOGIN:
+        return {
+            "username": STRANGER_LOGIN,
+            "about": f"{STRANGER_LINE} {STRANGER_SITE}",
+            "karma": 2140,
+        }
+    return None
+
+
+def _hn_by_author(login: str) -> dict[str, Any]:
+    """`tags=author_{handle}` — a story and a comment, both by that handle."""
+    stranger = login == STRANGER_LOGIN
+    line = STRANGER_LINE if stranger else HER_LINE
+    site = STRANGER_SITE if stranger else HER_SITE
+    company = STRANGER_COMPANY if stranger else HER_COMPANY
+    base = "5559" if stranger else "4011"
+    return {
+        "nbHits": 2,
+        "hits": [
+            {
+                "objectID": f"{base}0001",
+                "title": f"{company}: what the scheduler learned this year",
+                "author": login,
+                "points": 74,
+                "num_comments": 19,
+                "url": f"{site}notes/annual",
+                "story_text": line,
+                "created_at": "2024-05-02T15:11:00.000Z",
+                "_tags": ["story", f"author_{login}", f"story_{base}0001"],
+            },
+            {
+                "objectID": f"{base}0002",
+                "author": login,
+                "comment_text": line,
+                "story_id": f"{base}0000",
+                "story_title": "Ask HN: scheduling for small shops",
+                "created_at": "2024-05-20T10:02:00.000Z",
+                "_tags": ["comment", f"author_{login}", f"story_{base}0000"],
+            },
+        ],
+    }
+
+
+def _rss_for(url: str) -> str:
+    """The feed any host in this world serves (T-021), carrying that host's person.
+
+    Same reason as `_github_events`: `{origin}/feed` fell through to `_page_for` and was
+    answered with HTML, so a connector that read feeds correctly and a connector that read
+    them not at all were graded identically.
+    """
+    host = (urlsplit(url).hostname or "").lower()
+    stranger = host == STRANGER_HOST
+    site = STRANGER_SITE if stranger else HER_SITE
+    line = STRANGER_LINE if stranger else HER_LINE
+    company = STRANGER_COMPANY if stranger else HER_COMPANY
+    items = "".join(
+        f"<item><title>{company} notes, part {index}</title>"
+        f"<link>{site}notes/{index}</link>"
+        f"<pubDate>Thu, 02 May 2024 09:14:00 GMT</pubDate>"
+        f"<description>{line}</description></item>"
+        for index in (1, 2)
+    )
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+        f"<title>{company}</title><link>{site}</link>"
+        f"<description>Notes from {company}.</description>{items}</channel></rss>"
+    )
+
+
+def _is_a_feed_path(path: str) -> bool:
+    """The last path SEGMENT names a feed. A substring test also matches `/feedback`."""
+    segments = [part for part in path.lower().split("/") if part]
+    return bool(segments) and segments[-1] in (
+        "feed", "feeds", "rss", "atom", "atom.xml", "index.xml", "feed.xml", "rss.xml"
+    )
+
+
 def _hn() -> dict[str, Any]:
     return {
         "nbHits": 3,
@@ -749,6 +872,8 @@ def decoy_router(request: Any) -> Any:
                     for login in (STRANGER_LOGIN, HER_LOGIN)
                 ],
             }
+        if "/events" in path:
+            return _github_events(path.split("/")[2])
         if path.endswith("/repos"):
             return _github_repos(path.split("/")[2])
         if path.startswith("/users/"):
@@ -781,6 +906,12 @@ def decoy_router(request: Any) -> Any:
         return _propublica_search()
 
     if "algolia" in host:
+        if path.startswith("/api/v1/users/"):
+            return _hn_user(path.rsplit("/", 1)[-1])
+        tags = query.get("tags", "")
+        for login in (STRANGER_LOGIN, HER_LOGIN):
+            if f"author_{login}" in tags:
+                return _hn_by_author(login)
         return _hn()
     if "ycombinator.com" in host:
         return _page("Hacker News", HER_LINE)
@@ -790,6 +921,8 @@ def decoy_router(request: Any) -> Any:
             return _openalex_works(json.dumps(query))
         return _openalex_authors()
 
+    if _is_a_feed_path(path):
+        return _rss_for(str(request.url))
     if _looks_like_an_api(host, path, split.query):
         return _generic_json()
     return _page_for(str(request.url))
