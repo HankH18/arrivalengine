@@ -1891,6 +1891,66 @@
       "defect": "THE MEET SECTION IS ALMOST ALWAYS EMPTY ON PRODUCTION, and this is what a demo audience will see. Of six arrivals driven through the live site, exactly ONE produced a real match ('Both came through MIT', score 27); every other Meet row scored 0 with 'Nothing in common on the record yet.' The cause is corpus shape rather than code: 121 OF 125 HUBS ARE SINGLETONS, so only 4 hubs are held by more than one person and 42 of the 45 possible pairs can only ever score 0. Screenshot on file of Melanie Perkins arriving to two venture capitalists and being told she has nothing in common with either. This is documented behaviour and pinned by tests, but it sits against R8's stated intent that an empty Meet is 'a stated absence, never a list padded with people who share nothing'. Compounding it: sarah-tavel and josh-kopelman are unresolved, so store.py filters them out of the graph entirely \u2014 they can arrive and get a digest but are structurally unmatchable, and nothing on the roster says so.",
       "finding_id": "d47bde27378b9540991358fd90c7b047cdc08d2906e105f580b001412cbb1636",
       "reproduction": "Arrive six people on production and read each Meet section. Measured by the TESTBROWSER lane; independently consistent with T-077's own measurement."
+    },
+    {
+      "id": "T-098",
+      "title": "A 500 THAT IS LIVE IN PRODUCTION. `_payload` calls `await request.form()` outside any try. python_multipart raises MultipartParseError, which starlette does NOT catch (it handles only its own MultiPartException), and FastAPI turns it into a 500. This directly falsifies the docstring three lines above it at app.py:73-74: 'Nothing here can raise: a malformed body yields {}, which resolves to no person, which is a 404.' VERIFIED AGAINST THE DEPLOYED SITE \u2014 500, where the JSON control on the same route returns 404: `printf -- '--y\\r\\n--y--\\r\\n' > body.bin; curl -i -X POST https://arrival-engine.onrender.com/arrive -H 'Content-Type: multipart/form-data; boundary=x' --data-binary @body.bin`. Four shapes trigger it on BOTH /arrive and /leave: a boundary that does not match the body, an empty part, a CR inside a part header, and a boundary over the RFC 2046 length. A near miss that already works correctly: no boundary parameter at all is a clean 400. Carried as xfail(strict=True) naming the file, the line and the false claim.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/app.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "CRITICAL",
+      "location": "src/arrival/web/app.py:80",
+      "defect": "A 500 THAT IS LIVE IN PRODUCTION. `_payload` calls `await request.form()` outside any try. python_multipart raises MultipartParseError, which starlette does NOT catch (it handles only its own MultiPartException), and FastAPI turns it into a 500. This directly falsifies the docstring three lines above it at app.py:73-74: 'Nothing here can raise: a malformed body yields {}, which resolves to no person, which is a 404.' VERIFIED AGAINST THE DEPLOYED SITE \u2014 500, where the JSON control on the same route returns 404: `printf -- '--y\\r\\n--y--\\r\\n' > body.bin; curl -i -X POST https://arrival-engine.onrender.com/arrive -H 'Content-Type: multipart/form-data; boundary=x' --data-binary @body.bin`. Four shapes trigger it on BOTH /arrive and /leave: a boundary that does not match the body, an empty part, a CR inside a part header, and a boundary over the RFC 2046 length. A near miss that already works correctly: no boundary parameter at all is a clean 400. Carried as xfail(strict=True) naming the file, the line and the false claim.",
+      "finding_id": "9d8bc2b4d50cf8bd86fa4b9afea296d77fa70c50fc27ed0728c3176d90859777",
+      "reproduction": "The curl above, against production or a local instance. Reported by the TESTBACKEND lane."
+    },
+    {
+      "id": "T-099",
+      "title": "`--only ''` REBUILDS THE WHOLE ROSTER AGAINST A PAID API. `if opts.only` is falsy for the empty string, so `_selects` short-circuits True for every person and the 'matched nobody' guard never runs: exit 0, every person built. `--only ' '` (a space) correctly exits 2. So `python -m arrival build --only \"$PERSON\"` with $PERSON unset or empty rebuilds all ten people \u2014 the exact accident the guard was added to catch, reached by the one spelling the guard cannot see. Fix: test `opts.only is not None` rather than truthiness.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/research.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/research.py",
+      "defect": "`--only ''` REBUILDS THE WHOLE ROSTER AGAINST A PAID API. `if opts.only` is falsy for the empty string, so `_selects` short-circuits True for every person and the 'matched nobody' guard never runs: exit 0, every person built. `--only ' '` (a space) correctly exits 2. So `python -m arrival build --only \"$PERSON\"` with $PERSON unset or empty rebuilds all ten people \u2014 the exact accident the guard was added to catch, reached by the one spelling the guard cannot see. Fix: test `opts.only is not None` rather than truthiness.",
+      "finding_id": "a8ef3aa614c3a408bc132266f4c4e1fe6fb1cd92a37b6fc62a2800b35a9eb2e5",
+      "reproduction": "python -m arrival build --only '' \u2014 exits 0 having built everyone. Reported by the TESTBACKEND lane."
+    },
+    {
+      "id": "T-100",
+      "title": "`_parse_fetched_at` INVENTS A VALUE WHERE `_parse_expiry` REFUSES ONE. A malformed or missing `fetched_at` is silently replaced with `datetime.now(UTC)`, so a cached document reports a fetch time IN THE PRESENT that moves on every read, with `from_cache=True` beside it \u2014 a provenance claim the system fabricates. The adjacent field on the same record treats an unreadable `expires_at` as a cache miss. Neither ruling had a test; both now do. Also reported, latent rather than live: cache.py:215 `record.fetched_at.isoformat()` sits outside the try so an HttpRecord whose fetched_at is a str raises AttributeError, and cache.py:224 `json.dumps` raises TypeError for a non-serialisable field while the handler catches only (OSError, ValueError). Both contradict 'a cache that cannot be written is not an error', but HttpRecord is an unvalidated dataclass and the sole production constructor never builds one wrongly, so they need a programmer error to reach.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/cache.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/cache.py:65",
+      "defect": "`_parse_fetched_at` INVENTS A VALUE WHERE `_parse_expiry` REFUSES ONE. A malformed or missing `fetched_at` is silently replaced with `datetime.now(UTC)`, so a cached document reports a fetch time IN THE PRESENT that moves on every read, with `from_cache=True` beside it \u2014 a provenance claim the system fabricates. The adjacent field on the same record treats an unreadable `expires_at` as a cache miss. Neither ruling had a test; both now do. Also reported, latent rather than live: cache.py:215 `record.fetched_at.isoformat()` sits outside the try so an HttpRecord whose fetched_at is a str raises AttributeError, and cache.py:224 `json.dumps` raises TypeError for a non-serialisable field while the handler catches only (OSError, ValueError). Both contradict 'a cache that cannot be written is not an error', but HttpRecord is an unvalidated dataclass and the sole production constructor never builds one wrongly, so they need a programmer error to reach.",
+      "finding_id": "145dcc7d79444cb7619a5ac28bcddc97e9a4f88f99ee7cd03d74fe109d137475",
+      "reproduction": "Write a cache record with a malformed fetched_at and read it back twice. Reported by the TESTBACKEND lane."
+    },
+    {
+      "id": "T-101",
+      "title": "CLI exit-code and validation gaps. (a) A read-only `--out` exits 1 rather than 2: `out.mkdir()` raises inside build_all and lands in build_command's catch-all, so a wrapper reads 'retry me' instead of 'fix your arguments' \u2014 while an unreadable roster and an unreadable .env are both correctly 2. (b) NEGATIVE BUDGETS ARE ACCEPTED SILENTLY: `--max-docs -1` exits 0, because contracts.Budget declares these as bare `int` with no `ge=0`, which makes build_command's ValidationError handler for a bad budget UNREACHABLE by any input.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/research.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/research.py",
+      "defect": "CLI exit-code and validation gaps. (a) A read-only `--out` exits 1 rather than 2: `out.mkdir()` raises inside build_all and lands in build_command's catch-all, so a wrapper reads 'retry me' instead of 'fix your arguments' \u2014 while an unreadable roster and an unreadable .env are both correctly 2. (b) NEGATIVE BUDGETS ARE ACCEPTED SILENTLY: `--max-docs -1` exits 0, because contracts.Budget declares these as bare `int` with no `ge=0`, which makes build_command's ValidationError handler for a bad budget UNREACHABLE by any input.",
+      "finding_id": "49707b003194b917ed2449d350067c623a17e845c999424d301ed63fd81ab432",
+      "reproduction": "python -m arrival build --out /a/read-only/dir ; python -m arrival build --max-docs -1. Reported by the TESTBACKEND lane."
     }
   ],
   "cut_list": [
