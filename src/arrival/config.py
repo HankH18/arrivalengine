@@ -46,6 +46,10 @@ class Settings(BaseSettings):
 
     # --- credentials (all optional; a missing key disables its capability, never crashes)
     anthropic_api_key: str | None = None
+    #: Required by the API only for an IDENTITY-LINKED key, which answers 400
+    #: `anthropic-workspace-id is required` to every request without it. A key that is not
+    #: identity-linked ignores the header, so sending it when set is always safe.
+    anthropic_workspace_id: str | None = None
     tavily_api_key: str | None = None
     github_token: str | None = None
 

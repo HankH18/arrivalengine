@@ -260,7 +260,9 @@ class AnthropicClient:
                     "ANTHROPIC_API_KEY is not set, so no LLM call can be made. A missing "
                     "key disables the capability; it must not crash at import time."
                 )
-            self._client = anthropic.AsyncAnthropic(api_key=api_key)
+            workspace = getattr(settings, "anthropic_workspace_id", None)
+            headers = {"anthropic-workspace-id": workspace} if workspace else None
+            self._client = anthropic.AsyncAnthropic(api_key=api_key, default_headers=headers)
         return self._client
 
 

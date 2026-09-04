@@ -16,6 +16,10 @@ ENV_EXAMPLE = REPO_ROOT / ".env.example"
 
 ENV_KEYS = (
     "ANTHROPIC_API_KEY",
+    # Only an IDENTITY-LINKED key needs this; the API answers every request without it
+    # `400 anthropic-workspace-id is required`. A key that is not identity-linked ignores
+    # the header, so it is always safe to send when set. Measured against the live API.
+    "ANTHROPIC_WORKSPACE_ID",
     "TAVILY_API_KEY",
     "GITHUB_TOKEN",
     "CONTACT_EMAIL",
