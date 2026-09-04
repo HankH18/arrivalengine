@@ -18,6 +18,14 @@ Decision 5 — the citation check is not an LLM judgement):
   described one label inconsistently, the descriptions are RECONCILED by majority vote —
   the same repair `graph._hub_identity` makes downstream — so neither the model's output
   order nor a stray second opinion can split a node or move a match score.
+* nothing the model NAMES is an identity until a document corroborates it. The `doc_id` it
+  puts on a hub is believed only if that document names the hub (`_states_label`), and the
+  facts borrowed from it are only those that name the hub too — bulk-attaching a
+  document's other facts is what let a hub outlive the exclusion of its own evidence and
+  reopened R11. The QID it puts on a hub is ranked against every QID the hub's own
+  evidence offers and REFUSED on a tie (`_hub_qid`), because `hub_id` is the graph-wide
+  join key. The ids it invents for its own facts never overwrite ours, and an id it used
+  twice identifies neither fact (`_id_map`).
 * `category="non_obvious"` survives only on the source kinds R7 makes eligible. A
   subject's own about page IS the first page, so nothing on it is "not on the first page"
   however the model labelled it.
@@ -131,6 +139,12 @@ _RECENCY_UNKNOWN = 0.5
 
 _QID = re.compile(r"Q[1-9][0-9]*")
 
+#: The same identifier, scanned OUT of running prose rather than matched against a whole
+#: string. Word-bounded so that the `Q4242` inside a longer token is not a QID, and
+#: case-insensitive because `_states_qid` compares case-folded and this must never be the
+#: stricter of the two — a QID it failed to see is a competitor `_hub_qid` cannot rank.
+_QID_SCAN = re.compile(r"\bQ[1-9][0-9]*\b", re.IGNORECASE)
+
 # Typographic variants folded to one spelling before the substring test (T-015). A model
 # that retypes `O'Neil` as `O’Neil`, or an en dash as a hyphen, is quoting the same words;
 # dropping the fact costs a real citation over a difference no reader would call one.
@@ -208,8 +222,11 @@ class CandidateFact(BaseModel):
     fact_id: str = Field(
         default="",
         description=(
-            "a short name for this fact, unique within this answer, so a hub below can "
-            "point at it in `evidence_fact_ids`. Any string will do; we assign our own."
+            "a short name for this fact, so a hub below can point at it in "
+            "`evidence_fact_ids`. It MUST be different from every other fact_id in this "
+            "answer: an id you use twice identifies neither fact and is discarded, along "
+            "with every hub that pointed at it. We assign our own ids regardless, so this "
+            "one is only ever a label for the references inside this answer."
         ),
     )
     confidence: float = Field(
@@ -226,9 +243,21 @@ class CandidateFact(BaseModel):
 class CandidateHub(BaseModel):
     """One entity the model proposes as a shared node in the graph."""
 
-    label: str = Field(description="the entity's name as written, e.g. 'Foundry Seed'")
+    label: str = Field(
+        description=(
+            "the entity's name as written IN THE DOCUMENT, e.g. 'Foundry Seed'. It is "
+            "checked against the document's own text, so copy the spelling you found"
+        )
+    )
     type: HubType = Field(default="topic", description="what kind of entity this is")
-    doc_id: str = ""
+    doc_id: str = Field(
+        default="",
+        description=(
+            "id of the document this entity appears in. Only used when you give no "
+            "`evidence_fact_ids`, and only believed if that document really names the "
+            "entity — it is not a way to attach the document's other facts to this hub"
+        ),
+    )
     evidence_fact_ids: list[str] = Field(
         default_factory=list, description="fact_ids from this same answer that evidence the hub"
     )
@@ -289,6 +318,45 @@ def _most_common(values: list[str]) -> str | None:
     return min(counts.items(), key=lambda item: (-item[1], item[0]))[0]
 
 
+def _unambiguous(values: list[str], *, what: str) -> str | None:
+    """`_most_common`, except that a TIE between two different values refuses.
+
+    The difference from `_most_common` is deliberate and narrow, and it exists for exactly
+    one kind of value: an IDENTITY. `_most_common` breaks a tie lexicographically, which is
+    the right answer for a hub's displayed type and label — some spelling has to win, every
+    candidate is a description of the same node, and the lexicographic rule at least makes
+    the winner a function of the set rather than of the model's output order.
+
+    A Wikidata QID is not a description, it is a claim about WHICH entity this is, and it
+    becomes `hub_id`, which `graph._canonical_hub_ids` lets win the identity election
+    outright — so two hubs electing one QID are welded onto a single node with their
+    labels, types and `evidence_fact_ids` pooled. Alphabetical order is not evidence about
+    which of two entities is being described, and `Q4242` beating `Q7777` because "4" sorts
+    before "7" is arrival order in a better costume. `resolve._best` reached the same
+    conclusion about strong keys, for the same reason: "R2's refuse-to-guess applies to
+    identity at least as hard as it applies to membership."
+
+    Refusing is cheap here in a way it is not in `resolve`: `canonical_hub_id` is TOTAL, so
+    a refused QID leaves the hub with `{type}:{slug(label)}` — a complete identity that
+    still joins every dossier spelling the label the same way. See `_hub_qid`.
+    """
+    if not values:
+        return None
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    ranked = sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        log.info(
+            "refusing to choose %s: %r are equally evidenced, and an alphabetical winner "
+            "would be arrival order wearing the costume of evidence",
+            what,
+            [value for value, _ in ranked[:2]],
+        )
+        return None
+    return ranked[0][0]
+
+
 @dataclass
 class _HubGroup:
     """Every candidate that canonicalises to one node, accumulated across documents.
@@ -328,7 +396,12 @@ class _HubGroup:
 
     @property
     def qid(self) -> str | None:
-        return _most_common(self.qids)
+        """The group's QID, or None when its candidates named two of them equally often.
+
+        `_unambiguous`, not `_most_common`: this value becomes `hub_id`, and a hub_id is
+        an identity rather than a description. See `_unambiguous` and `_hub_qid`.
+        """
+        return _unambiguous(self.qids, what=f"a Wikidata QID for the hub {self.key!r}")
 
     @property
     def identity(self) -> tuple[str, str]:
@@ -486,6 +559,109 @@ def _states_qid(doc: RawDoc, qid: str) -> bool:
         return False
     needle = normalize_ws(qid)
     return needle in normalize_ws(doc.text) or needle in normalize_ws(doc.url)
+
+
+def _stated_qids(doc: RawDoc) -> set[str]:
+    """Every QID this Wikidata document carries — the field `_states_qid` asks about once.
+
+    `_states_qid` answers "does this document carry the id the model named", which is the
+    right question for one candidate and the wrong one for a corpus: it cannot see that the
+    document ALSO carries a different id, which is what makes the model's naming of one of
+    them a choice rather than a reading. Enumerating them is what lets `_hub_qid` rank.
+    """
+    if doc.source_kind != "wikidata":
+        return set()
+    haystack = f"{doc.url}\n{doc.title}\n{doc.text}"
+    return {found.group(0).upper() for found in _QID_SCAN.finditer(haystack)}
+
+
+def _mentions(text: str, phrase: str) -> bool:
+    """Whether `phrase` occurs in `text` as whole words, tolerant of typography only.
+
+    The same asymmetry as `cited_span` — forgiving about reflowing, case and typographic
+    punctuation, unforgiving about content — minus the evidence floor, which is a rule
+    about QUOTES. A hub label may legitimately be shorter than `MIN_QUOTE_CHARS` ("IBM"),
+    and unlike a quote it is not being offered as proof of a sentence; it is being used to
+    ask whether this document is talking about this entity at all.
+    """
+    needle, _ = _folded(phrase)
+    if not needle:
+        return False
+    haystack, _ = _folded(text)
+    start = haystack.find(needle)
+    while start >= 0:
+        if _whole_words(haystack, start, start + len(needle)):
+            return True
+        start = haystack.find(needle, start + 1)
+    return False
+
+
+def _states_label(doc: RawDoc, label: str) -> bool:
+    """Whether the document names the entity — the corroboration a hub's `doc_id` lacks.
+
+    A hub's LABEL is the one part of it that is evidence rather than opinion: the group
+    docstring is explicit that "the label is what appears verbatim in the documents". So
+    the same question `_source_doc` asks of a quote can be asked of a hub — is the thing
+    the model pointed at actually in the document it pointed at — and answered the same
+    mechanical way, with no LLM judgement anywhere in it.
+    """
+    return _mentions(f"{doc.title}\n{doc.text}", label)
+
+
+def _hub_qid(qid: str | None, label: str, evidence_docs: list[RawDoc]) -> str | None:
+    """The QID this hub has EARNED from its own evidence documents, or None.
+
+    `_states_qid` alone was `any(...)` over those documents, which asks only whether SOME
+    document in hand carries the string. A person's own Wikidata item names their employer,
+    so for a hub about the employer that question answers yes about the PERSON's id — and
+    `hub_id` is the graph-wide join key, so the wrong answer welds two entities onto one
+    node for every person in the graph (`graph._canonical_hub_ids`: a `wd:` id wins the
+    election however few carriers state it).
+
+    `resolve._best` is the shape of the fix, ported: collect EVERY candidate the evidence
+    offers, rank them on evidence — here, how many of the hub's evidence documents state
+    both that QID and this hub's own label — and REFUSE when the top two tie. The model's
+    id is believed only when it is the unique winner.
+
+    Confirm-or-refuse, never adopt: a QID the model did not name is not taken even when it
+    wins, because "this document states a QID and also mentions this label" does not make
+    the QID that label's. The frozen corpus proves it — the item Q900000411 belongs to Ilse
+    Vandermolen and states her employer Belmarch Optics — so adopting the winner would be
+    exactly the wrong-entity merge this function exists to prevent. Ranking may only ever
+    veto the model, never speak for it.
+    """
+    if qid is None:
+        return None
+    scores: dict[str, int] = {}
+    for doc in evidence_docs:
+        names_label = _states_label(doc, label)
+        offered = _stated_qids(doc) | ({qid} if _states_qid(doc, qid) else set())
+        for found in offered:
+            scores[found] = scores.get(found, 0) + (1 if names_label else 0)
+    if qid not in scores:
+        # Unchanged from the original guard: nothing we are holding states it at all, so
+        # the model produced it from memory rather than from the item in front of it.
+        return None
+    ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        log.info(
+            "refusing a QID for hub %r: %s are equally evidenced by its own documents, so "
+            "the model's pick is a choice rather than a reading",
+            label,
+            [found for found, _ in ranked[:2]],
+        )
+        return None
+    winner = ranked[0][0]
+    if winner != qid:
+        log.info(
+            "refusing the QID %s for hub %r: %s is better evidenced by the hub's own "
+            "documents, so the model's choice is not a reading of them",
+            qid,
+            label,
+            winner,
+        )
+        return None
+    return qid
 
 
 # --------------------------------------------------------------------------
@@ -684,23 +860,82 @@ def _build_fact(
     )
 
 
+def _id_map(
+    claims: list[tuple[str, str]], ours: list[str], reserved: frozenset[str]
+) -> dict[str, str]:
+    """Translate the ids the MODEL used into the ids WE assigned. Two refusals, no repairs.
+
+    * **Ours always win, and they are written last.** Our ids are `{doc_id}-f{n}` and the
+      prompt prints every `doc_id`, so `"<doc_id>-f1"` is a string the model can guess.
+      Folding both namespaces into one mapping with `setdefault`, in the order the facts
+      were built, let a claim staked on that string by an earlier candidate sit in the map
+      before fact #1 existed — and `setdefault` then declined to record the real one, so a
+      hub naming the id CORRECTLY reached the wrong fact. `reserved` extends the same
+      protection to the ids earlier batches already handed out, which is the cross-call
+      version of the bug `taste._absorb` records ("it may name a fact from an EARLIER
+      batch. `rulings` outlives one call").
+    * **An id two facts claimed is deleted, not resolved.** The schema asks for uniqueness
+      in prose only ("Any string will do"), so a model reusing `"f1"` across fifteen facts
+      is ordinary input rather than an attack — and `setdefault` resolved the collision
+      first-wins, which is the model's output order. Every hub pointing at the second fact
+      silently claimed the first as its evidence, and those ids are printed as citations by
+      `digest._hub_evidence` and `web.render._hub_evidence`. This is `taste._positions`'
+      rule verbatim: both sentences appear under that id, so no reference to it can be
+      attributed to one of them rather than the other.
+
+    A blank claim is not an id, for the reason `_positions` gives: a model gets `""` for
+    free by omitting the field.
+    """
+    mine = {fact_id: fact_id for fact_id in ours}
+    claimed: dict[str, str] = {}
+    ambiguous: set[str] = set()
+    for name, fact_id in claims:
+        if not name:
+            continue
+        if name in claimed:
+            ambiguous.add(name)
+        claimed[name] = fact_id
+    for name in sorted(ambiguous):
+        del claimed[name]
+        log.info(
+            "two facts in one extraction answer claim the id %r; it resolves to neither, "
+            "because no hub referencing it can be attributed to one of them",
+            name,
+        )
+
+    resolved = dict(mine)
+    for name, fact_id in claimed.items():
+        if name in mine or name in reserved:
+            log.info(
+                "ignoring the claimed fact id %r: it is one of ours, and a hub naming it "
+                "means the fact we assigned it to",
+                name,
+            )
+            continue
+        resolved[name] = fact_id
+    return resolved
+
+
 def _collect_facts(
     result: ExtractionResult,
     batch: tuple[RawDoc, ...],
     counters: dict[str, int],
     tally: ExtractionStats,
-) -> tuple[list[Fact], dict[str, str], dict[str, RawDoc], dict[str, list[str]]]:
+    reserved: frozenset[str] = frozenset(),
+) -> tuple[list[Fact], dict[str, str], dict[str, RawDoc], dict[str, list[Fact]]]:
     """Check, build and identify every candidate fact from one answer.
 
     Returns the surviving facts, the map from the id the model used to the id we assigned
     (so a hub's `evidence_fact_ids` can be translated and dangling references dropped), the
-    source document of each surviving fact, and the surviving fact ids per document.
+    source document of each surviving fact, and the surviving facts per document.
+
+    `reserved` is every id assigned by EARLIER batches; see `_id_map`.
     """
     by_id = {doc.doc_id: doc for doc in batch}
     facts: list[Fact] = []
-    id_map: dict[str, str] = {}
     sources: dict[str, RawDoc] = {}
-    kept_by_doc: dict[str, list[str]] = {}
+    kept_by_doc: dict[str, list[Fact]] = {}
+    claims: list[tuple[str, str]] = []
 
     for candidate in result.facts:
         tally.facts_proposed += 1
@@ -733,12 +968,76 @@ def _collect_facts(
         facts.append(fact)
         tally.facts_kept += 1
         sources[fact_id] = doc
-        kept_by_doc.setdefault(doc.doc_id, []).append(fact_id)
-        claimed = candidate.fact_id.strip()
-        if claimed:
-            id_map.setdefault(claimed, fact_id)
-        id_map.setdefault(fact_id, fact_id)
+        kept_by_doc.setdefault(doc.doc_id, []).append(fact)
+        claims.append((candidate.fact_id.strip(), fact_id))
+
+    id_map = _id_map(claims, [fact.fact_id for fact in facts], reserved)
     return facts, id_map, sources, kept_by_doc
+
+
+def _source_hub_doc(
+    label: str, declared_id: str, batch: tuple[RawDoc, ...], by_id: dict[str, RawDoc]
+) -> RawDoc | None:
+    """The prompted document that actually names this entity, or None.
+
+    `_source_doc` for hubs, and deliberately the same three steps: the id the model claimed
+    is tried FIRST and accepted only if the document really names the label; a batch that
+    answers UNAMBIGUOUSLY repairs a mixed-up id; and a batch that answers twice refuses.
+
+    The refusal matters more here than it does for a fact, because what the caller does
+    with the answer is attach a document's facts to the hub. Two documents naming the
+    entity is not a repair, it is a coin toss over which one's `published_at` becomes
+    `Hub.recency` — an edge weight in T-5's score — and over which document's facts become
+    the hub's citations.
+    """
+    declared = by_id.get(declared_id.strip())
+    if declared is not None and _states_label(declared, label):
+        return declared
+    found = [doc for doc in batch if _states_label(doc, label)]
+    if len(found) == 1:
+        return found[0]
+    if len(found) > 1:
+        log.info(
+            "refusing to guess a source document for the hub %r: %d prompted documents "
+            "name it (%s) and the model pointed at none of them",
+            label,
+            len(found),
+            ", ".join(doc.doc_id for doc in found),
+        )
+    return None
+
+
+def _corroborated_evidence(
+    label: str,
+    declared_id: str,
+    batch: tuple[RawDoc, ...],
+    by_id: dict[str, RawDoc],
+    kept_by_doc: dict[str, list[Fact]],
+) -> list[str]:
+    """The facts that may stand as evidence for a hub the model gave no fact ids for.
+
+    Two narrowings on what used to be `list(kept_by_doc[declared.doc_id])`, i.e. the whole
+    of whatever document the model named, believed without a check:
+
+    * the document must NAME the entity (`_source_hub_doc`). `CandidateHub.doc_id` is a
+      claim, and this module's own best function accepts a claim only when the document
+      carries the thing claimed;
+    * within that document, only the facts that themselves name the entity. Bulk-attaching
+      is what reopens SPEC R11. `research._supported_hubs` drops a hub only when EVERY
+      evidence fact it can resolve was excluded by taste, so one borrowed survivor keeps a
+      hub alive — and the leak that function's docstring records is exactly this shape: a
+      `home_or_property` sentence excluded, and `city:pecan-street` left standing as a
+      joinable node and a match reason because the same document also carried innocuous
+      facts. A hub evidenced only by facts that mention it goes down with them.
+    """
+    doc = _source_hub_doc(label, declared_id, batch, by_id)
+    if doc is None:
+        return []
+    return [
+        fact.fact_id
+        for fact in kept_by_doc.get(doc.doc_id, [])
+        if _mentions(f"{fact.text}\n{fact.provenance.quote}", label)
+    ]
 
 
 def _collect_hubs(
@@ -746,7 +1045,7 @@ def _collect_hubs(
     batch: tuple[RawDoc, ...],
     id_map: dict[str, str],
     sources: dict[str, RawDoc],
-    kept_by_doc: dict[str, list[str]],
+    kept_by_doc: dict[str, list[Fact]],
     groups: dict[str, _HubGroup],
     tally: ExtractionStats,
 ) -> None:
@@ -764,9 +1063,10 @@ def _collect_hubs(
             continue
 
         evidence = [id_map[raw] for raw in candidate.evidence_fact_ids if raw in id_map]
-        declared = by_id.get(candidate.doc_id.strip())
-        if not evidence and declared is not None:
-            evidence = list(kept_by_doc.get(declared.doc_id, []))
+        if not evidence:
+            evidence = _corroborated_evidence(
+                label, candidate.doc_id, batch, by_id, kept_by_doc
+            )
         if not evidence:
             # A hub whose every evidence fact failed the citation check is exactly as
             # unsupported as those facts were.
@@ -774,9 +1074,7 @@ def _collect_hubs(
             continue
 
         evidence_docs = [sources[fact_id] for fact_id in evidence]
-        qid = _valid_qid(candidate.qid)
-        if qid is not None and not any(_states_qid(doc, qid) for doc in evidence_docs):
-            qid = None
+        qid = _hub_qid(_valid_qid(candidate.qid), label, evidence_docs)
         recency = max(recency_for(doc.published_at) for doc in evidence_docs)
 
         group = groups.get(key)
@@ -872,7 +1170,11 @@ async def extract(
         result = await _ask(llm, person, batch, tally)
         if result is None:
             continue
-        batch_facts, id_map, sources, kept_by_doc = _collect_facts(result, batch, counters, tally)
+        # `fact_order` holds every id assigned so far, which is exactly the set a claimed
+        # id may not overwrite. See `_id_map`.
+        batch_facts, id_map, sources, kept_by_doc = _collect_facts(
+            result, batch, counters, tally, frozenset(fact_order)
+        )
         for fact in batch_facts:
             fact_order.setdefault(fact.fact_id, len(fact_order))
         facts.extend(batch_facts)
