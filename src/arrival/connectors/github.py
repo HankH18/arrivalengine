@@ -161,7 +161,12 @@ class GithubConnector(BaseConnector):
     async def _repositories(self, login: str, limit: int) -> list[RawDoc]:
         payload = await self.get_json(
             f"{API}/users/{login}/repos",
-            params={"sort": "pushed", "direction": "desc", "per_page": max(1, min(limit, 30))},
+            params={
+                "sort": "pushed",
+                "direction": "desc",
+                # Headroom for the fork filter below.
+                "per_page": max(1, min(limit * 2, 30)),
+            },
             headers=self._headers(),
         )
         rows: Any = payload
@@ -171,10 +176,15 @@ class GithubConnector(BaseConnector):
             return []
 
         docs: list[RawDoc] = []
-        for repo in rows[:limit]:
+        for repo in rows:
+            if len(docs) >= limit:
+                break
             if not isinstance(repo, dict) or repo.get("fork"):
                 # A fork is somebody else's work sitting in this account; citing it as
                 # "what they are building" is the kind of wrong a host says out loud.
+                # Filtered BEFORE the cap, not after: `rows[:limit]` spent a slot on every
+                # fork it happened to truncate against, so an account whose two most
+                # recently pushed repositories are forks returned nothing at budget 2.
                 continue
             doc = self.doc(
                 str(repo.get("html_url") or ""),
