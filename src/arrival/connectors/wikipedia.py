@@ -29,13 +29,12 @@ slash built a REST path that addresses something else and 404s.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 from urllib.parse import quote
 
-from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
+from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import best_affiliation, carries_name, identifies
 from arrival.contracts import PersonRef, RawDoc
-from arrival.util import normalize_ws
 
 __all__ = ["WikipediaConnector"]
 
@@ -43,24 +42,14 @@ API = "https://en.wikipedia.org/w/api.php"
 SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
 ARTICLE = "https://en.wikipedia.org/wiki/{title}"
 
-_WORD = re.compile(r"[^0-9a-z]+")
-
-
-def _tokens(text: str) -> set[str]:
-    """Comparable word tokens. Single letters are dropped: initials match anything."""
-    return {word for word in _WORD.split(normalize_ws(text)) if len(word) >= 2}
-
-
 def _is_about(title: str, name: str) -> bool:
     """Is an article with this title about `name`?
 
-    Word containment, so "Pell Marrowby (entrepreneur)" and "Marisol Quennebeck/Archive"
-    are hers while "Pelmyre Works" is not. Deliberately judged on the TITLE and not on the
+    `carries_name` (identity.py), applied deliberately to the TITLE and not to the
     extract: the company's article names its founder in the first sentence, which is
     exactly how an article about the company gets mistaken for an article about her.
     """
-    wanted = _tokens(name)
-    return bool(wanted) and wanted <= _tokens(title)
+    return carries_name(title, name)
 
 
 def _path_segment(title: str) -> str:
@@ -74,7 +63,7 @@ class WikipediaConnector(BaseConnector):
     kind = "wikipedia"
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        affiliation = next(iter(affiliations(person.details)), "")
+        affiliation = best_affiliation(person)
         payload = await self.get_json(
             API,
             params={
@@ -147,7 +136,19 @@ class WikipediaConnector(BaseConnector):
             or payload.get("title")
             or title
         )
+        # The TITLE has to name her and the ARTICLE has to recognise the roster. The title
+        # alone rejects the company's article — which is what this check was added for —
+        # and accepts every same-name stranger who has an article, including the
+        # disambiguated ones ("Marisol Quennebeck (logistics executive)") whose titles are
+        # built to say they are somebody else.
         if not _is_about(landed, person.name):
+            return None
+        if not identifies(
+            person,
+            names=[landed],
+            prose=[extract, str(payload.get("description") or "")],
+            context=[extract, str(payload.get("description") or "")],
+        ):
             return None
 
         url = ""

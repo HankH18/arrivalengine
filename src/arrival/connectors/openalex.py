@@ -36,12 +36,16 @@ So the author is chosen, not taken:
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
+from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import (
+    carries_name,
+    choose_one,
+    corroboration,
+    roster_terms,
+)
 from arrival.contracts import PersonRef, RawDoc
-from arrival.util import normalize_ws
 
 __all__ = ["OpenAlexConnector", "deinvert_abstract"]
 
@@ -51,14 +55,6 @@ WORKS = "https://api.openalex.org/works"
 #: Candidates to consider before disambiguating. Larger than any budget: the point is to
 #: SEE the same-name authors, because two of them is the signal to decline.
 AUTHOR_CANDIDATES = 10
-
-_WORD = re.compile(r"[^0-9a-z]+")
-
-
-def _tokens(text: str) -> set[str]:
-    """Comparable word tokens. Single letters are dropped: initials match anything."""
-    return {word for word in _WORD.split(normalize_ws(text)) if len(word) >= 2}
-
 
 def _names(author: dict[str, Any]) -> list[str]:
     """Every name OpenAlex records for an author profile."""
@@ -70,11 +66,11 @@ def _names(author: dict[str, Any]) -> list[str]:
 
 
 def _carries_name(author: dict[str, Any], name: str) -> bool:
-    """True when one of this profile's names contains every word of `name`."""
-    wanted = _tokens(name)
-    if not wanted:
-        return False
-    return any(wanted <= _tokens(candidate) for candidate in _names(author))
+    """True when one of this profile's names contains every word of `name`.
+
+    `carries_name` (identity.py) applied across every alias OpenAlex records.
+    """
+    return any(carries_name(candidate, name) for candidate in _names(author))
 
 
 def _display_names(value: Any) -> list[str]:
@@ -94,16 +90,16 @@ def _display_names(value: Any) -> list[str]:
 
 def _corroboration(author: dict[str, Any], terms: list[str]) -> int:
     """How many of the roster's affiliations this profile independently echoes."""
-    haystack = normalize_ws(
+    return corroboration(
         " ".join(
             _display_names(author.get("last_known_institutions"))
             + _display_names(author.get("last_known_institution"))
             + _display_names(author.get("affiliations"))
             + _display_names(author.get("x_concepts"))
             + _display_names(author.get("topics"))
-        )
+        ),
+        terms,
     )
-    return sum(1 for term in terms if term and term in haystack)
 
 
 def deinvert_abstract(index: Any) -> str:
@@ -172,23 +168,13 @@ class OpenAlexConnector(BaseConnector):
             for result in results
             if isinstance(result, dict) and _carries_name(result, person.name)
         ]
-        if not named:
-            return None
-        if len(named) == 1:
-            return named[0]
-
-        # More than one person publishes under this name, so the name has stopped being
-        # an identifier. Only a detail the roster supplied can break the tie, and a tie
+        # More than one person publishes under this name means the name has stopped being
+        # an identifier: only a detail the roster supplied can break the tie, and a tie
         # that stays tied is answered with nothing rather than with the first result.
-        terms = [normalize_ws(term) for term in affiliations(person.details)]
-        scored = sorted(
-            ((_corroboration(author, terms), index) for index, author in enumerate(named)),
-            key=lambda pair: (-pair[0], pair[1]),
-        )
-        best, runner_up = scored[0], scored[1]
-        if best[0] == 0 or best[0] == runner_up[0]:
-            return None
-        return named[best[1]]
+        # `choose_one` (identity.py) IS that rule — it was written here and hoisted so the
+        # connectors that also have to choose decline in the same way.
+        terms = roster_terms(person)
+        return choose_one(named, lambda author: _corroboration(author, terms))
 
     def _profile_document(self, author: dict[str, Any]) -> RawDoc | None:
         identifier = _openalex_id(author.get("id"))

@@ -41,6 +41,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 from arrival.connectors.base import BaseConnector, affiliations, hosts_in, text_block
+from arrival.connectors.identity import carries_name
 from arrival.contracts import PersonRef, RawDoc
 from arrival.util import normalize_ws
 
@@ -69,22 +70,10 @@ _INTERESTING = {
 }
 
 _ITEM_ID = re.compile(r"^Q\d+$")
-_WORD = re.compile(r"[^0-9a-z]+")
 
-
-def _tokens(text: str) -> set[str]:
-    """Comparable word tokens. Single letters are dropped: initials match anything."""
-    return {word for word in _WORD.split(normalize_ws(text)) if len(word) >= 2}
-
-
-def _carries_name(label: str, name: str) -> bool:
-    """True when every word of `name` appears in `label`.
-
-    A superset is allowed on purpose — "Pell Marrowby (entrepreneur)" and "Marisol
-    Quennebeck Vidal" are both plausibly her; "Pelmyre Works" is not.
-    """
-    wanted = _tokens(name)
-    return bool(wanted) and wanted <= _tokens(label)
+#: The name predicate now lives in `identity.py`. It was written here first and copied
+#: into three more connectors before anyone hoisted it; the import is the hoist.
+_carries_name = carries_name
 
 
 def _snak_value(claim: Any) -> str:

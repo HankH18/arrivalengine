@@ -21,12 +21,51 @@ from __future__ import annotations
 
 from typing import Any
 
-from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
+from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import (
+    best_affiliation,
+    choose_one,
+    corroborates,
+    identifies,
+    on_own_host,
+)
 from arrival.contracts import PersonRef, RawDoc
 
 __all__ = ["GithubConnector"]
 
 API = "https://api.github.com"
+
+#: Logins to look at before deciding. `/search/users` ranks by follower count, so the
+#: first hit is the most FAMOUS person with the name, not the member.
+CANDIDATE_LOGINS = 3
+
+
+def _account_fields(account: dict[str, Any]) -> dict[str, list[str]]:
+    """The profile fields, sorted by what KIND of evidence each one is."""
+    return {
+        "names": [str(account.get("name") or ""), str(account.get("login") or "")],
+        "prose": [str(account.get("bio") or "")],
+        "urls": [str(account.get("blog") or ""), str(account.get("html_url") or "")],
+        "context": [
+            str(account.get("company") or ""),
+            str(account.get("location") or ""),
+            str(account.get("blog") or ""),
+            str(account.get("bio") or ""),
+        ],
+    }
+
+
+def _is_the_member(person: PersonRef, account: dict[str, Any]) -> bool:
+    return identifies(person, **_account_fields(account))
+
+
+def _account_score(person: PersonRef, account: dict[str, Any]) -> int:
+    """How loudly this profile agrees with the roster. Ties between profiles decline."""
+    fields = _account_fields(account)
+    score = corroborates(person, *fields["context"], *fields["names"], *fields["prose"])
+    # A blog on a domain the roster named is worth more than any single field echo: the
+    # member wrote that URL into their own GitHub profile.
+    return score + 2 * sum(1 for url in fields["urls"] if on_own_host(url, person))
 
 
 class GithubConnector(BaseConnector):
@@ -45,12 +84,13 @@ class GithubConnector(BaseConnector):
         return headers
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        login = await self._find_login(person)
-        if not login:
+        account = await self._find_account(person)
+        if account is None:
             return []
+        login = str(account.get("login") or "")
 
         docs: list[RawDoc] = []
-        profile = await self._profile(login)
+        profile = self._profile(login, account)
         if profile is not None:
             docs.append(profile)
 
@@ -59,9 +99,21 @@ class GithubConnector(BaseConnector):
             docs.extend(await self._repositories(login, remaining))
         return docs
 
-    async def _find_login(self, person: PersonRef) -> str:
-        affiliation = next(iter(affiliations(person.details)), "")
-        query = f'"{person.name}" {affiliation}'.strip()
+    async def _find_account(self, person: PersonRef) -> dict[str, Any] | None:
+        """The member's account, or `None`. The search HIT can never answer this.
+
+        `/search/users` returns `{login, id, avatar_url, html_url, type}` and nothing
+        else — no name, no company, no location — so "the first hit with a login wins" was
+        not a weak identity check, it was the ABSENCE of one dressed as a lookup. The
+        fields a resolver needs to reject the wrong Marisol Quennebeck live one call
+        further in, on `/users/{login}`, which this connector was already fetching and
+        then never comparing against `details`.
+
+        So: fetch the profiles of the top few candidates and let the roster choose. A tie
+        declines (`choose_one`), because two accounts the roster corroborates equally are
+        two accounts it cannot tell apart.
+        """
+        query = f'"{person.name}" {best_affiliation(person)}'.strip()
         payload = await self.get_json(
             f"{API}/search/users",
             params={"q": query, "per_page": 5},
@@ -73,16 +125,22 @@ class GithubConnector(BaseConnector):
         elif isinstance(payload, list):
             items = payload
         if not isinstance(items, list):
-            return ""
-        for item in items:
-            if isinstance(item, dict) and item.get("login"):
-                return str(item["login"])
-        return ""
-
-    async def _profile(self, login: str) -> RawDoc | None:
-        payload = await self.get_json(f"{API}/users/{login}", headers=self._headers())
-        if not isinstance(payload, dict):
             return None
+
+        logins = [
+            str(item["login"])
+            for item in items
+            if isinstance(item, dict) and item.get("login")
+        ][:CANDIDATE_LOGINS]
+
+        accounts: list[dict[str, Any]] = []
+        for login in logins:
+            account = await self.get_json(f"{API}/users/{login}", headers=self._headers())
+            if isinstance(account, dict) and _is_the_member(person, account):
+                accounts.append(account)
+        return choose_one(accounts, lambda account: _account_score(person, account))
+
+    def _profile(self, login: str, payload: dict[str, Any]) -> RawDoc | None:
         url = str(payload.get("html_url") or f"https://github.com/{login}")
         return self.doc(
             url,

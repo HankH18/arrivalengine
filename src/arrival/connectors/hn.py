@@ -18,7 +18,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from arrival.connectors.base import BaseConnector, affiliations, parse_date, text_block
+from arrival.connectors.base import BaseConnector, parse_date, text_block
+from arrival.connectors.identity import best_affiliation, identifies
 from arrival.contracts import PersonRef, RawDoc
 
 __all__ = ["HackerNewsConnector"]
@@ -27,19 +28,50 @@ SEARCH = "https://hn.algolia.com/api/v1/search"
 ITEM_URL = "https://news.ycombinator.com/item?id={item_id}"
 
 
+def _is_hers(person: PersonRef, hit: dict[str, Any]) -> bool:
+    """Is this story by or about the member?
+
+    `hit["author"]` was displayed in the document text (`Submitted by ...`) and never
+    checked against anything — and it is a HANDLE, so checking it alone would reject every
+    correct hit: `mquennebeck` does not contain "marisol". It is one naming field among
+    several, never the gate.
+
+    What actually ties a story to a person here is where it POINTS. A submission linking
+    to the member's own domain is hers whoever posted it; otherwise the story's own words
+    have to name her in full and echo something the roster supplied.
+    """
+    linked = [str(hit.get("url") or ""), str(hit.get("story_url") or "")]
+    prose = [
+        str(hit.get("title") or ""),
+        str(hit.get("story_title") or ""),
+        str(hit.get("story_text") or ""),
+        str(hit.get("comment_text") or ""),
+    ]
+    return identifies(
+        person,
+        names=[str(hit.get("author") or "")],
+        prose=prose,
+        urls=linked,
+        context=[*prose, *linked],
+    )
+
+
 class HackerNewsConnector(BaseConnector):
     """`kind="hn"` — stories by or about this person, cited to the HN item."""
 
     kind = "hn"
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        affiliation = next(iter(affiliations(person.details)), "")
         payload = await self.get_json(
             SEARCH,
             params={
-                # The quoted name is the whole disambiguation budget here: HN search is
-                # a full-text index with no notion of people.
-                "query": f'"{person.name}" {affiliation}'.strip(),
+                # NOT a phrase query, whatever the quotes suggest. Algolia is typo-tolerant
+                # and does not honour `"` as a strict phrase operator, so this string is a
+                # bag of words and the hits come back fuzzy-matched: "the search returned
+                # it" carries no information about who it is about. The quotes are kept
+                # because they cost nothing and help the ranker; the DECIDING is done below,
+                # on the hit itself.
+                "query": f'"{person.name}" {best_affiliation(person)}'.strip(),
                 "tags": "story",
                 "hitsPerPage": max(1, min(budget * 2, 20)),
             },
@@ -50,6 +82,8 @@ class HackerNewsConnector(BaseConnector):
         for hit in hits:
             if len(docs) >= budget:
                 break
+            if not _is_hers(person, hit):
+                continue
             doc = self._document(hit)
             if doc is not None:
                 docs.append(doc)
