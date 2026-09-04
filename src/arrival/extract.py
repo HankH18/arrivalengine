@@ -587,7 +587,7 @@ def _merge_groups(groups: dict[tuple[str, str], _HubGroup], tally: ExtractionSta
         for hub_id, group in merged.items()
     ]
     hubs.sort(key=lambda hub: hub.hub_id)
-    tally.hubs_kept = len(hubs)
+    tally.hubs_kept += len(hubs)
     return hubs
 
 
@@ -607,11 +607,12 @@ async def extract(
     un-excluded — T-4 makes the taste decisions.
 
     Pass `stats` to receive the counts, including how many facts the citation check threw
-    away; they are logged either way.
+    away; they are logged either way. Every counter ACCUMULATES, so one `ExtractionStats`
+    may be shared across a whole roster to get the build-wide numbers.
     """
     tally = stats if stats is not None else ExtractionStats()
     accepted = _accepted_docs(resolution, docs)
-    tally.documents_prompted = len(accepted)
+    tally.documents_prompted += len(accepted)
     if not accepted:
         log.info("nothing to extract for %s: the resolver accepted no documents", person.name)
         return [], []

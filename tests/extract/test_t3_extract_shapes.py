@@ -207,6 +207,28 @@ async def test_what_comes_back_is_contract_shaped_enough_to_build_a_dossier():
     assert Dossier.model_validate_json(dossier.model_dump_json()) == dossier
 
 
+async def test_one_stats_object_accumulates_across_people():
+    """T-6 builds a whole roster; a counter that ASSIGNS reports only the last person."""
+    stats = ExtractionStats()
+    for url in ("https://example.com/one", "https://example.com/two"):
+        doc = corpus.make_doc(url, "search", corpus.ABOUT_TEXT)
+        llm = LLMDouble()
+        llm.queue(
+            ExtractionResult(
+                facts=[_fact(doc, "Runa Okonkwo co-founded Quarrystone Labs.", corpus.ABOUT_SPAN)],
+                hubs=[
+                    CandidateHub(label="Quarrystone Labs", type="company", doc_id=doc.doc_id)
+                ],
+            )
+        )
+        await extract(corpus.PERSON, corpus.resolution_for(doc), [doc], llm, stats=stats)
+
+    assert stats.documents_prompted == 2
+    assert stats.facts_kept == 2
+    assert stats.hubs_kept == 2
+    assert stats.llm_calls == 2
+
+
 async def test_the_extractor_makes_no_taste_decision():
     """T-4 owns `excluded` / `exclusion_reason`; every fact leaves here untouched."""
     doc = corpus.status_doc()
