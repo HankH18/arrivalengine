@@ -18,6 +18,12 @@ Pydantic ignores unknown keys by default, so the file still validates as a `RawD
 keeps DESIGN §Verification's "point the cache dir at recorded fixtures" honest: a
 hand-written file with no `http` envelope is read back as a plain-text document.
 
+LIFETIME.  The envelope may carry an `expires_at`, and an entry past it is a MISS.  ABSENT
+means durable, never expired — that is the shape of every file written before expiries
+existed and of every hand-written fixture, and a reader that read absence as "expired"
+would throw the whole warm cache away.  This module stores the moment and compares it;
+WHICH moment is `client`'s policy decision, not this one's.
+
 The directory is gitignored (`.gitignore` carries `.cache/`) and is CWD-relative by
 default — that is `Settings.cache_dir`'s documented shape, and hazard: a process started
 from a subdirectory therefore uses a different cache root.  Every caller here takes the
@@ -63,6 +69,22 @@ def _parse_fetched_at(value: object) -> datetime:
     return datetime.now(UTC)
 
 
+def _parse_expiry(value: object) -> datetime | None:
+    """`value` as an aware datetime, or None when it is not one.
+
+    A naive timestamp is read as UTC, the same way `fetched_at` is: comparing a naive
+    datetime against an aware `now` raises `TypeError`, and a cache read is the one place
+    in this module that has promised never to raise.
+    """
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
 def read_record(root: Path, key: str) -> HttpRecord | None:
     """The cached response for `key`, or None when there is none (or it is unreadable).
 
@@ -99,6 +121,20 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
             status = raw_status
         else:
             return None
+
+        # T-025: an entry may carry an expiry, and an expired entry is a MISS.
+        #
+        # ABSENT MEANS DURABLE, not expired. Every file already on disk was written before
+        # this key existed, and a reader that treated a missing expiry as "expired" would
+        # throw the entire warm cache away the first time it ran -- which is the opposite
+        # of the defect being fixed. An UNREADABLE expiry is a miss, on the same ruling as
+        # the status above: a file we cannot read in full is a file we should not serve,
+        # and a miss costs one re-fetch while a guess is wrong for the entry's whole life.
+        raw_expiry = envelope.get("expires_at")
+        if raw_expiry is not None:
+            expires_at = _parse_expiry(raw_expiry)
+            if expires_at is None or expires_at <= datetime.now(UTC):
+                return None
     elif isinstance(payload.get("text"), str) and payload["text"].strip():
         # A hand-written fixture in plain `RawDoc` shape: its extracted text IS the body.
         body = payload["text"]
@@ -117,9 +153,30 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
     )
 
 
-def write_record(root: Path, key: str, record: HttpRecord, *, text: str, title: str) -> None:
-    """Store `record` under `key`. A cache that cannot be written is not an error."""
+def write_record(
+    root: Path,
+    key: str,
+    record: HttpRecord,
+    *,
+    text: str,
+    title: str,
+    expires_at: datetime | None = None,
+) -> None:
+    """Store `record` under `key`. A cache that cannot be written is not an error.
+
+    `expires_at=None` writes a DURABLE entry -- no expiry key at all, which is also the
+    shape of every file written before expiries existed and of every hand-written fixture
+    (DESIGN §Verification). A caller that wants the entry to age out passes the moment it
+    should stop being served; `client.fetch_record` is the only one that does.
+    """
     path = cache_path(root, key)
+    envelope: dict[str, object] = {
+        "status": record.status,
+        "content_type": record.content_type,
+        "body": record.body,
+    }
+    if expires_at is not None:
+        envelope["expires_at"] = expires_at.isoformat()
     payload = {
         "doc_id": doc_id(record.url),
         "source_kind": "self_page",  # advisory only; re-stamped by the caller on read
@@ -128,11 +185,7 @@ def write_record(root: Path, key: str, record: HttpRecord, *, text: str, title: 
         "text": text,
         "published_at": None,
         "fetched_at": record.fetched_at.isoformat(),
-        "http": {
-            "status": record.status,
-            "content_type": record.content_type,
-            "body": record.body,
-        },
+        "http": envelope,
     }
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
