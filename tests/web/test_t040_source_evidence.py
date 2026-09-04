@@ -450,3 +450,81 @@ def test_a_digest_with_no_dossier_still_renders_its_sources():
     html = render("digest.html", **digest_view(digest, None))
     assert "Runs the platform team" in html
     assert 'id="source-1"' in html
+
+
+# ------------------------------------------- the last gate before HTML, exercised for real
+
+
+def _withheld(dossier: Dossier) -> Fact:
+    victim = next((f for f in dossier.facts if f.excluded), None)
+    assert victim is not None, "the fixture has no R11-excluded fact; this test proves nothing"
+    return victim
+
+
+async def test_a_withheld_fact_smuggled_into_lately_never_reaches_the_page():
+    """`is_displayable` at the render layer, on the one path nothing upstream re-filters.
+
+    `Digest.lately` is "displayable only" by contract, and a Meet row's evidence is filtered
+    by `_hub_evidence_facts` before `_source_evidence` ever sees it — so a sabotage that
+    removes the gate inside `_source_evidence` is invisible through the Meet path. This is the
+    path that actually reaches it: a `Digest` whose `lately` carries a taste-excluded fact.
+    Whatever produced such a digest is broken, but `render.py` is the LAST code before HTML
+    and must not be the thing that publishes it.
+    """
+    dossier, digest = await _build()
+    victim = _withheld(dossier)
+    leaky = digest.model_copy(
+        update={
+            "lately": [victim, *digest.lately],
+            "sources": [victim.provenance, *digest.sources],
+        }
+    )
+
+    view = digest_view(leaky, dossier)
+    quotes = [e["quote"] for entries in _evidence(view).values() for e in entries]
+    assert quotes, "no evidence rendered at all, so the absences below prove nothing"
+    assert victim.provenance.quote not in quotes, (
+        f"{victim.fact_id} ({victim.exclusion_reason}) is quoted in the evidence list"
+    )
+
+    html = render("digest.html", **view)
+    assert victim.provenance.quote not in html, (
+        f"{victim.fact_id}'s source excerpt reached the host-facing page"
+    )
+    assert victim.text not in html, f"{victim.fact_id}'s own sentence reached the page"
+    # Positive control: the displayable Lately bullets are still there.
+    assert digest.lately[0].text in html, "the real Lately bullets vanished with the withheld one"
+
+
+async def test_a_withheld_fact_smuggled_into_not_on_the_first_page_never_reaches_the_page():
+    """The other un-refiltered slot. `pick_non_obvious` applies R12; this re-applies it."""
+    dossier, digest = await _build()
+    victim = _withheld(dossier)
+    leaky = digest.model_copy(
+        update={"non_obvious": victim, "sources": [victim.provenance, *digest.sources]}
+    )
+
+    html = render("digest.html", **digest_view(leaky, dossier))
+    assert victim.text not in html, f"{victim.fact_id}'s own sentence reached the page"
+    assert victim.provenance.quote not in html, (
+        f"{victim.fact_id}'s source excerpt reached the host-facing page"
+    )
+    assert "Nothing here a first page" in html, (
+        "the withheld find was suppressed but the section states no absence in its place"
+    )
+
+
+async def test_a_low_confidence_fact_is_gated_the_same_way_as_an_excluded_one():
+    """R12's three clauses are independent, so the gate cannot be an `excluded` check."""
+    dossier, digest = await _build()
+    quiet = next(
+        f
+        for f in dossier.facts
+        if not f.excluded and not is_displayable(f)
+    )
+    leaky = digest.model_copy(
+        update={"lately": [quiet, *digest.lately], "sources": [quiet.provenance, *digest.sources]}
+    )
+    html = render("digest.html", **digest_view(leaky, dossier))
+    assert quiet.text not in html, f"{quiet.fact_id} is below the display gate yet is rendered"
+    assert quiet.provenance.quote not in html

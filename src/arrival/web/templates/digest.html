@@ -96,10 +96,13 @@
 
   <section id="not-on-the-first-page">
     <h2>Not on the first page</h2>
-    {% if digest.non_obvious %}
+    {# `non_obvious` rather than `digest.non_obvious`: the view model applies R12's display
+       gate one last time, so a fact that should never have been placed here cannot be
+       published by this template. Same reason `lately_rows` is filtered. #}
+    {% if non_obvious %}
     <p>
-      {{ digest.non_obvious.text }}{% for n in non_obvious_citations %}<sup class="cite"><a href="#source-{{ n }}">[{{ n }}]</a></sup>{% endfor %}
-      <br><span class="quote">&ldquo;{{ digest.non_obvious.provenance.quote }}&rdquo;</span>
+      {{ non_obvious.text }}{% for n in non_obvious_citations %}<sup class="cite"><a href="#source-{{ n }}">[{{ n }}]</a></sup>{% endfor %}
+      <br><span class="quote">&ldquo;{{ non_obvious.provenance.quote }}&rdquo;</span>
     </p>
     {% else %}
     <p class="absent">Nothing here a first page of results would not already have shown.</p>

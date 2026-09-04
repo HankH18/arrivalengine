@@ -318,17 +318,33 @@ def digest_view(digest: Digest, dossier: Dossier | None) -> dict[str, Any]:
         for row in digest.meet
     ]
 
+    # R12 re-applied on the two slots nothing between `make_digest` and here re-checks.
+    # `Digest.lately` is "displayable only" and `pick_non_obvious` gates its answer, so on
+    # every digest this project produces these two filters are no-ops. They are here because
+    # this module is the LAST code before HTML: a digest that violated the contract upstream
+    # would otherwise have `render.py` publish an R11 sentence and its source excerpt
+    # verbatim, and that is the one failure this product cannot absorb. Measured while
+    # sabotage-testing T-040: with a taste-excluded fact placed in `lately`, the page
+    # rendered both its text and its quote.
+    lately = [fact for fact in digest.lately if is_displayable(fact)]
+    non_obvious = (
+        digest.non_obvious
+        if digest.non_obvious is not None and is_displayable(digest.non_obvious)
+        else None
+    )
+
     return {
         "digest": digest,
         "sources": list(enumerate(digest.sources, start=1)),
         "source_evidence": _source_evidence(_page_claims(digest, dossier, who_facts), numbers),
         "who_citations": _citations(who_facts, numbers),
         "meet_rows": meet_rows,
+        "non_obvious": non_obvious,
         "lately_rows": [
-            {"fact": fact, "citations": _citations([fact], numbers)} for fact in digest.lately
+            {"fact": fact, "citations": _citations([fact], numbers)} for fact in lately
         ],
         "non_obvious_citations": (
-            _citations([digest.non_obvious], numbers) if digest.non_obvious else []
+            _citations([non_obvious], numbers) if non_obvious is not None else []
         ),
     }
 
