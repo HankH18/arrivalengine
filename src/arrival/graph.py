@@ -18,8 +18,21 @@ The arithmetic, from DESIGN Decision 3, in the order it is applied:
 * ``score = min(100, round(100 * raw / REF))`` with ``REF = ln(N / 3) * 1.5`` -- one rare hub
   shared by exactly two people, best type boost, full recency. The reference is FIXED rather
   than relative to the night's best pair, so a 100 means the same thing at every arrival.
-* the "why" path is the shortest path under edge ``cost = 1/(1+idf)``, so the cheapest route
-  between two people runs through their rarest shared hub.
+* the "why" path is the two-hop route through the pair's top CONTRIBUTING hub -- the same hub
+  the ``why`` names. On an ordinary corpus that is also the ``cost = 1/(1+idf)`` shortest
+  route, but the path is constructed rather than searched, for two reasons recorded in
+  :func:`_path`: a Dijkstra tie is broken by adjacency insertion order (i.e. by dossier
+  order), and a searched route can run through a hub the ``why`` refuses to name.
+
+One thing this module does that is easy to miss: **it elects the identity of a hub across
+its carriers.** ``Hub.hub_id`` is ``"wd:Q123"`` when Wikidata resolved the entity and
+``"{type}:{slug(label)}"`` otherwise, so the id is a function of two things the evidence does
+not fix -- the type the model chose, and whether a Wikidata document happened to be retrieved
+*for that particular person*. Two people who genuinely share a hub therefore arrive with
+different ids and score 0, which is exactly the case this engine exists to find. One
+``extract()`` call sees one person and has nothing to reconcile against; ``build_graph`` is
+the first place that sees them all, so the reconciliation lives here. See
+:func:`_canonical_hub_ids`.
 
 Two things this module deliberately does NOT do:
 
@@ -39,7 +52,8 @@ from collections.abc import Iterable, Sequence
 
 import networkx as nx
 
-from arrival.contracts import Dossier, HubContribution, Match, PersonRef
+from arrival.contracts import Dossier, Hub, HubContribution, Match, PersonRef
+from arrival.util import slug
 
 __all__ = [
     "DEFAULT_TYPE_BOOST",
@@ -47,6 +61,7 @@ __all__ = [
     "REF_SHARERS",
     "REF_TYPE_BOOST",
     "TYPE_BOOST",
+    "WIKIDATA_PREFIX",
     "build_graph",
     "hub_idf",
     "hub_node",
@@ -82,6 +97,11 @@ REF_TYPE_BOOST = 1.5
 
 PERSON_PREFIX = "person:"
 HUB_PREFIX = "hub:"
+
+#: The prefix ``extract.canonical_hub_id`` gives an id Wikidata resolved. An id carrying it
+#: names an ENTITY rather than a spelling, so it wins the identity election in
+#: :func:`_canonical_hub_ids` however few carriers stated it.
+WIKIDATA_PREFIX = "wd:"
 
 #: Deterministic, speakable phrasing per hub type (R18: read aloud, so no ids, no
 #: parentheticals, no scores). ``{label}`` is the hub's own label, verbatim.
@@ -166,9 +186,99 @@ def _hub_identity(descriptions: Sequence[tuple[str, str]]) -> tuple[str, str]:
     for hub_type, label in descriptions:
         types[hub_type] = types.get(hub_type, 0) + 1
         labels[label] = labels.get(label, 0) + 1
-    best_type = min(types.items(), key=lambda kv: (-kv[1], kv[0]))[0]
-    best_label = min(labels.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+    best_type = _elect(types)
+    best_label = _elect(labels)
     return best_type, best_label
+
+
+def _elect(counts: dict[str, int]) -> str:
+    """Most common wins, ties broken lexicographically.
+
+    The one voting rule this module has, factored out so the type vote, the label vote and
+    the hub-id vote cannot drift apart. ``extract._most_common`` deliberately duplicates it
+    for the WITHIN-dossier half of the same problem; ``graph`` sits downstream of ``extract``,
+    so importing upward would invert the dependency. If this tie-break ever changes, that
+    copy has to change with it.
+    """
+    return min(counts.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+
+
+def _identity_key(hub: Hub) -> str:
+    """What the evidence actually fixes about a hub: its label, normalised.
+
+    NOT its ``hub_id``. The id is ``"wd:Q123"`` when a Wikidata document happened to be
+    retrieved for that person and ``"{type}:{slug(label)}"`` otherwise, so two carriers of one
+    real hub disagree whenever the model picked a different type or only one of them saw a QID
+    -- and a disagreement makes them two nodes, which scores the pair 0. An empty label leaves
+    nothing to group by, so such a hub falls back to standing alone under its own id.
+    """
+    return slug(hub.label) or f"\0{hub.hub_id}"
+
+
+def _canonical_hub_ids(dossiers: Sequence[Dossier]) -> dict[str, str]:
+    """Elect ONE ``hub_id`` per real hub, keyed by :func:`_identity_key`.
+
+    Two rules, in order:
+
+    1. **A ``wd:`` id wins.** It names an entity Wikidata resolved rather than a spelling one
+       extraction chose, so a single carrier stating one settles the group.
+    2. Otherwise the ids vote, by :func:`_elect`.
+
+    The elected id is always one a carrier actually STATED -- nothing is recomputed from the
+    label. That matters twice over: an id whose slug has drifted from its label never has its
+    node silently renamed, and because the stated ids are ``{type}:{slug(label)}``, electing
+    among them by "most common, then lexicographic" agrees by construction with the type
+    :func:`_hub_identity` elects from the same occurrences.
+
+    Two carriers who state the SAME id under different labels land in different groups, and
+    still converge: each group's only stated id is that one, so both elect it and pass 2 keys
+    them to the same node.
+
+    The tradeoff, stated plainly: two genuinely different hubs that share a label ("Apple" the
+    company, "Apple" the topic) are merged. Label collision is the price of joining carriers
+    who disagree about type, and joining them is the entire point -- a hub the graph splits
+    contributes nothing to anybody.
+    """
+    stated: dict[str, dict[str, int]] = {}
+    for dossier in dossiers:
+        for hub in dossier.hubs:
+            counts = stated.setdefault(_identity_key(hub), {})
+            counts[hub.hub_id] = counts.get(hub.hub_id, 0) + 1
+
+    canonical: dict[str, str] = {}
+    for key, counts in stated.items():
+        qids = {i: n for i, n in counts.items() if i.startswith(WIKIDATA_PREFIX)}
+        canonical[key] = _elect(qids or counts)
+    return canonical
+
+
+def _one_hub_per_person(hubs: Sequence[Hub], hub_id: str) -> Hub:
+    """Fold one person's occurrences of a single elected hub into one :class:`Hub`.
+
+    Reached when a dossier lists the same hub twice, or lists it under two ids that the
+    election joined. The result carries the ELECTED id -- consumers read
+    ``HubContribution.hub.hub_id`` and compare it against the graph's node name (the frozen
+    T-5 suite does, at ``path[1]``), so an edge carrying a Hub whose id is not its node's
+    would be a lie about the graph. Everything else stays the arriving person's own: the
+    freshest recency they recorded, and their own evidence facts, which resolve only in their
+    own dossier.
+
+    Deterministic by construction: the occurrence whose own id was elected wins, then the
+    lexicographically smallest id, then the smallest label -- never list order.
+    """
+    ordered = sorted(hubs, key=lambda h: (h.hub_id != hub_id, h.hub_id, h.label))
+    base = ordered[0]
+    evidence: list[str] = []
+    for hub in ordered:
+        for fact_id in hub.evidence_fact_ids:
+            if fact_id not in evidence:
+                evidence.append(fact_id)
+    recency = max(hub.recency for hub in ordered)
+    if base.hub_id == hub_id and base.recency == recency and base.evidence_fact_ids == evidence:
+        return base  # the ordinary case: nothing to reconcile, so no copy is made
+    return base.model_copy(
+        update={"hub_id": hub_id, "recency": recency, "evidence_fact_ids": evidence}
+    )
 
 
 def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
@@ -194,29 +304,37 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     dossiers = list(dossiers)
     graph = nx.Graph()
 
-    # Pass 1: who carries what, and how each hub describes itself. IDF needs the whole
-    # population before any edge weight is meaningful, so nothing can be written until every
-    # dossier has been seen.
+    # Pass 1: elect each hub's identity, then record who carries what and how they describe
+    # it. IDF needs the whole population before any edge weight is meaningful, so nothing can
+    # be written until every dossier has been seen -- and the identity election needs it too,
+    # for the same reason.
+    canonical = _canonical_hub_ids(dossiers)
     carriers: dict[str, set[str]] = {}
     described: dict[str, list[tuple[str, str]]] = {}
-    recencies: dict[tuple[str, str], float] = {}
+    held: dict[str, dict[str, list[Hub]]] = {}
     for dossier in dossiers:
         person_id = dossier.person.person_id
+        mine = held.setdefault(person_id, {})
         for hub in dossier.hubs:
-            carriers.setdefault(hub.hub_id, set()).add(person_id)
-            described.setdefault(hub.hub_id, []).append((hub.type, hub.label))
-            # A dossier that lists one hub twice keeps its FRESHEST recency, rather than
-            # whichever entry happened to be written last.
-            key = (person_id, hub.hub_id)
-            recencies[key] = max(recencies.get(key, hub.recency), hub.recency)
+            hub_id = canonical[_identity_key(hub)]
+            carriers.setdefault(hub_id, set()).add(person_id)
+            described.setdefault(hub_id, []).append((hub.type, hub.label))
+            # Two dossiers for one person, or one dossier listing a hub twice, are one edge.
+            # `_one_hub_per_person` folds them by a rule, not by whichever was written last.
+            mine.setdefault(hub_id, []).append(hub)
 
-    for dossier in dossiers:
-        person = dossier.person
+    # Person nodes in person_id order, not dossier order. Node and edge INSERTION order is
+    # the only remaining channel through which a caller's dossier order could reach an
+    # output -- networkx iterates adjacency in insertion order, so a Dijkstra tie anywhere
+    # downstream would otherwise be decided by a filesystem glob (T-013).
+    by_person = {d.person.person_id: d.person for d in dossiers}
+    for person_id in sorted(by_person):
+        person = by_person[person_id]
         graph.add_node(
-            person_node(person.person_id),
+            person_node(person_id),
             bipartite=0,
             kind="person",
-            person_id=person.person_id,
+            person_id=person_id,
             person=person,
         )
 
@@ -225,30 +343,30 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     n_people = sum(1 for _, data in graph.nodes(data=True) if data.get("kind") == "person")
 
     # Pass 2: hub nodes and the edges, now that N is known.
-    for dossier in dossiers:
-        person_id = dossier.person.person_id
+    for person_id in sorted(held):
         source = person_node(person_id)
-        for hub in dossier.hubs:
-            hub_type, label = _hub_identity(described[hub.hub_id])
-            idf = hub_idf(n_people, len(carriers[hub.hub_id]))
+        for hub_id in sorted(held[person_id]):
+            hub = _one_hub_per_person(held[person_id][hub_id], hub_id)
+            hub_type, label = _hub_identity(described[hub_id])
+            idf = hub_idf(n_people, len(carriers[hub_id]))
             boost = TYPE_BOOST.get(hub_type, DEFAULT_TYPE_BOOST)
-            target = hub_node(hub.hub_id)
+            target = hub_node(hub_id)
             if target not in graph:
                 graph.add_node(
                     target,
                     bipartite=1,
                     kind="hub",
-                    hub_id=hub.hub_id,
+                    hub_id=hub_id,
                     label=label,
                     type=hub_type,
                     idf=idf,
                     type_boost=boost,
-                    n_carriers=len(carriers[hub.hub_id]),
+                    n_carriers=len(carriers[hub_id]),
                 )
             graph.add_edge(
                 source,
                 target,
-                recency=recencies[(person_id, hub.hub_id)],
+                recency=hub.recency,
                 cost=1.0 / (1.0 + idf),
                 hub=hub,
             )
@@ -309,27 +427,40 @@ def _normalise(raw: float, ref: float) -> float:
 def _path(
     graph: nx.Graph, arriving: str, other: str, components: Sequence[HubContribution]
 ) -> list[str]:
-    """The weighted shortest route between two people, through their top hub.
+    """The two-hop route through the pair's top CONTRIBUTING hub -- the one the ``why`` names.
 
     ``cost = 1/(1+idf)`` already makes the rarest shared hub the cheapest crossing, so on any
-    ordinary corpus the plain shortest path IS the route through the top contributor. The two
-    can diverge when a high-idf hub carries a low type boost -- the top CONTRIBUTION maximises
+    ordinary corpus this IS the plain weighted shortest path. The two can diverge when a
+    high-idf hub carries a low type boost -- the top CONTRIBUTION maximises
     ``idf * recency * boost`` while the cheapest edge only maximises ``idf``. When they
-    disagree the top hub wins, because the path is the picture of the why and must show the
-    reason the pair actually scored (T-5 acceptance 3); it is still the shortest path among
-    those that pass through that hub.
+    disagree the top contributor wins, because the path is the picture of the why and must
+    show the reason the pair actually scored (T-5 acceptance 3).
+
+    The route is CONSTRUCTED, not searched, and both reasons were measured:
+
+    * **T-013.** ``nx.shortest_path`` breaks an equal-cost tie by adjacency insertion order,
+      which is the order the dossiers arrived in. Over all 720 permutations of a six-dossier
+      corpus, 480 produced a different ``path`` for byte-identical input while every score,
+      contribution and why stayed identical. Two people are always adjacent to a hub they
+      share, so the shortest route through it is the direct two hops and there is nothing
+      left to search.
+    * **T-016.** A hub the clamp zeroed contributes nothing, so :func:`_why` refuses to name
+      it -- and a path routed through it then names a hub the why denies. Reproduced on the
+      frozen corpus: ``runa-okonkwo`` -> ``mira-hollowell`` answered
+      ``why="Nothing in common on the record yet."`` beside
+      ``path=[..., "hub:city:austin", ...]``. When no hub contributed, there is no route
+      worth showing and none is invented -- the same answer this already gave a pair with no
+      shared hub at all.
     """
     if arriving not in graph or other not in graph:
         return []
-    try:
-        if components:
-            via = hub_node(components[0].hub.hub_id)
-            head = nx.shortest_path(graph, arriving, via, weight="cost")
-            tail = nx.shortest_path(graph, via, other, weight="cost")
-            return list(head) + list(tail[1:])
-        return list(nx.shortest_path(graph, arriving, other, weight="cost"))
-    except (nx.NetworkXNoPath, nx.NodeNotFound):
+    top = next((c for c in components if c.contribution > 0), None)
+    if top is None:
         return []
+    via = hub_node(top.hub.hub_id)
+    if not (graph.has_edge(arriving, via) and graph.has_edge(via, other)):
+        return []  # defensive: a contribution always comes from a hub adjacent to both
+    return [arriving, via, other]
 
 
 def _why(components: Sequence[HubContribution]) -> str:
