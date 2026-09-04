@@ -41,6 +41,7 @@ from arrival.contracts import Digest, Dossier, LLMClient
 from arrival.digest import make_digest
 from arrival.graph import match as match_present
 from arrival.taste import EXCLUSION_POLICY
+from arrival.web.graph_view import graph_view
 from arrival.web.presence import Presence
 from arrival.web.render import debug_view, digest_view, render
 from arrival.web.store import DossierLoadError, DossierStore
@@ -286,6 +287,24 @@ def _register_routes(app: FastAPI) -> None:
                 render("not_found.html", what=f"dossier {person_id}"), status_code=404
             )
         return HTMLResponse(render("debug.html", **debug_view(dossier)))
+
+    # ---------------------------------------------------------------- R17: the graph
+    @app.get("/graph")
+    async def graph_page() -> Response:
+        """R17, and DESIGN's route table's one optional row.
+
+        Host-facing, not an operator view: `/debug` is the only page permitted to show
+        withheld material, so everything fact-level here goes through
+        `graph_view.shared_hub_evidence`, which applies `taste.is_displayable`.
+
+        No presence argument and no query string. The graph is "present people and their
+        shared hubs" (R17), and presence is process state the app already holds, so this
+        route takes no input at all — which also means there is no way to ask it about
+        somebody who is not here.
+        """
+        store: DossierStore = app.state.store
+        presence: Presence = app.state.presence
+        return HTMLResponse(render("graph.html", **graph_view(store, presence.present())))
 
     # ---------------------------------------------------------------- the demo driver
     @app.get("/")
