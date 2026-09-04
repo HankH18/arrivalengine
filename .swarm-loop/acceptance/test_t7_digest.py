@@ -96,18 +96,30 @@ OTHER_HOOK_PHRASE = "worst error messages"
 # one the cap must cut under any defensible reading of "most recent professional activity".
 OLDEST_ACTIVITY_FACT_ID = "runa-okonkwo-f08"
 
-# The freshest displayable material in the dossier is a TIE, and the tie CANNOT be broken in
-# the corpus: f05 (recent_activity) and f11 (affiliation) are both extracted from RawDoc
-# 92b1d32390d8795f, and a fact's `provenance.published_at` is its document's publication
-# date for all 35 facts here (measured in CORPUS-PROOF check 7, section D). Handing one of
-# them a different date would put the fixture in contradiction with its own source
-# document, which is a worse defect than the ambiguity it would remove.
+# The newest displayable date in the dossier is shared by TWO facts, and the tie cannot be
+# broken in the corpus: f05 (recent_activity) and f11 (affiliation) are both extracted from
+# RawDoc 92b1d32390d8795f, and `provenance.published_at` is its document's publication date
+# for all 35 facts here (measured in CORPUS-PROOF check 7, section D). Re-dating one of them
+# would put the fixture in contradiction with its own source document.
 #
-# So the tie is GRADED as a tie. "Lately opens on the newest displayable material" is the
-# criterion; either member of the pair satisfies it. Pinning f05 alone would fail a correct
-# implementation that breaks the tie the other way -- e.g. one bullet per source document,
-# ties resolved by fact_id -- for a choice the corpus gives it no way to get right.
+# The tie is nonetheless NOT a grading ambiguity, which is worth stating because it looks
+# like one. With three slots to fill, f05 survives every reading of the candidate set that
+# the binding documents support:
+#   * narrowest (`recent_activity` only, 4 candidates): f05 is the newest of the four;
+#   * widest (TASKS T-7 acceptance 1 -- every `is_displayable` fact, `published_at` desc,
+#     13 candidates): f05 and f11 are the two newest, so BOTH land in a three-slot list
+#     however the tie is broken;
+#   * anything in between (e.g. recent_activity + affiliation): same, for the same reason.
+# The one shape that could show f11 without f05 is a Lately deduplicated by `doc_id`, and
+# nothing asks for that: R9/S6 dedupe the SOURCE list by doc_id, never the bullets.
+#
+# It is also pinned elsewhere in the frozen suite and must stay consistent with it:
+# `test_t8_web.py` DISPLAYED[1] is f05's text verbatim and is asserted to appear in the
+# rendered digest, and Lately is the only section f05 can reach (who_line is built from
+# `current_work`, non_obvious is f09, say_out_loud from a `hook`). Relaxing this assertion
+# to "either tied fact will do" would leave T-7 and T-8 grading the same digest differently.
 NEWEST_DISPLAYABLE_DATE = dt.date(2026, 2, 11)
+MOST_RECENT_ACTIVITY_FACT_ID = "runa-okonkwo-f05"
 TIED_NEWEST_FACT_IDS = {"runa-okonkwo-f05", "runa-okonkwo-f11"}
 
 # DESIGN Decision 3 smooths the denominator: idf = max(0, ln(N / (1 + n_people_on_hub))).
@@ -341,7 +353,8 @@ def test_lately_is_capped_at_three_and_ordered_most_recent_first(frozen_fixtures
     runa, matches = _four_matches(frozen_fixtures)
 
     # Corpus self-check, run BEFORE the digest so a fixture change is reported as a fixture
-    # change. It keeps the tie tolerance below exactly as wide as the ambiguity and no wider.
+    # change rather than as a digest bug. It pins the shape the f05 assertion below depends
+    # on: f05 carries the newest displayable date, and shares it with exactly one other fact.
     newest = max(_published(f) for f in runa.facts if _displayable(f))
     assert newest == NEWEST_DISPLAYABLE_DATE, (
         f"frozen corpus changed: the newest displayable fact is now dated {newest}"
@@ -354,14 +367,15 @@ def test_lately_is_capped_at_three_and_ordered_most_recent_first(frozen_fixtures
     digest = _digest(runa, matches, _LLMStub())
 
     assert len(digest.lately) <= 3
-    # The cap is a FLOOR here as well as a ceiling. Under every defensible reading of the
-    # candidate set the corpus offers at least four eligible facts -- four displayable
-    # `recent_activity` facts on the narrowest reading, thirteen displayable facts on the
-    # widest -- so three slots are all fillable, and a digest that showed one bullet would
-    # otherwise have scored this criterion.
+    # The cap is a FLOOR here as well as a ceiling. Every reading of the candidate set that
+    # the binding documents support leaves at least four eligible facts -- four displayable
+    # `recent_activity` facts on the narrowest, thirteen displayable facts on the widest --
+    # so all three slots are fillable, and a digest that showed one bullet would otherwise
+    # have scored this criterion. (No document defines a recency window for "lately";
+    # RESEARCH.md lists that as an open user-research question, so no window is graded.)
     assert len(digest.lately) == 3, (
-        f"Lately has {len(digest.lately)} bullets; the corpus offers at least four eligible "
-        "facts under every reading, so all three slots are fillable"
+        f"Lately has {len(digest.lately)} bullets; at least four facts are eligible under "
+        "every reading the binding documents support, so all three slots are fillable"
     )
     dates = [_published(f) for f in digest.lately]
     assert all(d is not None for d in dates), f"Lately must be datable to be ordered: {dates}"
@@ -375,12 +389,13 @@ def test_lately_is_capped_at_three_and_ordered_most_recent_first(frozen_fixtures
         "the oldest recent-activity fact survived a cap that had three slots and four "
         "more-recent candidates"
     )
-    # Order-insensitive about the tied pair, on purpose: see TIED_NEWEST_FACT_IDS. What is
-    # graded is that Lately opens on the freshest displayable material at all, not which of
-    # two facts sharing one document and one publication date the builder put first.
-    assert set(ids) & TIED_NEWEST_FACT_IDS, (
-        "Lately shows none of the newest displayable material "
-        f"({sorted(TIED_NEWEST_FACT_IDS)}, both dated {NEWEST_DISPLAYABLE_DATE}); got {ids}"
+    # f05 is required, not merely "one of the two facts dated 2026-02-11" -- see the note on
+    # NEWEST_DISPLAYABLE_DATE. It survives the cap under every reading of the candidate set
+    # the binding documents support, and test_t8_web.py independently requires its text on
+    # the rendered page, which Lately is the only route to.
+    assert MOST_RECENT_ACTIVITY_FACT_ID in ids, (
+        "the most recent professional activity is missing from Lately "
+        f"({MOST_RECENT_ACTIVITY_FACT_ID}, dated {NEWEST_DISPLAYABLE_DATE}); got {ids}"
     )
 
 

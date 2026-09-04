@@ -24,11 +24,16 @@ are reproduced verbatim below so a reader can re-run them against the committed 
 > because the old id was not `{type}:{slug(label)}` and so was a hub no correct extractor
 > could emit (see *Disagreements* section 1, now resolved). **Every one of the seven checks
 > was re-run against the edited corpus, all seven exit 0, and every "Verbatim output" block
-> below is the output of that re-run.** Compared with the previous revision of this file,
-> checks 2-6 reproduced their output byte for byte and check 1 changed on exactly three
-> lines, all three of them the hub-id string, with every number identical. Check 7 is new
-> and exists to make this class of defect impossible to reintroduce silently.
-> **No graded number moved.**
+> below is the output of that re-run.** Checks 2-6 reproduced their previous output byte
+> for byte. Check 1 was diffed against a run over a *reconstruction of the pre-fix corpus*
+> under the same interpreter: it changes on exactly three lines, all three the hub-id
+> string, with every number identical. Check 7 is new and exists to make this class of
+> defect impossible to reintroduce silently. **No graded number moved.**
+>
+> Interpreter matters for one line of check 1: it prints the version of whatever `networkx`
+> the running interpreter has (`networkx 2.6.3 cross-check:` here). Diff check 1's output
+> against another interpreter's and that line will differ without any corpus having
+> changed - so re-run the before/after pair under the SAME `python3`.
 
 ---
 
@@ -196,18 +201,19 @@ canonicalisation (`test_wikidata_sourced_hub_is_keyed_by_its_qid` asserts
 `company:quarrystone-labs` from the label "Quarrystone Labs"). As first committed, this
 corpus carried hub_id `topic:developer-tools-gtm` against label
 `"Developer-tools go-to-market"` in `runa-okonkwo.json` and `jem-arrowood.json` - two of
-the sixteen hub entries, and the only two that broke the invariant. Check 7 run against
-the corpus **before** the fix, as a negative control:
+the sixteen hub entries, and the only two that broke the invariant. Check 7 run against a
+reconstruction of the pre-fix corpus, verbatim and unedited, as a negative control (exit 1):
 
 ```
-hub_id                               label                          {type}:{slug(label)}                
-city:austin                          'Austin'                       city:austin                          OK
-company:lantern-freight              'Lantern Freight'              company:lantern-freight              OK
-investor:foundry-seed-2019           'Foundry Seed 2019'            investor:foundry-seed-2019           OK
-school:bellhaven-polytechnic         'Bellhaven Polytechnic'        school:bellhaven-polytechnic         OK
-topic:developer-tools-gtm            'Developer-tools go-to-market' topic:developer-tools-go-to-market   MISMATCH
-topic:remote-work                    'Remote work'                  topic:remote-work                    OK
-every hub_id is canonical                                      FAIL   16 hub entries, 6 distinct hubs, 2 mismatches
+A. HUB ID CANONICALISATION - DESIGN Hub.hub_id = '{type}:{slug(label)}'
+  hub_id                               label                          {type}:{slug(label)}                
+  city:austin                          'Austin'                       city:austin                          OK
+  company:lantern-freight              'Lantern Freight'              company:lantern-freight              OK
+  investor:foundry-seed-2019           'Foundry Seed 2019'            investor:foundry-seed-2019           OK
+  school:bellhaven-polytechnic         'Bellhaven Polytechnic'        school:bellhaven-polytechnic         OK
+  topic:developer-tools-gtm            'Developer-tools go-to-market' topic:developer-tools-go-to-market   MISMATCH
+  topic:remote-work                    'Remote work'                  topic:remote-work                    OK
+  every hub_id is canonical                                      FAIL   16 hub entries, 6 distinct hubs, 2 mismatches
 ```
 
 That made the corpus something a correct pipeline could never produce: given that label,
@@ -268,19 +274,36 @@ that would keep passing - for the wrong reason - if someone "corrected" them.
   Setting `excluded: true` would leave that test green while destroying what it measures.
   (`runa-okonkwo-f14` plays the same role for the confidence floor: kept, not excluded,
   blocked at 0.55 < 0.7. Check 6 asserts both, "for two DIFFERENT reasons".)
-* **`runa-okonkwo-f05` and `runa-okonkwo-f11` share the date 2026-02-11, and the tie cannot
-  be broken.** Both are extracted from RawDoc `92b1d32390d8795f`, and
+* **`runa-okonkwo-f05` and `runa-okonkwo-f11` share the date 2026-02-11, the tie cannot be
+  broken, and it is NOT a grading ambiguity - which is worth stating because it looks like
+  one.** Both facts are extracted from RawDoc `92b1d32390d8795f`, and
   `provenance.published_at` equals its RawDoc's `published_at` for all 35 facts in this
-  corpus (check 7, section D). Giving one of them a different date to disambiguate "the
-  newest displayable fact" would put the fixture in contradiction with its own source
-  document - a worse defect than the ambiguity it removes. The tie is therefore graded as a
-  tie: `test_t7_digest.py` requires Lately to contain **at least one of** the pair, not f05
-  specifically, because a correct builder that resolves the tie the other way (say, one
-  bullet per source document) has no way to know which the harness preferred. Note that
-  check 6's line "lately ordering is unambiguous" is scoped to the four `recent_activity`
-  facts; it is not a claim about the wider candidate set that TASKS T-7 acceptance 1
-  actually permits (`lately` sorted by `published_at` desc over `is_displayable` facts,
-  with no category restriction).
+  corpus (check 7, section D), so re-dating either one would put the fixture in
+  contradiction with its own source document. But with three Lately slots to fill, **f05
+  survives every reading of the candidate set the binding documents support**:
+
+  | reading | candidates | top 3 | f05 in? |
+  |---|---|---|---|
+  | narrowest: `recent_activity` only | f05, f06, f07, f08 | f05, f06, f07 | yes, as the newest |
+  | TASKS T-7 acc. 1: every `is_displayable` fact, `published_at` desc | 13 | f05 and f11 (both 2026-02-11) plus one of the four dated 2026-01-05 | yes - the tie puts BOTH in the first two slots |
+  | anything between (e.g. + `affiliation`) | 6 | f05, f11, f10 | yes, same reason |
+
+  The one shape that could show f11 without f05 is a Lately deduplicated by `doc_id`, and
+  nothing asks for that: R9/S6 dedupe the **source list** by `doc_id`, never the bullets.
+  The frozen suite also pins f05 in a second place - `test_t8_web.py` `DISPLAYED[1]` is
+  f05's `text` verbatim and is asserted to appear in the rendered digest, and Lately is the
+  only section f05 can reach (`who_line` comes from `current_work`, `non_obvious` is f09,
+  `say_out_loud` from a `hook`). So `test_t7_digest.py` pins f05 too, and the two modules
+  grade the same digest the same way. **An earlier revision of this file relaxed T-7 to
+  "either tied fact will do"; that was withdrawn** because it made T-7 and T-8 contradict
+  each other and, as a side effect, allowed a Lately containing no `recent_activity` fact at
+  all (`[f11, f16, f17]` would have scored). What survives from that attempt is the corpus
+  self-check in `test_lately_is_capped_at_three_and_ordered_most_recent_first`, which pins
+  the shape the f05 assertion depends on and fails loudly if the corpus stops matching it.
+
+  Note also that check 6's line "lately ordering is unambiguous" is scoped to the four
+  `recent_activity` facts; it is not a claim about the wider candidate set that TASKS T-7
+  acceptance 1 permits.
 
 ### 2. "confidence" in section 1b means `provenance.confidence`
 
@@ -1765,12 +1788,15 @@ CHECK 6 RESULT: 0 failures
 
 ## Check 7 - Canonical identifiers, and the ties the corpus cannot break (added)
 
-Added when the hub id was corrected. It pins four things the other six checks did not:
-every `hub_id` is `{type}:{slug(label)}` (or a `wd:` QID); every `person_id` is
-`slug(person.name)`; every `provenance.doc_id` resolves to a file in `docs/` and agrees
-with that RawDoc's `published_at` and `source_kind`; and - as a consequence of that last
-one - the newest-displayable date in runa's dossier is a genuine tie between two facts
-cut from the same document, which is why `test_t7_digest.py` grades it as a tie.
+Added when the hub id was corrected. Two of its checks are genuinely new: every `hub_id`
+is `{type}:{slug(label)}` (or a `wd:` QID) - the invariant the hub-id defect broke - and
+every `person_id` is `slug(person.name)`. It then re-states three things in one place so
+the identifier story can be read without cross-referencing: `doc_id` resolution (also
+check 3), `provenance.source_kind` agreeing with its RawDoc (also check 2), and
+`provenance.published_at` agreeing with its RawDoc (new here). That last one is what makes
+the newest-displayable date in runa's dossier a *structural* tie between two facts cut
+from the same document, rather than an accident that could be edited away - the fact
+`test_t7_digest.py` documents where it pins f05.
 Section F restates the smoothed IDF for both scoring hubs, spelled out, because the
 shorthand `ln(5/3)` has already been misread once as "three people on the hub".
 
@@ -2038,8 +2064,14 @@ fail on the defect it was written for, not merely to pass on the corpus as fixed
 
 ## Reproducing this
 
-The scripts hard-code the absolute fixture path, take no arguments, print their own
-evidence, and exit non-zero on any failure. Run them in any order:
+The scripts hard-code an absolute path to the repository root, take no arguments, print
+their own evidence, and exit non-zero on any failure. **Point that constant at the root of
+the tree you want to check** before running them - as committed it names the canonical
+repo path, so running them unedited from a worktree or a scratch copy measures the wrong
+corpus (check 7 will report `MISMATCH` and exit 1 if the tree it reaches has not had the
+hub-id fix). The `python3` used for the recorded outputs has `networkx 2.6.3` and `PyYAML`
+available; check 1's networkx cross-check line and check 5 both need them. Run in any
+order:
 
 ```bash
 python3 check1_hub_arithmetic.py
@@ -2051,7 +2083,7 @@ python3 check6_contract_and_1b.py
 python3 check7_canonical_ids.py
 ```
 
-All seven exited 0 against the files committed in this directory. Checks 1-6 were re-run
-after the hub-id correction described at the top of this file; checks 2-6 reproduced their
-committed output byte for byte, and check 1 differed only in the hub-id string on three
-lines, with every number identical.
+All seven exited 0 with their path constant pointed at the tree that contains **this**
+file. Checks 1-6 were re-run after the hub-id correction described at the top of this file;
+checks 2-6 reproduced their committed output byte for byte, and check 1 differed only in
+the hub-id string on three lines, with every number identical.
