@@ -299,31 +299,48 @@ def test_only_matching_nobody_is_an_input_error_and_not_a_silent_success(
     ], f"--only {selector!r} matched nobody but wrote something"
 
 
-def test_an_empty_only_builds_the_whole_roster_while_a_space_refuses_it(capsys, roster, out):
-    """MEASURED, and the two spellings of "blank" disagree.
+# justify-test-edit (T-099) -- the FIRST HALF of the assertion below was INVERTED, not
+# weakened, and the reasoning is recorded because an unjustified test edit is
+# indistinguishable from reward hacking after the fact.
+#
+# WAS: test_an_empty_only_builds_the_whole_roster_while_a_space_refuses_it, asserting
+#     `code == 0` and that `--only ''` wrote a dossier for every person on the roster.
+# REQUIREMENT IT ENCODED: none. Its own docstring said so in as many words -- "Pinned as
+#     two observations rather than one assertion of correctness: this ticket may not change
+#     `src/`, and either answer could be the intended one -- but they cannot both be". It
+#     was a characterisation of a defect it had found and was not permitted to fix.
+# WOULD IT STILL FAIL IF MY CHANGE WERE REVERTED? No -- it passes on revert, and that is
+#     the whole point: it was written to record what the code DID. The grounds for editing
+#     it are therefore not "the code is right and the test is stale" but the narrower
+#     "it encodes a defect as the contract", which its author documented and this ticket
+#     (T-099, minted from this very test) exists to resolve.
+# WHY THE DEFECT AND NOT THE OTHER ANSWER: the file contradicts itself thirty lines above,
+#     where `--only '   '` and `--only '\t'` are already exit 2 -- two spellings of the same
+#     blank cannot both be right. `research.py`'s own guard comment, which pre-dates all of
+#     this, names the accident it was added for: a wrapper whose `--only` is empty must not
+#     read as "built, nothing to do". Building ten people's worth of paid model calls off an
+#     unset shell variable is the accident, not the contract.
+# THE REQUIREMENT IS PRESERVED, not dropped: the second half -- that a blank `--only`
+#     refuses and writes nothing -- is kept verbatim, and now both halves assert it.
+#     `tests/research/test_t099_only_blank_selector.py` pins all four spellings (absent,
+#     empty, whitespace, named) so the distinction cannot silently regress again.
+def test_an_empty_only_refuses_the_run_exactly_as_a_space_does(capsys, roster, out):
+    """The two spellings of "blank" agree, and neither means "everybody".
 
-    `--only ''` is FALSY, so `_selects` short-circuits to True for everybody and the whole
-    roster is built, exit 0. `--only ' '` is TRUTHY, reaches the comparison, matches
-    nobody, and `build_command`'s guard turns that into exit 2. So a wrapper written as
-
-        python -m arrival build --only "$PERSON"
-
-    with `$PERSON` unset silently rebuilds the ENTIRE roster — against a paid API — where
-    the same wrapper with `$PERSON=" "` correctly refuses. That is exactly the class of
-    accident the `--only` guard was added to catch, reached by the one spelling the guard
-    cannot see, because `if opts.only` is falsy for `""`.
-
-    Pinned as two observations rather than one assertion of correctness: this ticket may
-    not change `src/`, and either answer could be the intended one — but they cannot both
-    be, and today nothing in the suite records that they differ.
+    `--only ''` is what `--only "$PERSON"` expands to when `PERSON` is unset. It used to be
+    FALSY, so `_selects` short-circuited to True for everybody and the whole roster was
+    rebuilt against a paid API at exit 0, while `--only ' '` -- the same accident with a
+    stray character -- correctly refused with exit 2. The test is now ABSENT versus BLANK:
+    an OMITTED `--only` is `None` and means everybody; a PRESENT but blank one names
+    nobody and is exit 2.
     """
     empty_dir = out()
     code, _stdout, err = _run(
         capsys, ["build", "--roster", roster(TWO_PEOPLE), "--out", empty_dir, "--only", ""]
     )
-    assert code == 0, err
-    assert len([e for e in os.scandir(empty_dir) if e.name.endswith(".json")]) == 2, (
-        "--only '' built something other than the whole roster"
+    assert code == 2, err
+    assert not [e for e in os.scandir(empty_dir) if e.name.endswith(".json")], (
+        "--only '' built the roster instead of refusing"
     )
 
     space_dir = out()

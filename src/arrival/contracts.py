@@ -77,6 +77,11 @@ Probability = Annotated[float, Field(ge=0.0, le=1.0)]
 #: would admit `"   "`, which is blank everywhere it is displayed or slugged.
 NonBlank = Annotated[str, Field(min_length=1, pattern=r"\S")]
 
+#: A count of things to spend. Zero is legal — "ask for nothing" is a real, if useless,
+#: request, and `tests/research/test_t6_budgets.py` builds `Budget(max_llm_calls=0)` — so
+#: the bound is `ge=0` and never `ge=1`. Negatives are the nonsense.
+Count = Annotated[int, Field(ge=0)]
+
 __all__ = [
     "Budget",
     "BuildReport",
@@ -382,9 +387,30 @@ class Digest(BaseModel):
 
 
 class Budget(BaseModel):
-    docs_per_connector: int = 8
-    max_docs_total: int = 40
-    max_llm_calls: int = 80
+    # T-101. `Budget` is the one model here that is neither PERSISTED nor DERIVED PER
+    # REQUEST, so test 2 above needs restating for it rather than applying as written: it
+    # is an ARGUMENT OBJECT, built exactly once at the process boundary out of what an
+    # operator typed. The hazard test 2 exists to prevent — "a constraint on a derived
+    # model turns a load-time gate into a mid-request crash" — cannot fire, because there
+    # is no request path that constructs one: `research.py` builds a `Budget` at exactly
+    # one place from CLI flags (`build_command`, line ~1068) and otherwise calls the
+    # no-argument `Budget()`, which cannot fail. `web/app.py` never touches it. So this is
+    # a load-time gate on the only load there is, and it lands inside the `try` that
+    # already prints "arrival: bad budget: ..." and returns exit 2 — a handler that, until
+    # this constraint existed, was UNREACHABLE BY ANY INPUT a user could type.
+    #
+    # Test 3 is what makes it worth having. A negative budget corrupted quietly rather
+    # than degrading loudly: `_fan_out` clamps with `max(0, ...)` and `_BudgetedClient`
+    # with `max(0, int(max_calls))`, so `--max-docs -1` silently BECAME zero and the CLI
+    # reported a successful build of empty dossiers, exit 0. Those clamps are themselves
+    # the evidence that the code considers a negative nonsense and had nowhere to say so.
+    #
+    # Zero stays legal; see `Count`. Field names, types, order, requiredness and defaults
+    # are untouched — the constraint rides in `Annotated`, so `FieldInfo.annotation` is
+    # still `int` and `tests/test_t0_contract_fields.py`'s table still grades what it did.
+    docs_per_connector: Count = 8
+    max_docs_total: Count = 40
+    max_llm_calls: Count = 80
 
 
 class BuildReport(BaseModel):
