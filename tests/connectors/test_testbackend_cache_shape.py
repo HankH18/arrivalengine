@@ -217,42 +217,66 @@ def test_a_future_expiry_written_naive_is_read_as_utc_rather_than_raising(tmp_pa
 # ---------------------------------------------------------------------------
 
 
+# justify-test-edit (T-100) -- the two assertions below were INVERTED, not weakened, and
+# the reasoning is recorded because an unjustified test edit is indistinguishable from
+# reward hacking after the fact.
+#
+# WAS: test_a_malformed_fetched_at_is_replaced_by_now_and_never_raises, asserting
+#     `hit is not None` and `before <= hit.fetched_at <= datetime.now(UTC)`; and
+#     test_a_missing_fetched_at_key_is_also_replaced_by_now, asserting `hit is not None`.
+# REQUIREMENT THEY ENCODED: only the "never raises" half. The substitution half was
+#     explicitly NOT a correctness claim -- the first docstring said "Whether inventing is
+#     the right ruling is a product question; that it happens at all is invisible today,
+#     and this is where it becomes visible." These characterised a defect the ticket that
+#     found it was not permitted to fix.
+# WOULD THEY STILL FAIL IF MY CHANGE WERE REVERTED? No -- they pass on revert, by
+#     construction, because they were written to record what the code DID. The ground for
+#     editing is "it encodes a defect as the contract", raised by the test's own author.
+# WHY THE MISS AND NOT THE INVENTION: `read_record` already rules twice on this exact
+#     question, for `expires_at` and for `status`, and both times the answer is a MISS --
+#     "a file we cannot read in full is a file we should not serve, and a miss costs one
+#     re-fetch while a guess is wrong for the entry's whole life". `status` is, like
+#     `fetched_at`, purely descriptive and gates nothing, so "descriptive fields get a
+#     default" was never the convention. And the invented value is not inert: it reaches
+#     `RawDoc.fetched_at` (required, no default) and renders on the digest as the retrieval
+#     date, so it is a fabricated citation -- one that moved on every read, since it was
+#     `now()`. The cost was measured rather than assumed: all 150 committed cache-shaped
+#     documents under `data/docs/`, `tests/fixtures/` and `.swarm-loop/acceptance/fixtures/`
+#     carry a readable ISO stamp, and `write_record` cannot emit a record without one.
+# THE REQUIREMENT IS PRESERVED, not dropped: "never raises" is kept and asserted below,
+#     and `tests/connectors/test_t100_cache_fetched_at.py` pins the full ruling plus the
+#     controls that keep "unreadable is a miss" from degenerating into "everything is a
+#     miss" (a good stamp round-trips, a naive stamp is still read as UTC, an envelope-free
+#     recorded fixture still reads, and a bad stamp heals on the next write).
 @pytest.mark.parametrize(
     "value",
     ["not-a-date", "", "2026-13-45T99:99:99", 17, None, [], {"at": "then"}, True],
 )
-def test_a_malformed_fetched_at_is_replaced_by_now_and_never_raises(tmp_path, value):
-    """The asymmetry, pinned: `_parse_expiry` returns `None` for an unreadable timestamp
-    and `read_record` turns that into a MISS, while `_parse_fetched_at` substitutes
-    `datetime.now(UTC)` and the entry is served. So a cached document can report a
-    `fetched_at` in the present that moves on every read, with `from_cache=True` beside it.
-
-    Whether inventing is the right ruling is a product question; that it happens at all is
-    invisible today, and this is where it becomes visible.
+def test_a_malformed_fetched_at_is_a_miss_and_never_raises(tmp_path, value):
+    """The asymmetry, RESOLVED: `_parse_expiry` returns `None` for an unreadable timestamp
+    and `read_record` turns that into a MISS -- and `_parse_fetched_at` now does the same,
+    rather than substituting `datetime.now(UTC)` and serving the entry with a fabricated
+    retrieval date beside `from_cache=True`.
     """
     root = tmp_path / "cache"
-    before = datetime.now(UTC)
     _write_raw(root, {
         "url": URL, "text": "hello", "fetched_at": value,
         "http": {"status": 200, "content_type": "text/html", "body": "<p>hello</p>"},
     })
     hit = read_record(root, URL)
-    assert hit is not None, f"a bad fetched_at turned a good entry into a miss: {value!r}"
-    assert hit.from_cache is True
-    assert before <= hit.fetched_at <= datetime.now(UTC), (
-        f"fetched_at {hit.fetched_at} is not the substituted 'now'"
-    )
+    assert hit is None, f"a bad fetched_at {value!r} was served as {hit}"
 
 
-def test_a_missing_fetched_at_key_is_also_replaced_by_now(tmp_path):
+def test_a_missing_fetched_at_key_is_also_a_miss(tmp_path):
+    """`RawDoc.fetched_at` is required, so a payload without one is not a `RawDoc` dump --
+    and `HttpRecord.fetched_at` is a non-optional `datetime`, so tolerating the absence
+    would mean inventing a moment, which is the thing being stopped."""
     root = tmp_path / "cache"
     _write_raw(root, {
         "url": URL, "text": "hello",
         "http": {"status": 200, "content_type": "text/html", "body": "<p>hello</p>"},
     })
-    hit = read_record(root, URL)
-    assert hit is not None
-    assert hit.fetched_at.tzinfo is not None
+    assert read_record(root, URL) is None
 
 
 def test_a_naive_fetched_at_is_read_as_utc(tmp_path):
