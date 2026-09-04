@@ -174,15 +174,27 @@ class BaseConnector:
     # -- the sealed public contract ----------------------------------------------------
 
     async def search(self, person: PersonRef, budget: int) -> list[RawDoc]:
-        """Up to `budget` documents about `person`. Never raises (DESIGN Decision 8)."""
-        if budget <= 0:
+        """Up to `budget` documents about `person`. Never raises (DESIGN Decision 8).
+
+        The guard covers the budget check and `_finalise` as well as `_search`. Both used
+        to sit OUTSIDE it, so `search(person, None)` raised `TypeError` and a subclass
+        returning the wrong type raised `AttributeError` from `_finalise` -- past the
+        wrapper whose whole job is that nothing gets past it. "Never raises" has to mean
+        the method, not just the part of it a subclass wrote.
+        """
+        try:
+            limit = int(budget)
+        except (TypeError, ValueError):
+            log.warning("%s connector got a non-numeric budget %r", self.kind, budget)
+            return []
+        if limit <= 0:
             return []
         try:
-            docs = await self._search(person, budget)
+            docs = await self._search(person, limit)
+            return self._finalise(docs, limit)
         except Exception as exc:  # noqa: BLE001 - the whole point: a dead source is []
             log.warning("%s connector failed for %s: %s", self.kind, person.person_id, exc)
             return []
-        return self._finalise(docs, budget)
 
     async def _search(self, person: PersonRef, budget: int) -> list[RawDoc]:
         raise NotImplementedError  # pragma: no cover - abstract
@@ -194,7 +206,9 @@ class BaseConnector:
         seen: set[str] = set()
         kept: list[RawDoc] = []
         for doc in docs or []:
-            if doc is None or doc.doc_id in seen:
+            # `isinstance`, not `is not None`: a subclass bug that yields the wrong type
+            # should cost that document, not the nine good ones beside it.
+            if not isinstance(doc, RawDoc) or doc.doc_id in seen:
                 continue
             seen.add(doc.doc_id)
             kept.append(doc)
