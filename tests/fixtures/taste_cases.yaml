@@ -1176,3 +1176,12 @@ cases:
     rule_layer: deterministic
     provenance: same_author_as_filter
     rationale: "Reads like axis-keep-court-records-product and is its opposite. There the records belong to a product's users; here the possessive makes them the member's, and a records search by a reporter is the disclosure principle's exclude side."
+
+  - id: axis-guard-charged-with-an-offence
+    text: "They were charged with wire fraud in a 2016 filing that named them personally."
+    category: legal
+    expect: exclude
+    reason: legal
+    rule_layer: deterministic
+    provenance: same_author_as_filter
+    rationale: "The other half of axis-keep-charged-with-rebuilding, and the reason that one is safe to keep. 'Charged with' rules only when its object is an OFFENCE; without this case, deleting the offence reading outright broke NOTHING in either corpus, measured. R11 names criminal records and this is one."
