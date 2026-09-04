@@ -29,13 +29,26 @@
     </td>
     <td>{% if row.present %}in the building{% else %}<span class="absent">out</span>{% endif %}</td>
     <td>
+      {#
+        WCAG 2.1 SC 4.1.2 (Name, Role, Value). Without the `aria-label` these twenty
+        controls carry two accessible names between them -- "Arrive" ten times and "Leave"
+        ten times -- because the only thing distinguishing one row's button from the next
+        is the hidden `person_id`, which assistive technology never announces. A screen
+        reader user tabbing the roster then hears "Arrive, button. Leave, button." with no
+        way to tell whose row they are on, on the page that IS the demo.
+
+        The label goes on the button rather than on the form: the button is the control
+        that gets focus and gets announced. `aria-label` overrides the visible text for the
+        accessible name, and "Arrive Harlow Vane" still STARTS with the visible word, which
+        is what SC 2.5.3 (Label in Name) asks of a voice-control user saying "click Arrive".
+      #}
       <form method="post" action="/arrive">
         <input type="hidden" name="person_id" value="{{ row.person.person_id }}">
-        <button type="submit">Arrive</button>
+        <button type="submit" aria-label="Arrive {{ row.person.name }}">Arrive</button>
       </form>
       <form method="post" action="/leave">
         <input type="hidden" name="person_id" value="{{ row.person.person_id }}">
-        <button type="submit">Leave</button>
+        <button type="submit" aria-label="Leave {{ row.person.name }}">Leave</button>
       </form>
     </td>
   </tr>

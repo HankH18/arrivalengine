@@ -706,6 +706,25 @@ def graph_view(store: DossierStore, present_ids: Sequence[str]) -> dict[str, Any
     }
 
 
+def _count(n: int, singular: str, plural: str | None = None) -> str:
+    """`1 shared hub`, `2 shared hubs`, `1 person`, `3 people` — a count and a noun agreeing.
+
+    Every count `_alt_text` speaks goes through this. The templates already do it inline
+    (`graph.html`: `shared hub{{ '' if shared_hubs | length == 1 else 's' }}`;
+    `corpus.html`: `hub{{ '' if person.n_hubs == 1 else 's' }}`), and the text alternative
+    describes the SAME picture as the visible caption — so a hardcoded plural here does not
+    merely read badly, it makes the screen-reader text disagree with the text on screen.
+    That is what happened: with one shared hub the caption read "1 shared hub" and the
+    `aria-label` fifteen lines away read "1 shared hubs".
+
+    The `people` counts were correct only by accident of the state machine above — `empty`
+    and `alone` intercept 0 and 1, so `len(roster)` was never 1 here. Routing them through
+    this too means the sentence stays grammatical if that ever stops being true, rather
+    than depending on a caller two functions away to keep it so.
+    """
+    return f"{n} {singular if n == 1 else (plural or singular + 's')}"
+
+
 def _alt_text(
     state: str, roster: Sequence[dict[str, Any]], shared: Sequence[dict[str, Any]]
 ) -> tuple[str, str]:
@@ -726,7 +745,8 @@ def _alt_text(
         )
     if state == "unconnected":
         return (
-            f"An interest graph of {len(roster)} people with no shared hubs.",
+            f"An interest graph of {_count(len(roster), 'person', 'people')} "
+            "with no shared hubs.",
             f"In the building: {names}. Nothing on the record connects any two of them.",
         )
     hubs = _sentence_list(
@@ -738,6 +758,7 @@ def _alt_text(
         ]
     )
     return (
-        f"An interest graph of {len(roster)} people joined by {len(shared)} shared hubs.",
+        f"An interest graph of {_count(len(roster), 'person', 'people')} "
+        f"joined by {_count(len(shared), 'shared hub')}.",
         f"In the building: {names}. Shared: {hubs}.",
     )

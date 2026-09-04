@@ -34,7 +34,13 @@ from typing import Any
 from urllib.parse import parse_qs
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (
+    HTMLResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+    Response,
+)
 
 from arrival.config import get_settings
 from arrival.contracts import Digest, Dossier, LLMClient
@@ -56,8 +62,37 @@ __all__ = ["DossierLoadError", "app", "create_app"]
 DIGEST_HISTORY = 200
 
 
-def _not_on_roster() -> JSONResponse:
-    """R4 / DESIGN's route table: `404 {"error": "not on roster"}`."""
+#: How much of the rejected token to echo back on the 404 page. The body is caller-supplied
+#: and unbounded; a page is not the place to render a megabyte of it.
+_ECHO_LIMIT = 80
+
+
+def _not_on_roster(request: Request, token: str = "") -> Response:
+    """R4 / DESIGN's route table: `404 {"error": "not on roster"}` — as JSON, or as a page.
+
+    The BODY is the route table's, unchanged, for every caller that speaks JSON: an
+    integration posting a webhook gets `{"error": "not on roster"}` and a 404, and that is
+    the contract R4 pins.
+
+    What changes here is the REPRESENTATION for the one caller that is a person. `GET /` is
+    a plain-HTML demo driver (TASKS T-8 acceptance 6) and a browser that submits one of its
+    forms — or types a name into a mistyped URL-encoded post — was, alone among every form
+    path in this app, dropped onto a bare `{"error":"not on roster"}` JSON blob with the
+    styling, the nav and the way back all gone. Every other form path 303s to a page. The
+    machinery to tell the two callers apart already existed and this path simply did not use
+    it: `_is_form_post` says the request came from a browser form, `_wants_json` lets an
+    explicit `Accept: application/json` opt back out.
+
+    Still a 404, and deliberately: the status is about the person not being on the roster,
+    which is true whoever asked. Only the body's media type follows the caller.
+    """
+    if _is_form_post(request) and not _wants_json(request):
+        shown = token.strip()[:_ECHO_LIMIT]
+        # Jinja autoescapes, so echoing the caller's token back is safe; it is also the
+        # only thing that makes the page useful, since a typo you cannot see is a typo you
+        # cannot fix.
+        what = f'roster member called "{shown}"' if shown else "roster member by that name"
+        return HTMLResponse(render("not_found.html", what=what), status_code=404)
     return JSONResponse(status_code=404, content={"error": "not on roster"})
 
 
@@ -208,11 +243,11 @@ def _register_routes(app: FastAPI) -> None:
         if person_id is None:
             # R4. Refused BEFORE any matching or LLM work, so "no live research" is a
             # property of the control flow rather than of a check somewhere downstream.
-            return _not_on_roster()
+            return _not_on_roster(request, token)
 
         dossier = store.get(person_id)
         if dossier is None:  # pragma: no cover - resolve() only returns ids it holds
-            return _not_on_roster()
+            return _not_on_roster(request, token)
 
         # R3: presence first, then match. `graph.match` never returns the arriving person in
         # their own result, so adding them before matching is safe and is what makes the
@@ -243,7 +278,7 @@ def _register_routes(app: FastAPI) -> None:
 
         person_id = store.resolve(token)
         if person_id is None:
-            return _not_on_roster()
+            return _not_on_roster(request, token)
 
         # Idempotent: leaving twice is not an error. R5 asks that they stop being proposed,
         # and they already have.
@@ -324,6 +359,24 @@ def _register_routes(app: FastAPI) -> None:
         """
         store: DossierStore = app.state.store
         return HTMLResponse(render("corpus.html", **corpus_view(store)))
+
+    # ---------------------------------------------------------------- crawler policy
+    @app.get("/robots.txt", include_in_schema=False)
+    async def robots() -> Response:
+        """`Disallow: /`, because a missing robots.txt means "crawl everything".
+
+        This app has no auth by design (DESIGN: "no auth, one instance") and every
+        host-facing page renders researched material about NAMED REAL PEOPLE — the roster,
+        the digests, `/corpus`. R11/R12's taste gate decides what a HOST may read; it says
+        nothing about what a search engine may index and keep. A 404 here, which is what
+        this route answered before, is not neutral: to a crawler it is an affirmative "no
+        restrictions", and the demo URL is public.
+
+        Deliberately a whole-site disallow rather than a per-path one. Nothing on this
+        deploy benefits from being indexed, so the narrow rule would only be a list to keep
+        in sync with the route table. Reverting is deleting this handler.
+        """
+        return PlainTextResponse("User-agent: *\nDisallow: /\n")
 
     # ---------------------------------------------------------------- the demo driver
     @app.get("/")
