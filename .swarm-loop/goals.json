@@ -1,5 +1,110 @@
 {
   "frozen": false,
   "frozen_at": null,
-  "metrics": []
+  "metrics": [
+    {
+      "id": "acceptance_pass_rate",
+      "name": "Frozen acceptance pass rate (%)",
+      "kind": "global",
+      "command": "uv run python .swarm-loop/acceptance/run.py --pass-rate",
+      "target": 100,
+      "direction": "maximize"
+    },
+    {
+      "id": "acceptance_collected",
+      "name": "Frozen acceptance tests collected (count)",
+      "kind": "global",
+      "command": "uv run python .swarm-loop/acceptance/run.py --collected-count",
+      "target": 120,
+      "direction": "maximize"
+    },
+    {
+      "id": "build_succeeds",
+      "name": "Package imports and the CLI honours its contract (0/1)",
+      "kind": "global",
+      "command": "uv run python .swarm-loop/acceptance/run.py --build",
+      "target": 1,
+      "direction": "maximize"
+    },
+    {
+      "id": "lint_errors",
+      "name": "Ruff diagnostics under the frozen config (count)",
+      "kind": "global",
+      "command": "uv run python .swarm-loop/acceptance/run.py --lint",
+      "target": 0,
+      "direction": "minimize"
+    },
+    {
+      "id": "criteria_t1",
+      "name": "T-1: Connectors return cited RawDocs from recorded fixtures",
+      "kind": "feature",
+      "feature_id": "T-1",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-1",
+      "target": 19,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t2",
+      "name": "T-2: Entity resolution accepts the target and rejects namesakes",
+      "kind": "feature",
+      "feature_id": "T-2",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-2",
+      "target": 13,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t3",
+      "name": "T-3: Extractor emits schema-valid facts and hubs",
+      "kind": "feature",
+      "feature_id": "T-3",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-3",
+      "target": 10,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t4",
+      "name": "T-4: Taste filter excludes what R11 forbids and keeps what matters",
+      "kind": "feature",
+      "feature_id": "T-4",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-4",
+      "target": 14,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t5",
+      "name": "T-5: Matching ranks rare shared hubs above generic ones",
+      "kind": "feature",
+      "feature_id": "T-5",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-5",
+      "target": 8,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t6",
+      "name": "T-6: Pipeline builds dossiers end to end and degrades on failure",
+      "kind": "feature",
+      "feature_id": "T-6",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-6",
+      "target": 10,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t7",
+      "name": "T-7: Digest renders Meet and Lately with reasons",
+      "kind": "feature",
+      "feature_id": "T-7",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-7",
+      "target": 10,
+      "direction": "maximize"
+    },
+    {
+      "id": "criteria_t8",
+      "name": "T-8: Web app serves arrive, debug and the demo driver",
+      "kind": "feature",
+      "feature_id": "T-8",
+      "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-8",
+      "target": 14,
+      "direction": "maximize"
+    }
+  ]
 }

@@ -94,3 +94,26 @@ anything under the project's `tests/` is forbidden, because it looks helpful.
   3.12.6 site.addpackage silently skips hidden .pth files, so a fresh sync leaves a correct
   editable install completely inert: uv sync exited 0, the .pth held the right path, and
   'import arrival' still raised ModuleNotFoundError with no diagnostic from uv, site or pip.
+
+- (cycle 0) **Verify a metric's hermeticity by RUNNING it against a hostile config and reading
+  which configfile it reports, never by reading the flags it passes.** — A frozen pytest
+  runner documented itself as sealed by -o addopts= plus --confcutdir plus --rootdir, and
+  reported 'configfile: ../../pyproject.toml' when actually run: --rootdir does not stop
+  configfile discovery. A two-line worker-writable pyproject took the suite from 93 collected
+  to 12 and the pass rate from 15.05 to 100.0 with zero frozen bytes moved, so the integrity
+  check stayed green throughout. Only -c <frozen ini> overrides discovery.
+
+- (cycle 0) **When a gate reports OK, confirm it parsed something before believing it; a count
+  of zero inputs and a count of zero violations print the same green.** — A read-edge closure
+  gate exited 0 reporting '(none)' inbound and outbound because its AST extractor recognised
+  only @pytest.mark.ticket(id) while the suite used pytestmark = pytest.mark.tN. The intake
+  had recorded that green as proof the closure was 'mechanical rather than advisory'. The same
+  mismatch would have made freeze refuse all ten tickets with two remedies in its error text
+  that were both wrong for the case.
+
+- (cycle 0) **Write every non-trivial git commit message to a file and use 'git commit -F
+  <file>'; never pass one as a double-quoted shell argument.** — Backticks inside a
+  double-quoted -m argument are command substitution, so a merge message documenting which
+  field names a stub accepted had every one of those names silently executed as a command and
+  stripped, leaving sentences like 'the stub knew only .' The commit succeeded and the loss
+  was only visible on re-reading the stored message.
