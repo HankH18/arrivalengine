@@ -233,6 +233,20 @@ def _expiry_for(*, durable: bool) -> datetime | None:
     return datetime.now(UTC) + timedelta(seconds=max(0.0, float(ttl)))
 
 
+def _reason(exc: BaseException) -> str:
+    """`"ReadTimeout"`, or `"ConnectError: nodename nor servname provided"` (T-082).
+
+    This module degrades rather than raises (DESIGN Decision 8), so the WARNING it writes
+    is the entire account of why a source came back empty — and every `httpx` timeout
+    stringifies to `""`, so interpolating the exception alone produced
+    `fetch failed for <url>: ` and stopped. The type is always named; the message is joined
+    only when there is one, because `"ReadTimeout: "` is the same empty half one colon
+    further right.
+    """
+    message = str(exc).strip()
+    return f"{type(exc).__name__}: {message}" if message else type(exc).__name__
+
+
 async def fetch_record(
     url: str,
     *,
@@ -321,7 +335,15 @@ async def fetch_record(
                 # Releases the connection whether or not the body was read to completion.
                 await response.aclose()
     except Exception as exc:  # noqa: BLE001 - DESIGN Decision 8: degrade, never raise
-        log.warning("fetch failed for %s: %s", full_url, exc)
+        # The TYPE, not only the message (T-082). Every httpx timeout carries an empty
+        # `str()` — `str(httpx.ReadTimeout())` is `""` — so the live log read
+        # `fetch failed for https://web.archive.org/cdx/search/cdx?…: ` with nothing after
+        # the colon, and a degraded build's most common failure was the one an operator
+        # could learn least from. `ConnectError` and friends DO carry a message, so the
+        # type is printed beside it rather than instead of it — and the message is joined
+        # only when there is one, or the repair just moves the empty half one colon to the
+        # right (`…: ReadTimeout: `), which is the same line with more punctuation.
+        log.warning("fetch failed for %s: %s", full_url, _reason(exc))
         return None
 
     if content is None:  # over the size cap; `_read_capped` has logged why
