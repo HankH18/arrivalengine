@@ -58,10 +58,78 @@ _MISSING = object()
 
 # Non-required fields worth filling anyway: an extractor or resolver schema may declare
 # them with a default, and leaving them empty would starve the stage under test.
+# Membership is tested on the CANONICAL name (see `_FIELD_ALIASES`), so a schema that
+# spells the verdict `verdict` is filled exactly like one that spells it `match`.
 _ALWAYS_FILL = {
     "doc_id", "url", "quote", "evidence", "disambiguator", "text", "confidence",
     "match", "label", "hub_id", "category", "name", "facts", "hubs", "verdicts",
 }
+
+# ---------------------------------------------------------------------------
+# THESE TWO FILES MUST AGREE.
+#
+# This table is mirrored VERBATIM from `_VERDICT_ALIASES` in
+# `.swarm-loop/acceptance/test_t2_resolver.py` (~line 60), which is the canonical
+# copy; change one and you must change the other in the same edit.
+#
+# Why it exists here: T-2's and T-6's doubles both have to answer a response schema
+# that neither of them can see, because the schema the resolver hands to
+# `llm.structured(schema=...)` is INTERNAL to `arrival.resolve` and is pinned by
+# nothing. `contracts.Verdict.match` is the resolver's OUTPUT contract, not the name
+# the model is asked for. T-2 therefore accepts five spellings of the verdict field
+# (`match`, `verdict`, `decision`, `result`, `is_match`); this module used to accept
+# exactly one, `match`, and the disagreement was not cosmetic:
+# `LLMStub(..., overrides={"match": "no"})` silently stopped scripting anything the
+# moment the field was called `verdict`, the Literal branch of `_synth_value` fell
+# back to `args[0]`, and a run that the test believes is scripted NEGATIVE resolved
+# POSITIVE. A correct implementation then failed a frozen assertion forever, purely
+# for naming an internal field a legal synonym. The permissive form is the right one:
+# a harness-internal stub has no business pinning a schema field name the design never
+# pinned.
+#
+# schema field name -> canonical key this stub scripts and looks up
+# ---------------------------------------------------------------------------
+_FIELD_ALIASES = {
+    "verdict": "match",
+    "decision": "match",
+    "result": "match",
+    "is_match": "match",
+    "quote": "evidence",
+    "supporting_quote": "evidence",
+    "evidence_quote": "evidence",
+    "reason": "evidence",
+    "detail": "disambiguator",
+    "attribute": "disambiguator",
+    "disambiguating_detail": "disambiguator",
+    "document_id": "doc_id",
+    "id": "doc_id",
+    "score": "confidence",
+}
+
+# String spellings of a positive verdict, for a schema that models the verdict as a
+# `bool` rather than a `Literal`. Anything else — "no", "unsure", "unclear" — is False.
+_TRUEISH = {"yes", "true", "y", "1", "match", "same"}
+
+
+def _canonical(field_name):
+    """The canonical key a schema field name stands for: 'verdict' -> 'match'."""
+    return _FIELD_ALIASES.get(str(field_name).lower(), str(field_name).lower())
+
+
+def _override(field_name, overrides):
+    """A scripted value for this field, by its own name or by its canonical name."""
+    if field_name in overrides:
+        return overrides[field_name]
+    canonical = _canonical(field_name)
+    if canonical in overrides:
+        return overrides[canonical]
+    return _MISSING
+
+
+def _as_bool(value):
+    if isinstance(value, str):
+        return value.strip().lower() in _TRUEISH
+    return bool(value)
 
 
 # ---------------------------------------------------------------------------
@@ -206,11 +274,13 @@ def _is_model_list(ann):
 
 def _name_default(field_name):
     n = field_name.lower()
-    if "confidence" in n or "score" in n:
+    canonical = _canonical(n)
+    if canonical == "confidence" or "confidence" in n or "score" in n:
         return 0.9
     if "recency" in n:
         return 1.0
-    if n == "match" or n.endswith("_match"):
+    # Every spelling of the verdict field `test_t2_resolver.py` accepts, not just `match`.
+    if canonical == "match" or n.endswith("_match"):
         return "yes"
     if "category" in n:
         return "current_work"
@@ -229,12 +299,15 @@ def _ctx_default(field_name, ctx):
     if not ctx:
         return _MISSING
     n = field_name.lower()
-    if "doc_id" in n:
+    canonical = _canonical(n)
+    if canonical == "doc_id" or "doc_id" in n:
         return ctx["doc_id"]
     if "url" in n:
         return ctx["url"]
-    if "disambiguator" in n:
+    if canonical == "disambiguator" or "disambiguator" in n:
         return ctx["disambiguator"]
+    if canonical == "evidence":
+        return ctx["evidence"]
     if any(k in n for k in ("quote", "evidence", "span", "snippet", "supporting", "excerpt")):
         return ctx["evidence"]
     if n in ("text", "fact", "fact_text", "statement", "sentence", "claim", "summary"):
@@ -245,8 +318,11 @@ def _ctx_default(field_name, ctx):
 
 
 def _scalar(field_name, ctx, overrides):
-    if field_name in overrides:
-        return overrides[field_name]
+    # Overrides win, and they are looked up by the field's own name AND by its canonical
+    # name, so `overrides={"match": "no"}` scripts a schema field called `verdict` too.
+    scripted = _override(field_name, overrides)
+    if scripted is not _MISSING:
+        return scripted
     value = _ctx_default(field_name, ctx)
     if value is not _MISSING:
         return value
@@ -262,8 +338,9 @@ def _synth_value(ann, field_name, ctx, overrides, doc_ctxs):
     if origin is typing.Literal:
         want = _scalar(field_name, ctx, overrides)
         return want if want in args else args[0]
-    if field_name in overrides:
-        return overrides[field_name]
+    scripted = _override(field_name, overrides)
+    if scripted is not _MISSING:
+        return scripted
     if _is_union(origin):
         non_none = [a for a in args if a is not type(None)]  # noqa: E721
         if not non_none:
@@ -284,7 +361,14 @@ def _synth_value(ann, field_name, ctx, overrides, doc_ctxs):
         if issubclass(ann, BaseModel):
             return _synth(ann, ctx, overrides, doc_ctxs)
         if issubclass(ann, bool):
-            return False
+            # A schema that models the verdict as `is_match: bool` rather than a
+            # Literal must still obey `overrides`; returning a flat False there made
+            # the POSITIVE control unresolvable and the negative script unfalsifiable.
+            # Every other bool keeps the old, deliberately dull default.
+            value = _override(field_name, overrides)
+            if value is _MISSING and _canonical(field_name) == "match":
+                value = _name_default(field_name)
+            return False if value is _MISSING else _as_bool(value)
         if issubclass(ann, str):
             value = _scalar(field_name, ctx, overrides)
             return "Quarrystone Labs" if value is _MISSING else value
@@ -305,7 +389,8 @@ def _synth(model_cls, ctx, overrides, doc_ctxs):
     kwargs = {}
     for field_name, field in model_cls.model_fields.items():
         if not field.is_required():
-            if field_name.lower() not in _ALWAYS_FILL and not _is_model_list(field.annotation):
+            always = field_name.lower() in _ALWAYS_FILL or _canonical(field_name) in _ALWAYS_FILL
+            if not always and not _is_model_list(field.annotation):
                 continue
         value = _synth_value(field.annotation, field_name, ctx, overrides, doc_ctxs)
         if value is not _MISSING:
@@ -322,7 +407,9 @@ class LLMStub:
     pass), document ids and urls come from the sentinel in the prompt, and `Literal` fields
     take the value asked for when it is legal and the first member otherwise.
 
-    `overrides` forces a field by name — `{"match": "no"}` scripts every verdict negative.
+    `overrides` forces a field by name — `{"match": "no"}` scripts every verdict negative,
+    and it keeps doing so whichever of `_FIELD_ALIASES`' spellings the schema chose for
+    that field (`verdict`, `decision`, `result`, `is_match`), matching `test_t2_resolver.py`.
     """
 
     def __init__(self, registry, overrides=None):
@@ -418,6 +505,22 @@ def test_build_all_writes_one_validated_dossier_per_person_and_a_report(tmp_path
                     "hubs", "zero_result_sources"):
             assert key in row, f"BuildReport row is missing {key!r}: {row}"
         assert row["status"] in ("resolved", "unresolved")
+        # Presence is not a report. A row of `None`s carries every key and says nothing,
+        # so the counts must be real counts and the confidence a real probability.
+        for key in ("facts_kept", "facts_excluded", "hubs"):
+            assert isinstance(row[key], int) and not isinstance(row[key], bool), (
+                f"BuildReport row {key!r} is {row[key]!r}, not a count: {row}"
+            )
+            assert row[key] >= 0, f"BuildReport row {key!r} is negative: {row}"
+        assert isinstance(row["confidence"], (int, float)) and not isinstance(
+            row["confidence"], bool
+        ), f"BuildReport row confidence is {row['confidence']!r}, not a number: {row}"
+        assert 0.0 <= float(row["confidence"]) <= 1.0, (
+            f"BuildReport row confidence {row['confidence']!r} is outside 0..1: {row}"
+        )
+        assert isinstance(row["zero_result_sources"], (list, tuple, set)), (
+            f"BuildReport row zero_result_sources is {row['zero_result_sources']!r}: {row}"
+        )
 
     for person_id, _name, _details in ROSTER:
         path = out_dir / f"{person_id}.json"
@@ -426,6 +529,82 @@ def test_build_all_writes_one_validated_dossier_per_person_and_a_report(tmp_path
         dossier = _load_dossier(path)
         assert dossier.person.person_id == person_id
         assert dossier.schema_version == 1
+
+
+def test_a_resolved_dossier_holds_facts_and_hubs_and_its_report_row_accounts_for_them(tmp_path):
+    """T-6 acceptance 1: a resolved person's dossier has CONTENT, and the row describes it.
+
+    Without this, a pipeline that resolves everyone and then keeps nothing passes the
+    whole module: `facts == []` is asserted only for the UNRESOLVED case, and the
+    report-row check is about which keys exist, not what is in them. Structurally valid
+    and completely empty is the single most likely way for this build to be wrong while
+    looking right, so it gets its own criterion.
+    """
+    roster, connectors, llm = _standard_setup(tmp_path)
+    out_dir = tmp_path / "data" / "dossiers"
+
+    report = _run_build_all(roster, out_dir, connectors, llm, _budget())
+
+    rows = {row["person_id"]: row for row in report.people}
+    resolved = sorted(pid for pid, row in rows.items() if row["status"] == "resolved")
+    # Positive control: two connectors, four documents, every verdict scripted positive
+    # and the disambiguators alternated, so at least one synthetic person must resolve.
+    # Without this the loop below is vacuous over a pipeline that resolves nobody.
+    assert resolved, (
+        "no roster person resolved against a corpus scripted entirely positive, so "
+        f"'a resolved dossier has content' cannot be measured: {report.people}"
+    )
+
+    for person_id in resolved:
+        dossier = _load_dossier(out_dir / f"{person_id}.json")
+        row = rows[person_id]
+
+        assert len(dossier.facts) >= 1, (
+            f"{person_id} resolved and was researched, but its dossier holds no facts: "
+            "an empty dossier is schema-valid and worth nothing"
+        )
+        assert len(dossier.hubs) >= 1, (
+            f"{person_id} resolved but its dossier holds no hubs, so the matching stage "
+            "that joins people on shared hubs has nothing to join on"
+        )
+
+        kept = [fact for fact in dossier.facts if not fact.excluded]
+        assert kept, (
+            f"all {len(dossier.facts)} of {person_id}'s facts are excluded, so the "
+            "digest would have nothing to show"
+        )
+        for fact in kept:
+            assert fact.text.strip(), f"{person_id} kept a fact with empty text: {fact}"
+            assert fact.provenance.quote.strip(), (
+                f"{person_id} kept a fact carrying no supporting quote: {fact}"
+            )
+        for hub in dossier.hubs:
+            assert hub.hub_id.strip() and hub.label.strip(), (
+                f"{person_id} has a hub with no id or no label: {hub}"
+            )
+
+        # The row must be a description of THIS dossier, not three independent numbers.
+        assert row["facts_kept"] >= 1, (
+            f"the report says {person_id} kept {row['facts_kept']} facts while the "
+            f"dossier holds {len(kept)} non-excluded ones"
+        )
+        assert row["facts_kept"] + row["facts_excluded"] == len(dossier.facts), (
+            f"the report accounts for {row['facts_kept']} kept + "
+            f"{row['facts_excluded']} excluded facts for {person_id}, but the dossier "
+            f"holds {len(dossier.facts)}"
+        )
+        assert row["hubs"] == len(dossier.hubs), (
+            f"the report says {person_id} has {row['hubs']} hubs; the dossier holds "
+            f"{len(dossier.hubs)}"
+        )
+        assert float(row["confidence"]) > 0.0, (
+            f"{person_id} is reported resolved with confidence {row['confidence']!r}"
+        )
+        zero = set(row["zero_result_sources"])
+        assert zero.isdisjoint({"self_page", "search"}), (
+            f"both connectors returned documents for {person_id}, yet the report calls "
+            f"one of them zero-result: {sorted(zero)}"
+        )
 
 
 def test_build_all_writes_every_accepted_rawdoc_to_the_sibling_docs_dir(tmp_path):
