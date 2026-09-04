@@ -13,3 +13,4 @@ __pycache__/
 .ruff_cache/
 arrival-engine-build-docs.zip
 .codegraph/
+.swarm-loop/reports/metric-*.log
