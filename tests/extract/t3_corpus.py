@@ -115,3 +115,55 @@ def resolution_for(*docs: RawDoc, accepted: list[str] | None = None) -> Resoluti
         rejected=[],
         confidence=0.91,
     )
+
+
+# --------------------------------------------------------------------------
+# Documents added for the hub-identity and citation-guard repairs
+# (T-010 / T-011 / T-014 / T-015). Additive: nothing above changed.
+# --------------------------------------------------------------------------
+
+FUND_TEXT = (
+    "Foundry Seed 2019 (Q4242)\n\n"
+    "Item mirror. Instance of: venture capital fund. Also known as Foundry Capital.\n"
+    "Foundry Seed 2019 led the seed round in Quarrystone Labs."
+)
+FUND_SPAN = "Instance of: venture capital fund. Also known as Foundry Capital."
+
+TRADE_TEXT = (
+    "Foundry Seed 2019 has backed eleven infrastructure companies since it closed, and "
+    "Quarrystone Labs was the first of them."
+)
+TRADE_SPAN = "Foundry Seed 2019 has backed eleven infrastructure companies since it closed"
+
+#: The subject's own page carries an ASCII apostrophe and an em dash; a model that
+#: re-types the span with typographic punctuation is quoting the same words.
+PUNCTUATION_TEXT = (
+    "Jane O'Neil ships the parser every Friday, and the team's release notes have named "
+    "her in every one of the last nine—a streak that is now a running joke internally."
+)
+PUNCTUATION_SPAN = "Jane O'Neil ships the parser every Friday"
+PUNCTUATION_DASH_SPAN = "the last nine—a streak that is now a running joke internally."
+
+
+def fund_doc() -> RawDoc:
+    """A Wikidata item mirror that states Q4242."""
+    return make_doc("https://example.org/wikidata/Q4242", "wikidata", FUND_TEXT)
+
+
+def trade_doc(n: int = 0) -> RawDoc:
+    """One of several distinct documents carrying the SAME prose, for ambiguity tests."""
+    return make_doc(
+        f"https://example.org/tradepress/foundry-seed-{n}",
+        "search" if n % 2 == 0 else "hn",
+        TRADE_TEXT,
+        published_at=date(2026, 2, 11) if n % 2 == 0 else date(2019, 3, 2),
+    )
+
+
+def punctuation_doc() -> RawDoc:
+    return make_doc(
+        "https://example.com/jane-oneil/notes",
+        "github",
+        PUNCTUATION_TEXT,
+        published_at=date(2026, 2, 1),
+    )

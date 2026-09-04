@@ -6,13 +6,18 @@ can trust, plus the canonical `Hub`s T-5 joins people on.
 The model proposes; this module disposes, and every disposal is MECHANICAL (DESIGN
 Decision 5 — the citation check is not an LLM judgement):
 
-* a fact whose `quote` is not a `normalize_ws` substring of its own source document is
-  DROPPED and counted. Never repaired, never softened, never shown (SPEC C8 / R9).
-* every provenance field except the quote is copied from the `RawDoc` — `url`,
-  `source_kind`, `published_at`, `retrieved_at`. The model is never the source of a
-  citation's metadata, only of the sentence and the span it claims to be quoting.
-* `hub_id` is computed here from the type and the label (or from a Wikidata QID the
-  document itself states), so two dossiers built months apart still join on one node.
+* a fact whose `quote` is not a whole-word span of one identifiable source document,
+  long enough to be evidence of anything, is DROPPED and counted. Never repaired, never
+  softened, never shown (SPEC C8 / R9).
+* every provenance field is copied from the `RawDoc` — INCLUDING the quote, which is the
+  document's own characters for the span the model pointed at, not the model's retyping
+  of them. `url`, `source_kind`, `published_at` and `retrieved_at` likewise. The model is
+  never the source of a citation's content, only of the sentence and of where to look.
+* `hub_id` is computed here from the label (or from a Wikidata QID the document itself
+  states), so two dossiers built months apart still join on one node. Where the model
+  described one label inconsistently, the descriptions are RECONCILED by majority vote —
+  the same repair `graph._hub_identity` makes downstream — so neither the model's output
+  order nor a stray second opinion can split a node or move a match score.
 * `category="non_obvious"` survives only on the source kinds R7 makes eligible. A
   subject's own about page IS the first page, so nothing on it is "not on the first page"
   however the model labelled it.
@@ -49,6 +54,9 @@ from arrival.util import normalize_ws, slug
 __all__ = [
     "MAX_DOCS_PER_CALL",
     "MAX_FACT_CHARS",
+    "MAX_TOKENS_PER_CALL",
+    "MIN_QUOTE_CHARS",
+    "MIN_QUOTE_WORDS",
     "NON_OBVIOUS_ELIGIBLE_KINDS",
     "STOP_HUB_LABELS",
     "CandidateFact",
@@ -56,6 +64,7 @@ __all__ = [
     "ExtractionResult",
     "ExtractionStats",
     "canonical_hub_id",
+    "cited_span",
     "extract",
     "is_cited",
     "recency_for",
@@ -74,6 +83,14 @@ MAX_DOCS_PER_CALL = 3
 #: Output ceiling per call. Three documents of facts and hubs do not fit in the protocol
 #: default of 2000, and a truncated JSON body costs the whole batch.
 MAX_TOKENS_PER_CALL = 4000
+
+#: The floor a quote must clear before "it is a substring of the document" means anything.
+#: Below it the test degenerates: `"a"` is a verbatim span of every document ever written,
+#: so a one-character quote was a UNIVERSAL citation and certified whatever sentence the
+#: model attached to it. Measured on the pre-repair code: `is_cited("a", doc)` was True
+#: against every document in the corpus, and the invented sentence it carried was kept.
+MIN_QUOTE_CHARS = 16
+MIN_QUOTE_WORDS = 3
 
 # DESIGN Decision 3, verbatim: never nodes, after lower-casing.
 #
@@ -113,6 +130,41 @@ _RECENCY_OLDER = 0.3
 _RECENCY_UNKNOWN = 0.5
 
 _QID = re.compile(r"Q[1-9][0-9]*")
+
+# Typographic variants folded to one spelling before the substring test (T-015). A model
+# that retypes `O'Neil` as `O’Neil`, or an en dash as a hyphen, is quoting the same words;
+# dropping the fact costs a real citation over a difference no reader would call one.
+#
+# This is the ONLY direction the guard is ever loosened, and it is paid for on the spot:
+# `cited_span` returns the DOCUMENT's characters, so what is stored still satisfies
+# `normalize_ws(quote) in normalize_ws(doc.text)`. Only variants of the SAME character
+# belong here — never a mapping that could turn one word into a different one.
+_TYPOGRAPHIC: dict[str, str] = {
+    "‘": "'",  # left single quotation mark
+    "’": "'",  # right single quotation mark (the typographic apostrophe)
+    "‚": "'",  # single low-9 quotation mark
+    "‛": "'",  # single high-reversed-9 quotation mark
+    "ʼ": "'",  # modifier letter apostrophe
+    "ʹ": "'",  # modifier letter prime
+    "′": "'",  # prime
+    "´": "'",  # acute accent used as an apostrophe
+    "`": "'",  # grave accent used as an apostrophe
+    "“": '"',  # left double quotation mark
+    "”": '"',  # right double quotation mark
+    "„": '"',  # double low-9 quotation mark
+    "‟": '"',  # double high-reversed-9 quotation mark
+    "″": '"',  # double prime
+    "«": '"',  # left guillemet
+    "»": '"',  # right guillemet
+    "‐": "-",  # hyphen
+    "‑": "-",  # non-breaking hyphen
+    "‒": "-",  # figure dash
+    "–": "-",  # en dash
+    "—": "-",  # em dash
+    "―": "-",  # horizontal bar
+    "−": "-",  # minus sign
+    "…": "...",  # horizontal ellipsis
+}
 
 
 # --------------------------------------------------------------------------
@@ -206,21 +258,75 @@ class ExtractionStats:
     dropped_unsupported_hubs: int = 0
 
 
+def _most_common(values: list[str]) -> str | None:
+    """The commonest value, ties broken lexicographically; None for nothing at all.
+
+    Deliberately the same rule `graph._hub_identity` uses downstream, for the same reason:
+    the answer must not depend on the order the descriptions arrived in. Duplicated rather
+    than imported because `graph` sits DOWNSTREAM of this module — it reads the dossiers
+    this one writes — and an upward import would invert that. See DECISIONS in the T-010
+    report: the honest home for this is `arrival.util`, which this ticket does not own.
+    """
+    if not values:
+        return None
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+    return min(counts.items(), key=lambda item: (-item[1], item[0]))[0]
+
+
 @dataclass
 class _HubGroup:
-    """Every candidate that canonicalises to one node, accumulated across documents."""
+    """Every candidate that canonicalises to one node, accumulated across documents.
 
-    label: str
-    type: HubType
+    A group is keyed on `slug(label)` ALONE. The type is deliberately not part of the key:
+    it is the model's opinion about an entity whose LABEL is the evidence — the label is
+    what appears verbatim in the documents — and one label described as `investor` in one
+    document and `company` in the next is one entity described twice, not two entities.
+    Grouping on `(type, key)` split exactly that case into two hubs with the evidence
+    divided between them, and two people who genuinely shared the hub then scored 0.
+
+    So every description is COLLECTED and the survivor is voted on (`_most_common`), which
+    makes the emitted label, type and `hub_id` a function of the evidence rather than of
+    the model's output order.
+    """
+
     key: str
-    qid: str | None = None
+    descriptions: list[tuple[str, str]] = field(default_factory=list)
+    qids: list[str] = field(default_factory=list)
     recency: float = 0.0
     evidence: list[str] = field(default_factory=list)
+
+    def describe(self, hub_type: HubType, label: str) -> None:
+        self.descriptions.append((hub_type, label))
 
     def add_evidence(self, fact_ids: list[str]) -> None:
         for fact_id in fact_ids:
             if fact_id not in self.evidence:
                 self.evidence.append(fact_id)
+
+    def absorb(self, other: _HubGroup) -> None:
+        """Fold another group into this one. Every operation is commutative on purpose."""
+        self.descriptions.extend(other.descriptions)
+        self.qids.extend(other.qids)
+        self.add_evidence(other.evidence)
+        self.recency = max(self.recency, other.recency)
+
+    @property
+    def qid(self) -> str | None:
+        return _most_common(self.qids)
+
+    @property
+    def identity(self) -> tuple[str, str]:
+        """The reconciled `(type, label)`. Independent of the order they were seen in.
+
+        The fallbacks are unreachable for a live group — one is only created alongside its
+        first description — and are spelled out rather than asserted so that `-O` cannot
+        turn a defensive check into a crash.
+        """
+        hub_type = _most_common([hub_type for hub_type, _ in self.descriptions]) or "topic"
+        label = _most_common([label for _, label in self.descriptions]) or self.key
+        return hub_type, label
 
 
 # --------------------------------------------------------------------------
@@ -228,16 +334,91 @@ class _HubGroup:
 # --------------------------------------------------------------------------
 
 
-def is_cited(quote: str, doc: RawDoc) -> bool:
-    """DESIGN Decision 5: a quote counts as cited when it is verbatim after normalisation.
+def _folded(text: str) -> tuple[str, list[int]]:
+    """`normalize_ws`, plus typographic folding, plus a map back into `text`'s offsets.
 
-    `normalize_ws` collapses whitespace runs and case-folds BOTH sides, so a quote reflowed
-    by the extractor or re-cased by the model still passes, while a quote that differs by
-    one WORD does not. That asymmetry is the whole guard: it is forgiving about typography
-    and unforgiving about content.
+    Every character of the returned string records the index in `text` it came from, so a
+    match found in the folded form can be sliced back out of the ORIGINAL document. That
+    index map is what lets the guard be forgiving about typography without ever storing a
+    quote its source does not literally contain: the tolerant search finds the span, and
+    the document's own characters are what gets kept.
     """
-    text = normalize_ws(quote)
-    return bool(text) and text in normalize_ws(doc.text)
+    folded: list[str] = []
+    origin: list[int] = []
+    pending_space = False
+    for index, char in enumerate(text):
+        if char.isspace():
+            pending_space = bool(folded)
+            continue
+        if pending_space:
+            folded.append(" ")
+            origin.append(index)
+            pending_space = False
+        # `casefold` may expand one character into several (ß -> ss); each of them maps
+        # back to the single source character, which is all the slice below needs.
+        for piece in _TYPOGRAPHIC.get(char, char).casefold():
+            folded.append(piece)
+            origin.append(index)
+    return "".join(folded), origin
+
+
+def _is_evidence(folded_quote: str) -> bool:
+    """A span too small to identify anything is not evidence, however verbatim it is."""
+    return (
+        len(folded_quote) >= MIN_QUOTE_CHARS
+        and len(folded_quote.split(" ")) >= MIN_QUOTE_WORDS
+    )
+
+
+def _whole_words(haystack: str, start: int, end: int) -> bool:
+    """The span may not begin or end in the middle of a word.
+
+    Without this, `"plat"` is a verbatim span of any document containing "platform" — the
+    substring test says yes to a fragment that is not a word of the document at all, and a
+    short enough fragment matches everything.
+    """
+    before_ok = start == 0 or not haystack[start - 1].isalnum()
+    after_ok = end == len(haystack) or not haystack[end].isalnum()
+    return before_ok and after_ok
+
+
+def cited_span(quote: str, doc: RawDoc) -> str | None:
+    """The DOCUMENT's own text for `quote`, or None when the document does not carry it.
+
+    This is the citation check (DESIGN Decision 5) and the repair in one step. The search
+    is forgiving about typography — whitespace runs, letter case, and the typographic
+    variants in `_TYPOGRAPHIC`, so a model that retypes `O'Neil` as `O’Neil` has not lost
+    the fact — and unforgiving about everything else: the span must clear
+    `MIN_QUOTE_CHARS`/`MIN_QUOTE_WORDS`, must land on word boundaries, and must differ
+    from the source in nothing but typography.
+
+    What comes back is a slice of `doc.text`, never the caller's string. That is what pays
+    for the tolerance: `contracts.Provenance` is pinned on
+    `normalize_ws(quote) in normalize_ws(doc.text)`, and storing the source's own
+    characters keeps that true for every fact this module emits.
+    """
+    needle, _ = _folded(quote)
+    if not _is_evidence(needle):
+        return None
+    haystack, origin = _folded(doc.text)
+    start = haystack.find(needle)
+    while start >= 0:
+        end = start + len(needle)
+        if _whole_words(haystack, start, end):
+            return doc.text[origin[start] : origin[end - 1] + 1]
+        start = haystack.find(needle, start + 1)
+    return None
+
+
+def is_cited(quote: str, doc: RawDoc) -> bool:
+    """Whether this document carries the span `quote` points at. See `cited_span`.
+
+    The asymmetry is the whole guard: forgiving about typography, unforgiving about
+    content. A quote differing by one WORD, a paraphrase, an ellipsis join, an empty
+    string, a fragment below the evidence floor and a fragment cut mid-word are all
+    refused; only reflowing, re-casing and typographic punctuation are forgiven.
+    """
+    return cited_span(quote, doc) is not None
 
 
 def recency_for(published_at: date | None, *, today: date | None = None) -> float:
@@ -408,20 +589,41 @@ def _accepted_docs(resolution: Resolution, docs: list[RawDoc]) -> list[RawDoc]:
 
 def _source_doc(
     candidate: CandidateFact, quote: str, batch: tuple[RawDoc, ...], by_id: dict[str, RawDoc]
-) -> RawDoc | None:
-    """The document that actually contains this quote, or None.
+) -> tuple[RawDoc, str] | None:
+    """The document that actually contains this quote and its own text for it, or None.
 
     The id the model claimed is tried FIRST and only accepted if the quote really is in
-    that document. The fallback — any other document in the same batch that does contain
-    the span — repairs a mixed-up id without ever inventing a citation, because a document
-    holding the verbatim span is a true source of it whatever the model wrote down.
+    that document. The fallback — another document in the same batch that does contain the
+    span — repairs a mixed-up id without inventing a citation, because a document holding
+    the span is a true source of it whatever the model wrote down.
+
+    The fallback fires only when the batch answers UNAMBIGUOUSLY. Two documents both
+    carrying the span is not a repair, it is a coin toss: `source_kind`, `url` and
+    `published_at` all come out of whichever one the loop reached first, and
+    `published_at` feeds `recency_for` and therefore T-5's score. Measured on the
+    pre-repair code, one candidate and two documents differing only in list order came
+    back as `search`/2026-02-11 or as `hn`/2019-03-02. Refusing costs one fact; guessing
+    prints a citation nobody chose under a sentence a host reads out loud.
     """
     declared = by_id.get(candidate.doc_id.strip())
-    if declared is not None and is_cited(quote, declared):
-        return declared
+    if declared is not None:
+        span = cited_span(quote, declared)
+        if span is not None:
+            return declared, span
+    found: list[tuple[RawDoc, str]] = []
     for doc in batch:
-        if is_cited(quote, doc):
-            return doc
+        span = cited_span(quote, doc)
+        if span is not None:
+            found.append((doc, span))
+    if len(found) == 1:
+        return found[0]
+    if len(found) > 1:
+        log.info(
+            "dropping a fact whose quote is in %d prompted documents (%s); the batch cannot "
+            "say which one it came from",
+            len(found),
+            ", ".join(doc.doc_id for doc, _ in found),
+        )
     return None
 
 
@@ -444,9 +646,11 @@ def _category_for(candidate: CandidateFact, doc: RawDoc, tally: ExtractionStats)
 def _build_fact(
     candidate: CandidateFact,
     doc: RawDoc,
+    span: str,
     fact_id: str,
     tally: ExtractionStats,
 ) -> Fact:
+    """`span` is the document's own text for the quote, never the model's retyping of it."""
     return Fact(
         fact_id=fact_id,
         text=_normalise_sentence(candidate.text),
@@ -455,7 +659,7 @@ def _build_fact(
             doc_id=doc.doc_id,
             url=doc.url,
             source_kind=doc.source_kind,
-            quote=_normalise_sentence(candidate.quote),
+            quote=_normalise_sentence(span),
             published_at=doc.published_at,
             retrieved_at=doc.fetched_at,
             confidence=min(1.0, max(0.0, float(candidate.confidence))),
@@ -494,17 +698,21 @@ def _collect_facts(
             tally.dropped_over_length += 1
             log.info("dropping a %d-character fact (cap is %d)", len(text), MAX_FACT_CHARS)
             continue
-        doc = _source_doc(candidate, quote, batch, by_id)
-        if doc is None:
+        located = _source_doc(candidate, quote, batch, by_id)
+        if located is None:
             tally.dropped_uncited += 1
-            log.info("dropping an uncited fact; quote was not verbatim in any prompted document")
+            log.info(
+                "dropping an uncited fact; its quote is not a whole-word span of exactly one "
+                "prompted document"
+            )
             continue
+        doc, span = located
 
         index = counters.get(doc.doc_id, 0)
         counters[doc.doc_id] = index + 1
         fact_id = f"{doc.doc_id}-f{index}"
 
-        fact = _build_fact(candidate, doc, fact_id, tally)
+        fact = _build_fact(candidate, doc, span, fact_id, tally)
         facts.append(fact)
         tally.facts_kept += 1
         sources[fact_id] = doc
@@ -522,7 +730,7 @@ def _collect_hubs(
     id_map: dict[str, str],
     sources: dict[str, RawDoc],
     kept_by_doc: dict[str, list[str]],
-    groups: dict[tuple[str, str], _HubGroup],
+    groups: dict[str, _HubGroup],
     tally: ExtractionStats,
 ) -> None:
     """Canonicalise, filter and merge every candidate hub from one answer, into `groups`."""
@@ -554,38 +762,57 @@ def _collect_hubs(
             qid = None
         recency = max(recency_for(doc.published_at) for doc in evidence_docs)
 
-        group = groups.get((candidate.type, key))
+        group = groups.get(key)
         if group is None:
-            group = _HubGroup(label=label, type=candidate.type, key=key)
-            groups[(candidate.type, key)] = group
+            group = _HubGroup(key=key)
+            groups[key] = group
+        group.describe(candidate.type, label)
         group.add_evidence(evidence)
         group.recency = max(group.recency, recency)
-        if group.qid is None:
-            group.qid = qid
+        if qid is not None:
+            group.qids.append(qid)
 
 
-def _merge_groups(groups: dict[tuple[str, str], _HubGroup], tally: ExtractionStats) -> list[Hub]:
-    """One `Hub` per canonical id, evidence merged, sorted for a stable dossier on disk."""
+def _merge_groups(
+    groups: dict[str, _HubGroup], order: dict[str, int], tally: ExtractionStats
+) -> list[Hub]:
+    """One `Hub` per canonical id, evidence merged, everything about it order-independent.
+
+    Two groups reach one id only through a shared Wikidata QID — two labels for one item,
+    `Foundry Seed 2019` and `Foundry Capital` on `wd:Q4242`. That branch used to keep the
+    FIRST group's label and type, and "first" was the model's output ordering, so
+    permuting the model's list moved the type and therefore T-5's `TYPE_BOOST`
+    (investor 1.5 vs city 0.5) and the score with it. Now the descriptions are pooled and
+    voted on, which is commutative, and every other field already was: evidence is a
+    union, recency a max.
+
+    `order` maps a fact id to the position its fact was created in, so the merged evidence
+    list reads in discovery order however the model happened to list its hubs.
+    """
     merged: dict[str, _HubGroup] = {}
     for group in groups.values():
-        hub_id = canonical_hub_id(group.type, group.label, group.qid)
+        hub_type, label = group.identity
+        hub_id = canonical_hub_id(hub_type, label, group.qid)
         existing = merged.get(hub_id)
         if existing is None:
             merged[hub_id] = group
             continue
-        existing.add_evidence(group.evidence)
-        existing.recency = max(existing.recency, group.recency)
+        existing.absorb(group)
 
-    hubs = [
-        Hub(
-            hub_id=hub_id,
-            label=group.label,
-            type=group.type,
-            recency=group.recency,
-            evidence_fact_ids=list(group.evidence),
+    hubs = []
+    for hub_id, group in merged.items():
+        hub_type, label = group.identity
+        hubs.append(
+            Hub(
+                hub_id=hub_id,
+                label=label,
+                type=hub_type,
+                recency=group.recency,
+                evidence_fact_ids=sorted(
+                    group.evidence, key=lambda fact_id: order.get(fact_id, len(order))
+                ),
+            )
         )
-        for hub_id, group in merged.items()
-    ]
     hubs.sort(key=lambda hub: hub.hub_id)
     tally.hubs_kept += len(hubs)
     return hubs
@@ -618,18 +845,23 @@ async def extract(
         return [], []
 
     facts: list[Fact] = []
-    groups: dict[tuple[str, str], _HubGroup] = {}
+    groups: dict[str, _HubGroup] = {}
     counters: dict[str, int] = {}
+    # Discovery order, so a merged hub's evidence list does not depend on the order the
+    # model listed its hubs in. Spans every batch, as the groups themselves do.
+    fact_order: dict[str, int] = {}
 
     for batch in batched(accepted, MAX_DOCS_PER_CALL):
         result = await _ask(llm, person, batch, tally)
         if result is None:
             continue
         batch_facts, id_map, sources, kept_by_doc = _collect_facts(result, batch, counters, tally)
+        for fact in batch_facts:
+            fact_order.setdefault(fact.fact_id, len(fact_order))
         facts.extend(batch_facts)
         _collect_hubs(result, batch, id_map, sources, kept_by_doc, groups, tally)
 
-    hubs = _merge_groups(groups, tally)
+    hubs = _merge_groups(groups, fact_order, tally)
     log.info(
         "extracted %d fact(s) and %d hub(s) for %s from %d document(s); dropped %d uncited, "
         "%d over-length, %d stop-hub(s), %d unsupported hub(s)",
