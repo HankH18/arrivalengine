@@ -150,6 +150,13 @@ _STREET_ADDRESS = _rx(
     ignorecase=False,
 )
 
+#: Dwelling nouns. A residence, not a building type: "office" and "warehouse" are absent
+#: because a member's workplace is a professional fact.
+_DWELLING = (
+    r"(?:house|home|apartment|flat|condo|condominium|bungalow|cottage|penthouse|villa|"
+    r"residence|ranch|farmhouse|townhouse|duplex|maisonette|chalet|cabin|estate)"
+)
+
 #: STRONG cues: an unambiguous R11 surface marker whose subject can only be the person.
 #: A hit here is settled by the rule layer alone, with a named category.
 _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
@@ -165,6 +172,16 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         _rx(r"\bdepress(?:ion|ive)\b"),
         _rx(r"\b(?:surgery|chemotherapy|chemo|dialysis|transplant|remission|relapse)\b"),
         _rx(r"\bmedical\s+(?:leave|history|records?|condition|treatment)\b|\bsick\s+leave\b"),
+        # An inpatient stay is a hospital stay by another name; the siblings above
+        # already settle "hospitalised" and "intensive care" and this is the same fact.
+        _rx(r"\bin-?patient\b"),
+        # Principle 2 again, in its RECORDS form. The pattern below catches a person
+        # telling a reporter; a letter, a chart or a claim file is the same disclosure
+        # made by paper, and is never the member's own published material.
+        _rx(
+            r"\b(?:medical|insurer|insurance|hospital|pharmacy|clinic|treatment)\s+"
+            r"(?:letters?|records?|files?|charts?|notes?|claims?|bills?)\b"
+        ),
         # Principle 2, the exclude side: somebody ELSE put a personal struggle on the
         # record. The mirror of a member's own published material, which defers instead.
         _rx(
@@ -180,6 +197,9 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
     "family": (
         _rx(rf"\b(?:their|his|her)\s+(?:[\w'’-]+\s+){{0,2}}{_RELATIVE}\b"),
         _rx(r"\bmarried\s+(?:to|since)\b|\b(?:has|have|had)\s+been\s+married\b"),
+        # "They married an architect in June" names a spouse just as plainly as
+        # "married to"; only the preposition differed, and the sentence leaked.
+        _rx(r"\b(?:they|he|she)\s+married\b"),
         _rx(r"\bmarriage\s+to\b|\bengaged\s+to\s+be\s+married\b"),
         _rx(rf"\bthey\s+(?:have|has)\s+(?:a|one|two|three|four|no)\s+{_RELATIVE}\b"),
     ),
@@ -209,8 +229,11 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         ),
         _rx(
             r"\b(?:bought|buying|purchased|owns?)\b[^.]{0,40}?"
-            r"\b(?:house|home|apartment|flat|condo|bungalow|cottage|estate)\b"
+            rf"\b{_DWELLING}\b"
         ),
+        # The same fact with the words the other way round: "the farmhouse they purchased".
+        # Only the clause order differed and the sentence went straight through.
+        _rx(rf"\b{_DWELLING}\b[^.]{{0,30}}?\bthey\s+(?:bought|purchased|own|owned)\b"),
         _rx(
             r"\bbuyer\s+of\b[^.]{0,40}?"
             r"\b(?:house|home|apartment|flat|condo|bungalow|cottage|property|estate)\b"
@@ -236,7 +259,18 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
             r"took\s+home|walked\s+away\s+with)\b"
         ),
         _rx(r"\b(?:millionaire|billionaire)\b"),
-        _rx(r"\bthey\s+(?:are|were)\s+(?:worth|paid)\b|\bthey\s+earns?\b|\bthey\s+earned\b"),
+        _rx(r"\bthey\s+(?:are|were)\s+(?:worth|paid)\b"),
+        # A MONEY object is required. Bare "they earned" also matches "they earned a
+        # master's in materials science", which is a professional credential and one of
+        # the plainest keeps a digest has - measured on an independently written case.
+        # Nothing that is genuinely about the member's money leaves the category: the
+        # sums, the salary words and the "personally cleared" family above all remain.
+        _rx(
+            r"\bthey\s+(?:earn|earns|earned|earning)\b[^.]{0,40}?"
+            r"\b(?:\$[\d.,]+|[\d.,]+\s*(?:million|billion|thousand)|million|billion|"
+            r"salar(?:y|ies)|compensation|bonus|wages?|dollars?|"
+            r"(?:six|seven|eight|nine|ten)-figure)\b"
+        ),
     ),
     "political": (
         _rx(r"\bpolitical\s+part(?:y|ies)\b|\bparty\s+affiliation\b"),
@@ -262,7 +296,9 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
 #: never decided by the rule layer.
 _WEAK: dict[str, tuple[re.Pattern[str], ...]] = {
     "health": (
-        _rx(r"\bburn-?out\b"),
+        _rx(r"\bburn-?out\b|\bburn(?:ing|ed|t)\s+out\b"),
+        _rx(r"\balcohol(?:ism|\s+(?:dependence|dependency|abuse|misuse))\b|"
+            r"\bsubstance\s+(?:abuse|use\s+disorder|dependence)\b"),
         _rx(r"\bstruggl\w*\b"),
         _rx(r"\brecover(?:y|ing|ed)\b"),
         _rx(r"\bmental\s+health\b|\bwell-?being\b|\btherapy\b|\brehab\w*\b"),
@@ -282,6 +318,11 @@ _WEAK: dict[str, tuple[re.Pattern[str], ...]] = {
         _rx(r"\bsettle(?:d|ment|ments)\b"),
         _rx(r"\bdisputes?\b|\bdisputed\b"),
         _rx(r"\blawsuits?\b|\blitigation\b|\blegal\s+(?:action|proceeding|battle|dispute)\b"),
+        # The STRONG forms above catch the member as DEFENDANT ("they were sued"). As
+        # plaintiff - "the four years they spent suing their former co-founder" - the
+        # member is just as much a party, but "their company sued a rival" is a business
+        # fact, so the subject decides and this defers instead of ruling.
+        _rx(r"\b(?:sued|suing|sues)\b"),
         _rx(r"\bconfidential\b|\bsealed\b|\bnon-?disclosure\b"),
         _rx(r"\ballegation\w*\b|\baccused\b|\bcomplaint\s+(?:filed|against)\b"),
         _rx(r"\bbankruptc\w+\b"),
@@ -292,6 +333,10 @@ _WEAK: dict[str, tuple[re.Pattern[str], ...]] = {
         _rx(r"\bspends?\b[^.]{0,45}?\bthere\b"),
         _rx(r"\bneighbou?rhood\b"),
         _rx(r"\bmoved\s+(?:to|into)\b"),
+        # "the converted grain silo they live in" is a dwelling; "they live in Lisbon" is
+        # a city hub and a keep. The surface cannot tell them apart, so it defers - the
+        # STRONG "lives at / resides at" forms above still settle an address outright.
+        _rx(r"\b(?:they|he|she)\s+(?:live|lives|lived)\s+in\b"),
     ),
     "wealth": (
         _rx(r"\b(?:million|billion|thousand)[\s-]?(?:dollar|dollars)\b|\$[\d.,]+"),
