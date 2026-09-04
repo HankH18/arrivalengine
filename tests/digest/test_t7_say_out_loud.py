@@ -23,6 +23,7 @@ from arrival.digest import (
     OPENER_OF_LAST_RESORT,
     SAY_OUT_LOUD_TIMEOUT_SECONDS,
     SayOutLoud,
+    is_speakable,
     make_digest,
     pick_opener_hook,
 )
@@ -226,3 +227,85 @@ def test_the_hook_choice_ignores_facts_already_spoken(alpha):
 
     assert filtered is not None
     assert filtered.fact_id != unfiltered.fact_id
+
+
+def test_the_deadline_is_the_one_design_decision_12_specifies():
+    """Pin the LITERAL 2.5 s.
+
+    Every other timing assertion in this module is written in terms of the constant, so
+    all of them stay green if the constant is widened to 250. This is the one that does not.
+    """
+    assert SAY_OUT_LOUD_TIMEOUT_SECONDS == 2.5
+
+
+def test_the_fallback_hook_is_the_HIGHEST_confidence_of_several(alpha):
+    """The fixture carries one hook, so "highest" needs a second one to mean anything.
+
+    Measured: with a single-hook fixture, flipping `max` to `min` in the selection left
+    this module entirely green.
+    """
+    from t7_digest_helpers import with_facts
+
+    weaker = variant(fact_of(alpha, "alpha-hook"), confidence=0.72)
+    stronger = variant(
+        weaker,
+        fact_id="alpha-hook-strong",
+        text="He rewrote the rubric three times before anyone else saw it.",
+        confidence=0.97,
+        doc_id="00000000000000d1",
+    )
+    dossier = replacing(alpha, {"alpha-hook": weaker})
+    dossier = with_facts(dossier, [*dossier.facts, stronger])
+
+    chosen = pick_opener_hook(dossier)
+
+    assert chosen is not None
+    assert chosen.fact_id == "alpha-hook-strong", "the lower-confidence hook was chosen"
+
+
+@pytest.mark.parametrize(
+    "rough_fact_text",
+    [
+        "Believes pricing pages (all of them) belong on the web.",
+        "Believes pricing belongs at https://example.org/pricing for everyone.",
+        "Believes pricing should be public, scored 67 by the internal ranker.",
+        "Believes " + " ".join(["pricing"] * 40) + ".",
+    ],
+)
+async def test_the_templated_opener_is_held_to_r18_too(alpha, rough_fact_text):
+    """R18 binds `say_out_loud` on EVERY path, and the template is the failure path.
+
+    `f"Ask about {hook.text}"` interpolates a fact verbatim, and a fact is not guaranteed
+    speakable — they run to 200 characters and nothing stops one carrying a parenthetical
+    or a URL. Validating only the MODEL's line leaves R18 unenforced on the path taken by
+    timeout, transport error and every rejected model line, which is the path DESIGN
+    Decision 12 exists to make reliable.
+    """
+    rough = variant(fact_of(alpha, "alpha-hook"), text=rough_fact_text)
+    dossier = replacing(alpha, {"alpha-hook": rough})
+    llm = LLMDouble()  # unscripted: the template branch is taken
+
+    digest = await make_digest(dossier, [], llm)
+
+    assert is_speakable(digest.say_out_loud), (
+        f"the fallback opener is not speakable: {digest.say_out_loud!r}"
+    )
+    assert rough_fact_text not in digest.say_out_loud, "the unspeakable hook was used anyway"
+    assert digest.say_out_loud.startswith(("Ask", "Curious"))
+
+
+async def test_when_no_candidate_survives_r18_the_last_resort_opener_is_used(alpha):
+    """Skipping to the next hook is not a licence to ship nothing."""
+    from t7_digest_helpers import with_facts
+
+    unspeakable = [
+        variant(f, text=f"Does things at https://example.org/{f.fact_id} always.")
+        for f in alpha.facts
+    ]
+    dossier = with_facts(alpha, unspeakable)
+    llm = LLMDouble()
+
+    digest = await make_digest(dossier, [], llm)
+
+    assert digest.say_out_loud == OPENER_OF_LAST_RESORT
+    assert is_speakable(digest.say_out_loud)

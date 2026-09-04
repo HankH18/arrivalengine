@@ -57,11 +57,15 @@ __all__ = [
     "OPENER_PREFIXES",
     "OPENER_TEMPLATE",
     "SAY_OUT_LOUD_TIMEOUT_SECONDS",
+    "SCORE_WORDS",
     "SPOKEN_WORD_CAP",
     "SURVEILLANCE_PHRASES",
+    "WHO_OF_LAST_RESORT",
+    "WHY_OF_LAST_RESORT",
     "SayOutLoud",
     "is_speakable",
     "make_digest",
+    "opener_hook_candidates",
     "pick_lately",
     "pick_non_obvious",
     "pick_opener_hook",
@@ -125,9 +129,17 @@ SURVEILLANCE_PHRASES: tuple[str, ...] = ("i saw", "we noticed", "our records")
 #: The template DESIGN Decision 12 falls back to. Formatted with the hook fact's text.
 OPENER_TEMPLATE = "Ask about {text}"
 
-#: Used only when a dossier carries no displayable fact at all, so there is nothing to
-#: invite a question about. Still an invitation; still speakable.
+#: Used only when a dossier carries no displayable fact at all — or none whose own wording
+#: survives R18 — so there is nothing to invite a question about. Still an invitation.
 OPENER_OF_LAST_RESORT = "Ask what they are working on right now."
+
+#: Shown when a Meet row's ``why`` repairs to nothing. It states an absence rather than
+#: inventing a shared thing the matcher never claimed.
+WHY_OF_LAST_RESORT = "Worth a hello; nothing quotable on the record yet."
+
+#: Shown when a dossier has no name, no roster detail and no person_id to build a Who line
+#: from. R8's "still a digest" property has to survive even an empty record.
+WHO_OF_LAST_RESORT = "A member has arrived."
 
 _SAY_OUT_LOUD_SYSTEM = (
     "You write one spoken opener for a club host who is about to greet an arriving "
@@ -158,17 +170,57 @@ class SayOutLoud(BaseModel):
 _CITATION_MARKER = re.compile(r"\[\s*\d+\s*\]")
 _PARENTHETICAL = re.compile(r"\([^)]*\)")
 _BARE_INTEGER = re.compile(r"^\d{1,3}$")
+_SCORE_FRACTION = re.compile(r"^\d{1,3}\s*(?:/\s*100|%)$")
+_ORPHANED_PUNCTUATION = re.compile(r"\s+([.,;:!?])")
+
+#: R18 bans a number used **as a score**, which is narrower than "a number". A count is
+#: not a score, and an earlier version of this module treated every bare integer in 0..100
+#: as one — which silently deleted content from a matcher's own reasoning: "Both shipped 12
+#: open-source developer tools together" became "Both shipped open-source developer tools
+#: together", and "Both deep in Web 2 standards work" lost the 2. So a digit only reads as
+#: a score when the word in front of it says it is one.
+SCORE_WORDS: frozenset[str] = frozenset(
+    {
+        "score",
+        "scored",
+        "scores",
+        "scoring",
+        "rank",
+        "ranked",
+        "ranks",
+        "ranking",
+        "rated",
+        "rating",
+        "points",
+        "weight",
+        "weighted",
+    }
+)
 
 
-def _looks_like_a_score(word: str) -> bool:
-    """A bare integer in 0..100 read aloud is a score (R18), not prose.
+def _bare(word: str) -> str:
+    return word.strip(".,;:!?'\"")
 
-    Years and counts survive: ``2016`` is four digits, ``sixty-three`` is not a digit at
-    all. Only a standalone one-to-three digit number inside the 0..100 range is treated as
-    a score leaking out of the ranking into a sentence.
+
+def _score_positions(words: Sequence[str]) -> set[int]:
+    """Indexes of tokens in ``words`` that read aloud as a score (R18).
+
+    Two shapes qualify: a bare integer 0..100 immediately after a scoring word
+    ("scored 67", "weight 3"), and a self-declaring fraction ("67/100", "67%"). Everything
+    else — years, counts, version numbers, product names — is prose and survives.
     """
-    stripped = word.strip(".,;:!?'\"")
-    return bool(_BARE_INTEGER.fullmatch(stripped)) and int(stripped) <= 100
+    found: set[int] = set()
+    for index, word in enumerate(words):
+        stripped = _bare(word)
+        if _SCORE_FRACTION.fullmatch(stripped):
+            found.add(index)
+            continue
+        if not _BARE_INTEGER.fullmatch(stripped) or int(stripped) > 100:
+            continue
+        previous = _bare(words[index - 1]).casefold() if index else ""
+        if previous in SCORE_WORDS:
+            found.add(index)
+    return found
 
 
 def is_speakable(text: str) -> bool:
@@ -188,7 +240,7 @@ def is_speakable(text: str) -> bool:
     words = text.split()
     if len(words) > SPOKEN_WORD_CAP:
         return False
-    return not any(_looks_like_a_score(w) for w in words)
+    return not _score_positions(words)
 
 
 def speakable(text: str) -> str:
@@ -202,14 +254,14 @@ def speakable(text: str) -> str:
     cleaned = _CITATION_MARKER.sub(" ", text)
     cleaned = _PARENTHETICAL.sub(" ", cleaned)
     cleaned = cleaned.replace("(", " ").replace(")", " ")
-    words = [
-        w
-        for w in cleaned.split()
-        if "http" not in w.casefold() and not _looks_like_a_score(w)
-    ]
+    words = [w for w in cleaned.split() if "http" not in w.casefold()]
+    scores = _score_positions(words)
+    words = [w for index, w in enumerate(words) if index not in scores]
     truncated = len(words) > SPOKEN_WORD_CAP
     words = words[:SPOKEN_WORD_CAP]
-    line = " ".join(words).strip()
+    # Removing a token can strand the punctuation that followed it ("Y Combinator ."),
+    # which a host reads as a stumble even though every rule above is satisfied.
+    line = _ORPHANED_PUNCTUATION.sub(r"\1", " ".join(words).strip())
     if truncated and line and line[-1] not in ".!?":
         line += "."
     return line
@@ -268,12 +320,17 @@ def who_line_for(dossier: Dossier) -> tuple[str, list[Fact]]:
         return " ".join(parts).strip(), used
 
     # No citable current-work sentence fits. Fall back to what the roster itself says,
-    # which is the member's own self-description rather than anything researched.
+    # which is the member's own self-description rather than anything researched. The
+    # detail is sentence-cased on the way in: a roster reads "co-founder, Quarrystone
+    # Labs", and "Runa Okonkwo. co-founder, ..." is a stumble on the page.
     for detail in dossier.person.details:
-        candidate = f"{opening} {detail.strip().rstrip('.')}.".strip()
+        trimmed = detail.strip().rstrip(".")
+        if not trimmed:
+            continue
+        candidate = f"{opening} {trimmed[0].upper()}{trimmed[1:]}.".strip()
         if is_speakable(candidate):
             return candidate, []
-    return opening or name or dossier.person.person_id, []
+    return opening or name or dossier.person.person_id or WHO_OF_LAST_RESORT, []
 
 
 def pick_non_obvious(dossier: Dossier) -> Fact | None:
@@ -327,12 +384,14 @@ def pick_lately(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> list[Fact]
     return _by_recency(chosen)
 
 
-def pick_opener_hook(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> Fact | None:
-    """The fact the fallback opener invites a question about (DESIGN Decision 12).
+def opener_hook_candidates(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> list[Fact]:
+    """Facts the fallback opener may invite a question about, best first.
 
-    The highest-confidence displayable ``hook`` fact; if the dossier has none, the most
-    recent displayable fact of any category; if it has none of those either, ``None`` and
-    the caller uses :data:`OPENER_OF_LAST_RESORT`.
+    DESIGN Decision 12's order: displayable ``hook`` facts by confidence descending, then
+    every other displayable fact most-recent-first. A LIST rather than a single fact
+    because the template it feeds is itself subject to R18 — if the best hook's own wording
+    cannot be read aloud, the opener moves to the next one instead of shipping a line the
+    host stumbles over (see :func:`_fallback_opener`).
 
     ``exclude`` carries the facts the page already speaks aloud, and it earns its place:
     four of the five people in the grading corpus carry no ``hook`` fact at all, and their
@@ -343,12 +402,19 @@ def pick_opener_hook(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> Fact 
     """
     spoken_for = {f.fact_id for f in exclude}
     displayable = [f for f in _displayable(dossier.facts) if f.fact_id not in spoken_for]
-    hooks = [f for f in displayable if f.category == "hook"]
-    if hooks:
-        return max(hooks, key=lambda f: (f.provenance.confidence, f.fact_id))
-    if displayable:
-        return _by_recency(displayable)[0]
-    return None
+    hooks = sorted(
+        (f for f in displayable if f.category == "hook"),
+        key=lambda f: (f.provenance.confidence, f.fact_id),
+        reverse=True,
+    )
+    others = [f for f in _by_recency(displayable) if f.category != "hook"]
+    return hooks + others
+
+
+def pick_opener_hook(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> Fact | None:
+    """The single best opener hook, or ``None`` when the dossier shows nothing at all."""
+    candidates = opener_hook_candidates(dossier, exclude=exclude)
+    return candidates[0] if candidates else None
 
 
 def _capped_meet(matches: Sequence[Match]) -> list[Match]:
@@ -389,7 +455,10 @@ def _speakable_match(match: Match) -> Match:
         return match if why == match.why else match.model_copy(update={"why": why})
     repaired = speakable(why)
     if not repaired:
-        repaired = f"{match.other.name} is here tonight."
+        # Nothing survived the repair, so there is no shared thing left to name. R7 wants a
+        # why that names one; when the input carried none this module will NOT invent it —
+        # a fabricated connection is worse on this product than an admitted blank.
+        repaired = WHY_OF_LAST_RESORT
     return match.model_copy(update={"why": repaired})
 
 
@@ -443,10 +512,25 @@ def _validate_opener(line: str) -> str | None:
     return candidate
 
 
-def _fallback_opener(hook: Fact | None) -> str:
-    if hook is None:
-        return OPENER_OF_LAST_RESORT
-    return OPENER_TEMPLATE.format(text=hook.text.strip())
+def _fallback_opener(candidates: Sequence[Fact]) -> tuple[str, Fact | None]:
+    """DESIGN Decision 12's template, held to the SAME R18 bar as the model's line.
+
+    ``f"Ask about {hook.text}"`` interpolates a fact verbatim, and a fact's own wording is
+    not guaranteed speakable: facts run to 200 characters and nothing stops one carrying a
+    parenthetical or a URL. Validating only the model's line and not the template's leaves
+    R18 unenforced on the path taken by EVERY failure mode — timeout, transport error,
+    rejected model line — which is precisely the path DESIGN Decision 12 exists to make
+    reliable. So the template is validated too, and an unspeakable hook yields to the next
+    candidate rather than to a line the host stumbles over.
+
+    Returns the line and the fact it quotes, because a quoted fact is a fact SHOWN and R9
+    requires it to be citable. ``None`` means nothing was quoted.
+    """
+    for hook in candidates:
+        line = OPENER_TEMPLATE.format(text=hook.text.strip())
+        if _validate_opener(line) is not None:
+            return line, hook
+    return OPENER_OF_LAST_RESORT, None
 
 
 def _opener_prompt(dossier: Dossier, hook: Fact | None, lately: Sequence[Fact]) -> str:
@@ -461,16 +545,21 @@ def _opener_prompt(dossier: Dossier, hook: Fact | None, lately: Sequence[Fact]) 
 
 async def _say_out_loud(
     dossier: Dossier,
-    hook: Fact | None,
+    candidates: Sequence[Fact],
     lately: Sequence[Fact],
     llm: LLMClient,
-) -> str:
+) -> tuple[str, Fact | None]:
     """DESIGN Decision 12: exactly one LLM call, bounded, validated, always answered.
 
     Every way the call can go wrong — a slow API, a transport error, a model that ignores
     R14 — converges on the same documented template, so the arrival path has no branch that
     can leave the host without a line to say.
+
+    The second element of the return is the fact the line QUOTES, or ``None``. A model's
+    opener is a paraphrase and cites nothing; the template's is the fact's own sentence,
+    which R9 says must be checkable back to a document.
     """
+    hook = candidates[0] if candidates else None
     try:
         result = await asyncio.wait_for(
             llm.structured(
@@ -485,10 +574,12 @@ async def _say_out_loud(
         # Broad on purpose. R3 gives the arrival path three seconds and R14 gives it one
         # sentence; a digest that propagates an LLM transport failure has traded a working
         # page for a stack trace. The failure mode is the documented template, not an error.
-        return _fallback_opener(hook)
+        return _fallback_opener(candidates)
 
     validated = _validate_opener(str(getattr(result, "line", "") or ""))
-    return validated if validated is not None else _fallback_opener(hook)
+    if validated is not None:
+        return validated, None
+    return _fallback_opener(candidates)
 
 
 # --------------------------------------------------------------------------- the builder
@@ -519,13 +610,19 @@ async def make_digest(
     non_obvious = pick_non_obvious(dossier)
     lately = pick_lately(dossier, exclude=who_facts + ([non_obvious] if non_obvious else []))
 
-    hook = pick_opener_hook(dossier, exclude=who_facts)
-    say_out_loud = await _say_out_loud(dossier, hook, lately, llm)
+    candidates = opener_hook_candidates(dossier, exclude=who_facts)
+    say_out_loud, quoted = await _say_out_loud(dossier, candidates, lately, llm)
 
     cited: list[Fact] = [*who_facts, *lately]
     if non_obvious is not None:
         cited.append(non_obvious)
     cited.extend(_hub_evidence(dossier, meet))
+    # R9: the templated opener quotes a fact's own sentence, so that fact is SHOWN and must
+    # be checkable back to a document. Appended LAST so it can never disturb the first-use
+    # order of the sections above it, and only when the template was actually used — a
+    # model-written opener is a paraphrase and cites nothing.
+    if quoted is not None:
+        cited.append(quoted)
 
     return Digest(
         digest_id=uuid.uuid4().hex[:16],
