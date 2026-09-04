@@ -541,6 +541,12 @@ def test_a_naive_expiry_timestamp_is_read_as_utc_rather_than_crashing(tmp_path):
         json.dumps(
             {
                 "url": _URL,
+                # T-100: a cache entry carries a readable `fetched_at` or it is a miss.
+                # Added to the INPUT, not to an assertion -- what this test asserts about
+                # naive expiries is unchanged, and a "plain RawDoc file" has always had a
+                # `fetched_at` (the field is required on `contracts.RawDoc`), so the
+                # fixture is now a more faithful example of what it claims to be.
+                "fetched_at": "2026-01-01T00:00:00+00:00",
                 "text": _SENTENCE,
                 "http": {
                     "status": 200,
@@ -661,7 +667,15 @@ def test_a_recorded_fixture_with_no_envelope_is_untouched_by_the_expiry_rule(tmp
     root = tmp_path / "cache"
     root.mkdir()
     (root / f"{doc_id(_URL)}.json").write_text(
-        json.dumps({"url": _URL, "title": "Thornfield Loom", "text": _SENTENCE}),
+        # T-100: `fetched_at` added to the INPUT (see the note above). `RawDoc` requires
+        # it, so a "plain `RawDoc` file with no `http` envelope" carries one by definition;
+        # the no-envelope path this test guards is exercised exactly as before.
+        json.dumps({
+            "url": _URL,
+            "title": "Thornfield Loom",
+            "text": _SENTENCE,
+            "fetched_at": "2026-01-01T00:00:00+00:00",
+        }),
         encoding="utf-8",
     )
 
@@ -718,6 +732,9 @@ def test_an_unexpired_envelope_with_an_unusable_body_still_falls_back_to_the_tex
         json.dumps(
             {
                 "url": _URL,
+                # T-100: added to the INPUT (see the note above); the fallback this test
+                # asserts about an unusable envelope body is untouched.
+                "fetched_at": "2026-01-01T00:00:00+00:00",
                 "text": _SENTENCE,
                 "http": {"status": 200, "body": 17, "expires_at": "2999-01-01T00:00:00+00:00"},
             }

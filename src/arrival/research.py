@@ -675,9 +675,25 @@ def load_roster(roster_path: str | Path) -> list[PersonRef]:
 
 
 def _selects(person: PersonRef, only: str | None) -> bool:
-    if not only:
+    """Whether `person` is in the run. `only=None` — the flag OMITTED — means everybody.
+
+    T-099: the test is ABSENT versus BLANK, never falsy versus truthy. This used to read
+    `if not only: return True`, which is also taken by the EMPTY STRING — and the empty
+    string is what `--only "$PERSON"` expands to when `PERSON` is unset, so the one
+    accident the `--only` guard was added to catch was the one spelling it could not see:
+    `--only ''` short-circuited to True for every person and rebuilt the whole roster
+    against a paid API, exit 0, while `--only ' '` correctly refused with exit 2.
+
+    A blank value is an operator naming a person badly, not an operator naming everybody.
+    It matches nobody, and `build_command` turns "matched nobody" into exit 2. Refused
+    explicitly rather than left to fall through the comparison below, so the answer does
+    not depend on whether `PersonRef.person_id` happens to be constrained non-blank.
+    """
+    if only is None:
         return True
     wanted = only.strip()
+    if not wanted:
+        return False
     return wanted in (person.person_id, person.name) or slug(wanted) == person.person_id
 
 
@@ -910,7 +926,9 @@ async def build_all(
     """
     started = _now()
     people = [p for p in load_roster(roster_path) if _selects(p, only)]
-    if only and not people:
+    # `is not None`, not truthiness: `only=""` is a selector that matched nobody, and the
+    # empty string is falsy, so this warning was silent for the one case it exists for.
+    if only is not None and not people:
         log.warning("no roster person matched only=%r", only)
 
     out = Path(out_dir)
@@ -923,8 +941,21 @@ async def build_all(
             f"--out {out} would put dossiers and their documents in the same directory "
             f"({docs_dir}); the documents go to out_dir/../docs, so pick another --out"
         )
-    out.mkdir(parents=True, exist_ok=True)
-    docs_dir.mkdir(parents=True, exist_ok=True)
+    # T-101: a `--out` the process cannot create is BAD INPUT, not a failed build. These
+    # two calls used to raise `PermissionError` straight through `build_all` into
+    # `build_command`'s catch-all, which reports exit 1 — "the run failed, retry me" — for
+    # an argument that will never work without a chmod. An unreadable roster and an
+    # unreadable `.env` are both already exit 2; a directory the operator named and the
+    # process cannot make is the same kind of fact about the same kind of argument, and
+    # `BuildError` is the type `build_command` already maps to 2.
+    try:
+        out.mkdir(parents=True, exist_ok=True)
+        docs_dir.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise BuildError(
+            f"cannot create the dossier directory {out} (and its documents directory "
+            f"{docs_dir}): {exc.strerror or exc}"
+        ) from exc
 
     fan_out = list(connectors) if connectors is not None else _default_connectors()
     client = llm if llm is not None else _default_llm()
@@ -1092,9 +1123,14 @@ def build_command(
 
     print(format_report(report))
 
-    if opts.only and not report.people:
+    if opts.only is not None and not report.people:
         # A one-character typo in `--only` otherwise prints an empty table and exits 0,
         # which a per-person CI wrapper reads as "built, nothing to do".
+        #
+        # T-099: `is not None` rather than truthiness. argparse hands `None` for an OMITTED
+        # `--only` and `''` for `--only ""`, and the falsy test could not tell them apart —
+        # so the guard was blind to `--only "$PERSON"` with `PERSON` unset, which is the
+        # single accident it was written for.
         print(f"arrival: no roster person matched --only {opts.only!r}", file=sys.stderr)
         return 2
 

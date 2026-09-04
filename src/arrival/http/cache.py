@@ -62,14 +62,45 @@ def cache_path(root: Path, key: str) -> Path:
     return Path(root) / f"{doc_id(key)}.json"
 
 
-def _parse_fetched_at(value: object) -> datetime:
-    if isinstance(value, str):
-        try:
-            parsed = datetime.fromisoformat(value)
-        except ValueError:
-            return datetime.now(UTC)
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
-    return datetime.now(UTC)
+def _parse_fetched_at(value: object) -> datetime | None:
+    """`value` as an aware datetime, or None when it is not one.
+
+    T-100. This used to return `datetime.now(UTC)` for anything it could not read, which
+    made `read_record` serve the entry anyway with a fetch time IN THE PRESENT that moved
+    on every read, `from_cache=True` beside it. The value reaches `RawDoc.fetched_at` and
+    is displayed on the digest as the retrieval date, so that was a fabricated citation.
+
+    It now refuses, on the module's own rule, already stated twice for two other fields of
+    this same record: an unreadable `expires_at` is a miss, and a present-but-unreadable
+    `status` is a miss, because "a file we cannot read in full is a file we should not
+    serve" and "a miss costs one re-fetch while a guess is wrong for the entry's whole
+    life". `status` is, like this field and unlike the expiry, purely descriptive and
+    gates nothing here — so "descriptive fields get a default" was never the convention;
+    it was this field's alone.
+
+    ABSENT is refused too, which is the one place this departs from the module's
+    "absence is the shape a fixture intends" reading, and the reason is that this field
+    HAS NO HONEST DEFAULT. Absence is expressible for both neighbours: no expiry means
+    durable, a real state with a real representation (`None`), and no status means 200,
+    which is what a fixture carrying no envelope metadata actually asserts.
+    `HttpRecord.fetched_at` is a non-optional `datetime`, so there is no way to say "I do
+    not know when this was fetched" — every tolerated absence must INVENT a moment, and an
+    invented moment is precisely the provenance claim this change exists to stop.
+    `RawDoc.fetched_at` is required for the same reason, so a payload without one is not a
+    `RawDoc` dump and was never the documented shape. Measured before ruling: all 150 committed
+    cache-shaped documents under `data/docs/`, `tests/fixtures/` and the frozen fixtures
+    carry a readable ISO stamp, and `write_record` cannot produce one that does not — so
+    nothing that exists is turned into a miss, and a miss heals on the next write.
+
+    A NAIVE stamp is readable, merely under-specified, and is still read as UTC.
+    """
+    if not isinstance(value, str):
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def _parse_expiry(value: object) -> datetime | None:
@@ -100,6 +131,13 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
     except (OSError, ValueError):
         return None
     if not isinstance(payload, dict):
+        return None
+
+    # T-100: read BEFORE anything else about the body, because this is a judgement on the
+    # whole payload rather than on one arm of the branch below -- a record with no
+    # readable fetch time is not a complete record, whichever shape its body arrives in.
+    fetched_at = _parse_fetched_at(payload.get("fetched_at"))
+    if fetched_at is None:
         return None
 
     envelope = payload.get("http")
@@ -176,7 +214,7 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
         status=status,
         content_type=content_type,
         body=body,
-        fetched_at=_parse_fetched_at(payload.get("fetched_at")),
+        fetched_at=fetched_at,
         from_cache=True,
     )
 
@@ -198,28 +236,43 @@ def write_record(
     should stop being served; `client.fetch_record` is the only one that does.
     """
     path = cache_path(root, key)
-    envelope: dict[str, object] = {
-        "status": record.status,
-        "content_type": record.content_type,
-        "body": record.body,
-    }
-    if expires_at is not None:
-        envelope["expires_at"] = expires_at.isoformat()
-    payload = {
-        "doc_id": doc_id(record.url),
-        "source_kind": "self_page",  # advisory only; re-stamped by the caller on read
-        "url": record.url,
-        "title": title,
-        "text": text,
-        "published_at": None,
-        "fetched_at": record.fetched_at.isoformat(),
-        "http": envelope,
-    }
     # Write-then-rename: a killed process leaves either the old file or the new one,
     # never a truncated one that every later run has to re-diagnose. Named OUTSIDE the
     # try so the handler can always clean it up.
     temporary = path.with_suffix(".json.tmp")
+    # T-100: the payload is BUILT INSIDE the try, and it used to be built outside. Two
+    # escapes lived in those lines, and both contradicted this function's unconditional
+    # docstring the same way T-066's `UnicodeEncodeError` did:
+    #
+    #   * `record.fetched_at.isoformat()` is an `AttributeError` for an `HttpRecord`
+    #     whose stamp is a `str`, and `expires_at.isoformat()` the same for a `str` expiry;
+    #   * `json.dumps` raises `TypeError` -- neither `OSError` nor `ValueError` -- for a
+    #     non-serialisable `body`, `text` or `title`.
+    #
+    # Reaching either needs a caller mistake: `HttpRecord` is an unvalidated dataclass and
+    # `client.fetch_record`, its only production constructor, never builds one wrongly. It
+    # is nonetheless PUBLIC and exported, the promise above is written over `record` rather
+    # than over one caller's habits, and an unconditional promise that holds only for the
+    # inputs today's sole caller happens to produce is exactly the shape of the defect
+    # T-066 closed. A miss is the right answer here for the same reason it is below.
     try:
+        envelope: dict[str, object] = {
+            "status": record.status,
+            "content_type": record.content_type,
+            "body": record.body,
+        }
+        if expires_at is not None:
+            envelope["expires_at"] = expires_at.isoformat()
+        payload = {
+            "doc_id": doc_id(record.url),
+            "source_kind": "self_page",  # advisory only; re-stamped by the caller on read
+            "url": record.url,
+            "title": title,
+            "text": text,
+            "published_at": None,
+            "fetched_at": record.fetched_at.isoformat(),
+            "http": envelope,
+        }
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         temporary.replace(path)
@@ -240,7 +293,11 @@ def write_record(
     # A miss is the right answer, not a sanitised write: a body rewritten to get past the
     # codec would answer differently warm than cold, which `read_record` above calls a
     # worse defect than the one being fixed. The cost is one re-fetch per affected url.
-    except (OSError, ValueError):
+    #
+    # `TypeError` and `AttributeError` are T-100's two, and they are scoped as tightly as
+    # the arms above: the only calls in this block that can raise them are the two
+    # `.isoformat()`s and `json.dumps`.
+    except (OSError, TypeError, ValueError, AttributeError):
         # `write_text` opens with "w", so a mid-write failure leaves a TRUNCATED .tmp on
         # disk. It is never read (readers only open `{doc_id}.json`), but it would
         # accumulate one file per failure forever. `research.py:_write_json` cleans up the
