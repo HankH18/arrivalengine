@@ -1,0 +1,53 @@
+{
+  "case_id": "hallucinated-city-evidence",
+  "person": {
+    "person_id": "rurik-ashgrove",
+    "name": "Rurik Ashgrove",
+    "details": [
+      "VP engineering at Ninebark Marine",
+      "Halden"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "2f559d5a983c0090",
+      "source_kind": "self_page",
+      "url": "https://boatyard-directory.example/ninebark-marine/crew",
+      "title": "Ninebark Marine - crew",
+      "text": "Ninebark Marine - crew\n\nRurik Ashgrove is vice president of engineering at Ninebark Marine and has been with the yard since it was two sheds and a slipway.\n\nHe does not have a public calendar and would like that noted.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "db3d3e288715461e",
+      "source_kind": "search",
+      "url": "https://harbour-review.example/2025/hull-monitoring",
+      "title": "Harbour Review - hull monitoring",
+      "text": "Harbour Review - hull monitoring\n\nThe yard declined to say where its engineering lead is based, noting only that the monitoring work is done wherever the hull is.\n\nThe system logs strain at fourteen points and has been running for two winters.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "2f559d5a983c0090",
+      "match": "yes",
+      "confidence": 0.87,
+      "evidence": "Rurik Ashgrove is vice president of engineering at Ninebark Marine",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "db3d3e288715461e",
+      "match": "yes",
+      "confidence": 0.8,
+      "evidence": "Rurik Ashgrove has run the Halden yard office since 2017.",
+      "disambiguator": "city"
+    }
+  ],
+  "expect": {
+    "status": "unresolved",
+    "accepted_doc_ids": [],
+    "strong_keys_present": [],
+    "note": "DESIGN Decision 5 made outcome-changing. The second verdict is a `yes` on `city` whose evidence appears in no document -- the document says the opposite, that the yard declined to say where its engineering lead is based. That verdict is downgraded to `unsure`, which leaves one `yes` and no strong key (no wikidata/github/edgar document, and the employer's own domain would be ninebarkmarine.* or ninebark-marine.*, and every url here sits on a third-party host), so the answer is `unresolved` with no stored documents. A resolver that skips the citation check resolves this on employer+city and accepts both documents."
+  }
+}

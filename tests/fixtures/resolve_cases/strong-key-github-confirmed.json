@@ -1,0 +1,57 @@
+{
+  "case_id": "strong-key-github-confirmed",
+  "person": {
+    "person_id": "imogen-vasseur-kell",
+    "name": "Imogen Vasseur-Kell",
+    "details": [
+      "Staff engineer at Duskwater Robotics",
+      "Tampere"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "50d12753dd2b0139",
+      "source_kind": "github",
+      "url": "https://code-host.example/users/ivasseurkell",
+      "title": "code-host - ivasseurkell",
+      "text": "code-host - ivasseurkell\n\nName: Imogen Vasseur-Kell\nCompany: Duskwater Robotics\nLocation: Tampere\nWebsite: not set\n\nPinned repositories\n\nwetleg - a gait controller for machines that have to walk on wet stone. 212 stars.\nslipmap - terrain classification from a single downward camera. 64 stars.\n\nThe account has been open since 2015 and every commit for the last three years has been to the two pinned repositories.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "a66e828d3d9520e1",
+      "source_kind": "hn",
+      "url": "https://forum.example/threads/gait-controllers-on-wet-stone",
+      "title": "forum thread: gait controllers on wet stone",
+      "text": "forum thread: gait controllers on wet stone\n\nThe wetleg approach is interesting but I have no idea who maintains it now. The commit history has three names in it and none of them are in the readme.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "50d12753dd2b0139",
+      "match": "yes",
+      "confidence": 0.9,
+      "evidence": "Name: Imogen Vasseur-Kell\nCompany: Duskwater Robotics\nLocation: Tampere",
+      "disambiguator": "handle"
+    },
+    {
+      "doc_id": "a66e828d3d9520e1",
+      "match": "unsure",
+      "confidence": 0.25,
+      "evidence": "The commit history has three names in it and none of them are in the readme.",
+      "disambiguator": "role"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "50d12753dd2b0139"
+    ],
+    "strong_keys_present": [
+      "github"
+    ],
+    "note": "The confirmed half of the pair the frozen corpus refuses. The profile's Name field matches the person's name AND its Company field matches the employer detail, which is the confirmation DESIGN Decision 4 requires, so the handle is a strong key and resolution does not need a second independent attribute -- there is exactly one `yes` verdict here, and a resolver that unconditionally demands two of them fails this case. The `unsure` document must not be accepted."
+  }
+}

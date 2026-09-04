@@ -1,0 +1,69 @@
+{
+  "case_id": "unresolved-one-attribute-twice",
+  "person": {
+    "person_id": "ozric-tarrandale",
+    "name": "Ozric Tarrandale",
+    "details": [
+      "Head of data at Pelmet & Rowe",
+      "Ghent"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "8fabc41643df26aa",
+      "source_kind": "self_page",
+      "url": "https://firm-directory.example/pelmet-and-rowe/who-we-are",
+      "title": "Pelmet & Rowe - who we are",
+      "text": "Pelmet & Rowe - who we are\n\nA seven-person shop that measures things for people who have been guessing.\n\nOzric Tarrandale is head of data at Pelmet & Rowe and looks after the survey pipeline. He will tell you, at length, that a confidence interval is not a decoration.\n\nWe do not publish client names. We do publish our methodology, which is unusual enough that people write to ask whether it is a mistake.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "20aced4d7951a7b3",
+      "source_kind": "search",
+      "url": "https://measurement-weekly.example/2025/survey-pipelines-that-hold",
+      "title": "Measurement Weekly - survey pipelines that hold",
+      "text": "Measurement Weekly - survey pipelines that hold\n\n\"The pipeline is the study,\" said Ozric Tarrandale, head of data at Pelmet & Rowe, when asked why his team spends more time on ingestion than on modelling.\n\nThe piece goes on to describe three failure modes, of which the third -- a silently dropped stratum -- is the one that ends careers.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "2ce5b50fc9f2dd47",
+      "source_kind": "hn",
+      "url": "https://forum.example/threads/weighting-a-panel-badly",
+      "title": "forum thread: weighting a panel badly",
+      "text": "forum thread: weighting a panel badly\n\nSomebody called Tarrandale wrote a good comment about this a while back, or possibly it was a different person with a similar name. I could not find it again and I am not sure it was the same forum.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "8fabc41643df26aa",
+      "match": "yes",
+      "confidence": 0.88,
+      "evidence": "Ozric Tarrandale is head of data at Pelmet & Rowe",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "20aced4d7951a7b3",
+      "match": "yes",
+      "confidence": 0.84,
+      "evidence": "said Ozric Tarrandale, head of data at Pelmet & Rowe",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "2ce5b50fc9f2dd47",
+      "match": "unsure",
+      "confidence": 0.3,
+      "evidence": "Somebody called Tarrandale wrote a good comment about this a while back",
+      "disambiguator": "role"
+    }
+  ],
+  "expect": {
+    "status": "unresolved",
+    "accepted_doc_ids": [],
+    "strong_keys_present": [],
+    "note": "R2. Two `yes` verdicts, both citing `employer`: corroboration of one attribute, which DESIGN Decision 4's second arm explicitly does not accept -- the disambiguators must DIFFER. No strong key is available either: no wikidata, github or edgar document, and the only host derivable from the employer detail would be pelmetandrowe.* or pelmet-and-rowe.*, which no url here sits on -- every document is on a third-party directory host. The city detail Ghent is corroborated by nothing. So the answer is `unresolved` with no stored documents."
+  }
+}
