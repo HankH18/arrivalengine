@@ -330,7 +330,10 @@ def _hub_payload(doc, spec, fact_ids):
         "hub_id": spec["label"],
         "label": spec["label"],
         "type": spec["type"],
-        "evidence_fact_ids": list(fact_ids),
+        # `evidence` lets a spec hand back NO evidence ids while still naming a document —
+        # the shape a model produces when it asserts a hub it cannot cite, and the shape
+        # the doc_id fallback exists to serve. Absent the key, behaviour is unchanged.
+        "evidence_fact_ids": list(spec["evidence"]) if "evidence" in spec else list(fact_ids),
         "doc_id": doc.doc_id,
         "url": doc.url,
         "source_kind": doc.source_kind,
@@ -600,6 +603,68 @@ def test_one_label_across_two_docs_becomes_one_hub_evidenced_by_both(frozen_fixt
     cited_docs = {facts_by_id[fid].provenance.doc_id for fid in evidence}
     assert cited_docs == {about.doc_id, roadmap.doc_id}, (
         f"merged evidence must span both source documents, got {sorted(cited_docs)}"
+    )
+
+
+def test_a_hubs_evidence_must_come_from_documents_that_name_it(frozen_fixtures):
+    """SPEC R11 via DESIGN Decision 3: a hub may not borrow another document's facts.
+
+    `research._supported_hubs` exists to drop a hub whose evidence was taste-excluded. That
+    guarantee is only worth what the evidence link is worth: if a hub can be evidenced by
+    facts from a document that has nothing to do with it, the support check is satisfied by
+    facts it never examined, and withheld material reaches a host-facing page through a hub
+    nobody screened.
+
+    The shape under test is the one a model actually produces — a hub it asserts but cannot
+    cite, naming a document. Answering that with "then take everything from that document"
+    is the defect. `Foundry Seed` is named in the about page and nowhere in the trade-press
+    piece, which the pre-conditions below assert against the corpus rather than assume.
+    """
+    about = _frozen_doc(frozen_fixtures, _ABOUT_DOC)
+    roadmap = _frozen_doc(frozen_fixtures, _ROADMAP_DOC)
+    label = "Foundry Seed"
+    assert _norm(label) in _norm(about.text), "fixture pre-condition: the about page names it"
+    assert _norm(label) not in _norm(roadmap.text), (
+        "fixture pre-condition: the trade-press piece must NOT name it, or this test is vacuous"
+    )
+
+    facts, hubs = _run_extract(
+        [about, roadmap],
+        [about.doc_id, roadmap.doc_id],
+        {
+            about.doc_id: [
+                {
+                    "text": "Runa Okonkwo co-founded Quarrystone Labs and runs its platform team.",
+                    "quote": _ABOUT_SPAN,
+                    "category": "current_work",
+                }
+            ],
+            roadmap.doc_id: [
+                {
+                    "text": "Quarrystone Labs opened its platform roadmap to customers.",
+                    "quote": _ROADMAP_SPAN,
+                    "category": "recent_activity",
+                }
+            ],
+        },
+        # Asserted on the piece that never names it, with no evidence of its own.
+        {roadmap.doc_id: [{"label": label, "type": "investor", "evidence": []}]},
+    )
+
+    facts_by_id = {f.fact_id: f for f in facts}
+    docs_by_id = {about.doc_id: about, roadmap.doc_id: roadmap}
+    borrowed = []
+    for hub in hubs:
+        for fact_id in hub.evidence_fact_ids:
+            fact = facts_by_id.get(fact_id)
+            if fact is None:
+                continue  # dangling ids are a separate criterion
+            source = docs_by_id.get(fact.provenance.doc_id)
+            if source is not None and _norm(hub.label) not in _norm(source.text):
+                borrowed.append((hub.hub_id, fact_id, fact.provenance.doc_id))
+    assert not borrowed, (
+        "a hub is evidenced by a fact whose source document never names it — borrowed "
+        f"evidence satisfies the R11 support check without being screened: {borrowed}"
     )
 
 

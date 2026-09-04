@@ -1,6 +1,6 @@
 {
   "frozen": true,
-  "frozen_at": "2026-09-04T00:23:43",
+  "frozen_at": "2026-09-04T03:20:45",
   "metrics": [
     {
       "id": "acceptance_pass_rate",
@@ -15,7 +15,7 @@
       "name": "Frozen acceptance tests collected (count)",
       "kind": "global",
       "command": "uv run python .swarm-loop/acceptance/run.py --collected-count",
-      "target": 122,
+      "target": 123,
       "direction": "maximize"
     },
     {
@@ -58,7 +58,7 @@
       "kind": "feature",
       "feature_id": "T-3",
       "command": "uv run python .swarm-loop/acceptance/run.py --count-passing --ticket T-3",
-      "target": 10,
+      "target": 11,
       "direction": "maximize"
     },
     {
@@ -107,7 +107,7 @@
       "direction": "maximize"
     }
   ],
-  "amendments": 3,
-  "last_amended_at": "2026-09-04T00:23:43",
-  "last_amend_reason": "Re-derive the two targets the ESC-006 amendment moved: acceptance_collected 120 -> 122 and criteria_t6 10 -> 12, both measured against the amended suite rather than assumed."
+  "amendments": 4,
+  "last_amended_at": "2026-09-04T03:20:45",
+  "last_amend_reason": "ESC-007, authorized by the owner 2026-09-04 ('for esc-007, Use your best judgment. Give my authorization.'). Adds ONE criterion to test_t3_extractor.py: every Hub.evidence_fact_id must resolve to a fact whose source document names the hub's label. Re-measured with a sound rig before spending the authorization \u2014 the frozen runner derives REPO_ROOT from its own __file__ and overwrites PYTHONPATH, so it always measures the tree containing the run.py invoked; a verifier copied the whole tree including .swarm-loop/acceptance and ran the copy's own run.py, proving the loaded module's realpath and sabotage marker from inside pytest_configure, with a positive control moving the gate to 98.35/t3=8 in the same run. Under that rig the full pre-repair extract.py shape (CandidateHub.doc_id trusted uncorroborated, a whole document's facts bulk-attached as a hub's evidence) left the gate at exactly 100.0/t3=10/t6=12. Not an unreached branch: instrumentation shows the graded run enters that fallback 107 times and the sabotaged computation would yield different Hub.evidence_fact_ids in 52 of them. Targets moved with it: acceptance_collected 122->123, criteria_t3 10->11."
 }

@@ -1,6 +1,6 @@
 {
-  "frozen_at": "2026-09-04T00:23:43",
-  "amendments": 3,
+  "frozen_at": "2026-09-04T03:20:45",
+  "amendments": 4,
   "files": {
     ".swarm-loop/acceptance/conftest.py": "0597691ae06e9fd6a9345d7bf963ca49dd7c57e6ef700f33ebca53dba0e11f55",
     ".swarm-loop/acceptance/pytest.ini": "c3af3d4c18d41c7ef6d065b6f3a7b325f6155da00cd89fb6f745751f30585b61",
@@ -9,7 +9,7 @@
     ".swarm-loop/acceptance/test_t0_contracts.py": "0307753f368fe399e62aa8b3dd6bf6ccb6f2ecff90e4bff94dfff275adc7f5a1",
     ".swarm-loop/acceptance/test_t1_connectors.py": "90be6539b22a63ad5b0187dead415fd17ccf651bc59e96851711a4e5d0e1b538",
     ".swarm-loop/acceptance/test_t2_resolver.py": "c1822a58afcd33cfd8110902e221c447f43f99b48d4d2ead046e1bc94c49b5c0",
-    ".swarm-loop/acceptance/test_t3_extractor.py": "87910e08191b527c73aba9b5d0b21996945cdefd25ffd555cf51c00b5833281e",
+    ".swarm-loop/acceptance/test_t3_extractor.py": "cda6b39487a1368210da922edacae0ec081f81e75839497306454abfb60862e2",
     ".swarm-loop/acceptance/test_t4_taste.py": "ba24c9c8df640a6c2c6064cf597d478e2386352a526defc4157ccb2ba06c5a25",
     ".swarm-loop/acceptance/test_t5_matching.py": "0660d8834aa5052108e2a3b57a838c3b6e264887a7b1d35febba9b10e0d3b16d",
     ".swarm-loop/acceptance/test_t6_pipeline.py": "91d6ab9c38a18a29b8324be97c5a5e068747644cc0bd1475fc22981e16f67cc0",
@@ -55,23 +55,23 @@
     ".swarm-loop/acceptance/fixtures/dossiers/runa-okonkwo.json": "ccd9aa234497bd1762188302c1dc171349fcf25ab4e7a7b8432ec45e4849915e",
     ".swarm-loop/acceptance/fixtures/dossiers/sil-vantorre.json": "c69ceded62c3f1146751ed9b5da6acc0454bb73206dd6707863a8772e6957665",
     ".swarm-loop/acceptance/fixtures/dossiers/theo-baptiste.json": "955dabd56478c05bf897fb81066cd5bc677ccf6aca6df0a52a2675d289fb89a8",
-    ".swarm-loop/goals.json": "bb9d1c088f289a083ee31ea50561c13d159f0b096c3466ad044733df50254cac",
+    ".swarm-loop/goals.json": "b2d8a6ac7508e7943d2d1f58f4e6268c03ca1ea0de9f0ddd75f129cfdd268182",
     "tickets.json": "f12d37a1a696954d55f2812e4e7a3c9e55907718c80b09a96ead39ca6f591f56"
   },
   "targets": {
     "acceptance_pass_rate": 100.0,
-    "acceptance_collected": 122.0,
+    "acceptance_collected": 123.0,
     "build_succeeds": 1.0,
     "lint_errors": 0.0,
     "criteria_t1": 19.0,
     "criteria_t2": 13.0,
-    "criteria_t3": 10.0,
+    "criteria_t3": 11.0,
     "criteria_t4": 14.0,
     "criteria_t5": 8.0,
     "criteria_t6": 12.0,
     "criteria_t7": 10.0,
     "criteria_t8": 14.0
   },
-  "goals_canon": "40ff4d430b98a008b43495e2d5b91956256c1e0d3587cfc92c1389c5d418fdad",
-  "log_seq": 21
+  "goals_canon": "46b5344e1e911fe84d5e52fc6fad4e25f292b5389c82a2b6eca1778a731c60e0",
+  "log_seq": 22
 }
