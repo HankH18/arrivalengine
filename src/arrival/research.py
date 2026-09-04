@@ -645,7 +645,13 @@ def load_roster(roster_path: str | Path) -> list[PersonRef]:
     path = Path(roster_path)
     try:
         raw = path.read_text(encoding="utf-8")
-    except OSError as exc:
+    # `ValueError` is here for `UnicodeDecodeError`, which subclasses it rather than
+    # `OSError`. A roster is hand-written, so a file saved as latin-1 or cp1252 is an
+    # ordinary operator mistake -- and with only `except OSError` it escaped `RosterError`
+    # and fell through to `_main`'s catch-all, which logs a traceback and returns 1 instead
+    # of the diagnosis and exit 2 a roster problem is supposed to get. Same shape as
+    # `_existing_row` below, which already caught `ValueError` alongside the OS errors.
+    except (OSError, ValueError) as exc:
         raise RosterError(f"cannot read roster {path}: {exc}") from exc
     try:
         data = yaml.safe_load(raw)
