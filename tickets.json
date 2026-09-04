@@ -1396,6 +1396,66 @@
       "defect": "`test_every_corpus_hub_label_yields_a_speakable_why` grades with the BARE `is_speakable(why)`, but after T-052 the product path is `_speakable_match`, which additionally receives the declared noun-phrase spans from Match.contributions. So the tripwire goes red for a MULTI-WORD corpus label whose head reads as a verb ('Reuters Media Group' as a company) even though the product is now correct on that input. It is a false alarm waiting to fire the day either corpus gains such a label. Fix: grade through the same path the product takes, or declare the spans the way _speakable_match does.",
       "finding_id": "dade9460c11bed920181948f3db811a5f349db03a8090b52ead64ac45c7c0a88",
       "reproduction": "Add a multi-word hub label whose head token ends in -s to either fixture corpus. Reported by the FIX-DIGEST2 lane; the test belongs to T-5 and was outside its ownership."
+    },
+    {
+      "id": "T-065",
+      "title": "A non-UTF-8 `.env` in the process CWD makes `Settings()` raise a bare UnicodeDecodeError straight out of python-dotenv, with no handler anywhere. Reproduced by execution twice, independently. This is the T-058 blast radius UPSTREAM of every guard: `uvicorn arrival.web.app:app` on Render dies with a raw dotenv traceback instead of a named error carrying the path, because app.py ends with `app = create_app()` and config is read before anything else. Note `env_file='.env'` is RELATIVE and resolves against the process CWD, unlike `dossier_dir`, which config.py:21-34 deliberately anchors on __file__ so the app finds the same corpus whatever directory it starts from \u2014 so the .env a deploy picks up depends on where the process was launched. Fix: `get_settings()` wraps `Settings()` and catches ValueError (which covers UnicodeDecodeError), re-raising a named, path-carrying error the way DossierLoadError does. A .env now exists in this repo, so the path is live rather than hypothetical.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/config.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/config.py:41",
+      "defect": "A non-UTF-8 `.env` in the process CWD makes `Settings()` raise a bare UnicodeDecodeError straight out of python-dotenv, with no handler anywhere. Reproduced by execution twice, independently. This is the T-058 blast radius UPSTREAM of every guard: `uvicorn arrival.web.app:app` on Render dies with a raw dotenv traceback instead of a named error carrying the path, because app.py ends with `app = create_app()` and config is read before anything else. Note `env_file='.env'` is RELATIVE and resolves against the process CWD, unlike `dossier_dir`, which config.py:21-34 deliberately anchors on __file__ so the app finds the same corpus whatever directory it starts from \u2014 so the .env a deploy picks up depends on where the process was launched. Fix: `get_settings()` wraps `Settings()` and catches ValueError (which covers UnicodeDecodeError), re-raising a named, path-carrying error the way DossierLoadError does. A .env now exists in this repo, so the path is live rather than hypothetical.",
+      "finding_id": "c1344b4db1fe0a4f708e07e6f7467169d2f235b4ba0742211ee8c9fcac23606c",
+      "reproduction": "Write a latin-1 byte into .env and call get_settings(). Reported by the FIX-ENC lane, which fixed the CLI arm it owned and left the root because config.py was outside its ownership."
+    },
+    {
+      "id": "T-066",
+      "title": "`write_record`'s handler at :225 is `except OSError:` only, while `write_text(encoding='utf-8')` raises UnicodeEncodeError \u2014 a ValueError \u2014 on a lone surrogate, which extract.py:210's `ensure_ascii=False` re-emits from a remote JSON body. The full chain was measured. This breaks the function's own documented contract, which says in as many words that 'a cache that cannot be written is not an error', and the exception escapes fetch_record. Same defect class as T-058; a one-word fix.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/cache.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/cache.py:223",
+      "defect": "`write_record`'s handler at :225 is `except OSError:` only, while `write_text(encoding='utf-8')` raises UnicodeEncodeError \u2014 a ValueError \u2014 on a lone surrogate, which extract.py:210's `ensure_ascii=False` re-emits from a remote JSON body. The full chain was measured. This breaks the function's own documented contract, which says in as many words that 'a cache that cannot be written is not an error', and the exception escapes fetch_record. Same defect class as T-058; a one-word fix.",
+      "finding_id": "4e342bf41ae5e08cb4137492fffcfcd526deb8367eef6f9e1feba7c7401b973e",
+      "reproduction": "Feed a remote JSON body containing a lone surrogate through extract and into write_record. Reported by the FIX-ENC lane."
+    },
+    {
+      "id": "T-067",
+      "title": "A bare `url.encode()` is utf-8/strict and raises on a lone surrogate. Callers `http/cache.py:62` and `http/client.py:489` are both UNGUARDED \u2014 the call sits outside their functions' try blocks \u2014 while research.py's callers are guarded. Part of the 11 uncaught sites the FIX-ENC lane enumerated across 46 production decision sites.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/util.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/util.py:60",
+      "defect": "A bare `url.encode()` is utf-8/strict and raises on a lone surrogate. Callers `http/cache.py:62` and `http/client.py:489` are both UNGUARDED \u2014 the call sits outside their functions' try blocks \u2014 while research.py's callers are guarded. Part of the 11 uncaught sites the FIX-ENC lane enumerated across 46 production decision sites.",
+      "finding_id": "0e56e91f11bcd69a721bb6a9d1974d7180805d5bb2a9ce4277afdc8c661e4660",
+      "reproduction": "Call doc_id() with a URL containing a lone surrogate. Reported by the FIX-ENC lane."
+    },
+    {
+      "id": "T-068",
+      "title": "`_payload`'s docstring asserts 'Nothing here can raise', but `await request.form()` can raise on a malformed multipart body, and _payload is called UNGUARDED at :202 and :239 \u2014 the two webhook routes. A docstring that is wrong about whether a function can raise is worse than no docstring, because the call sites were written trusting it. Related: starlette's JSONResponse/HTMLResponse render with `.encode('utf-8')` strict, so a lone surrogate in a person's name is an unhandled 500 at render time.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/app.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/web/app.py:78",
+      "defect": "`_payload`'s docstring asserts 'Nothing here can raise', but `await request.form()` can raise on a malformed multipart body, and _payload is called UNGUARDED at :202 and :239 \u2014 the two webhook routes. A docstring that is wrong about whether a function can raise is worse than no docstring, because the call sites were written trusting it. Related: starlette's JSONResponse/HTMLResponse render with `.encode('utf-8')` strict, so a lone surrogate in a person's name is an unhandled 500 at render time.",
+      "finding_id": "475cd1cf53d36ab4f1672087d55577f8cafaf15c797547b4ded5729d9531754a",
+      "reproduction": "POST a malformed multipart body to /arrive. Reported by the FIX-ENC lane."
     }
   ],
   "cut_list": [

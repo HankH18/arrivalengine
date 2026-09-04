@@ -240,6 +240,27 @@ Never trust the installer's exit code.
   a `pytest_configure` hook in a plugin, so the proof runs in the process that does the
   measuring.** A sabotage run in which NOTHING goes red is not evidence that your tests
   are weak — check which tree pytest imported before you believe it.
+
+  **AND THAT IS STILL NOT ENOUGH FOR THE FROZEN GATE.** Read this before reporting any
+  "the frozen gate stayed green under sabotage" result, because that is the exact claim
+  this rule exists to make trustworthy. `.swarm-loop/acceptance/run.py` derives `REPO_ROOT`
+  from its OWN `__file__`, OVERWRITES `PYTHONPATH` with `REPO_ROOT/src`, passes
+  `-c <frozen pytest.ini>` (bypassing configfile discovery) and `-o addopts=` (discarding
+  the project's `pythonpath` ini key). Net effect: **the frozen runner always measures the
+  tree containing the `run.py` you executed, discards any `PYTHONPATH` you set, and ignores
+  `-o pythonpath` entirely** — falling through to whatever the installed editable `.pth`
+  points at, which is the worktree. Two lanes hit this independently.
+
+  To sabotage-test the frozen gate you must do BOTH of these:
+  1. **Copy the WHOLE tree, `.swarm-loop/acceptance/` included, and execute the COPY's own
+     `run.py`** by a relative path from inside the copy.
+  2. **Copy `.venv` into the copy and rewrite
+     `site-packages/_editable_impl_arrival_engine.pth` to point at `<copy>/src`**, then run
+     everything with `<copy>/.venv/bin/python`.
+
+  Then prove it: `rootdir`, `inifile` and every loaded module's realpath must resolve inside
+  the copy, and a POSITIVE CONTROL in the same run must move the gate. A control that does
+  not move means the rig is broken and every "not caught" reading in that run is worthless.
 - **A TEST YOU WRITE MAY NOT GRADE AGAINST A FILE YOU OWN.** Whatever an assertion
   compares against — a fixture, a golden file, a snapshot, a recorded response, the source
   text of a module — must be something you CANNOT write: orchestrator-owned, or frozen
