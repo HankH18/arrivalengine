@@ -15,6 +15,11 @@
     {
       "method": "GET",
       "url": "https://en.wikipedia.org/w/api.php?action=query&list=search",
+      "query": {
+        "srsearch": "Marisol Quennebeck Thornfield Loom",
+        "format": "json",
+        "formatversion": "2"
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {

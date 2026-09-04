@@ -15,6 +15,11 @@
     {
       "method": "POST",
       "url": "https://api.tavily.com/search",
+      "request_json": {
+        "query": "Marisol Quennebeck Thornfield Loom",
+        "search_depth": "basic",
+        "include_answer": false
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {
@@ -47,6 +52,10 @@
     {
       "method": "GET",
       "url": "https://html.duckduckgo.com/html/",
+      "query": {
+        "q": "Marisol Quennebeck Thornfield Loom",
+        "kl": "us-en"
+      },
       "status": 200,
       "content_type": "text/html; charset=utf-8",
       "body": "<!doctype html><html><body><div class=\"result\"><a class=\"result__a\" href=\"/l/?uddg=https%3A%2F%2Fthornfieldloom.example.com%2Fteam%2Fmarisol-quennebeck\">Marisol Quennebeck — Thornfield Loom</a><div class=\"result__snippet\">Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.</div></div><div class=\"result\"><a class=\"result__a\" href=\"https://example.org/nwp/2023-4\">The maintenance almanac as a shop-floor protocol</a><div class=\"result__snippet\">Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.</div></div></body></html>"

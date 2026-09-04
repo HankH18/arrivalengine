@@ -15,6 +15,13 @@
     {
       "method": "GET",
       "url": "https://web.archive.org/cdx/search/cdx",
+      "query": {
+        "url": "thornfieldloom.example.com/*",
+        "output": "json",
+        "collapse": "urlkey",
+        "filter": "statuscode:200",
+        "fl": "urlkey,timestamp,original,mimetype,statuscode,digest,length"
+      },
       "status": 200,
       "content_type": "application/json",
       "json": [

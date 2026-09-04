@@ -15,6 +15,9 @@
     {
       "method": "GET",
       "url": "https://api.openalex.org/authors",
+      "query": {
+        "search": "Marisol Quennebeck"
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {
@@ -49,6 +52,10 @@
     {
       "method": "GET",
       "url": "https://api.openalex.org/works",
+      "query": {
+        "filter": "author.id:A5099184423",
+        "sort": "publication_date:desc"
+      },
       "status": 200,
       "content_type": "application/json; charset=utf-8",
       "json": {
