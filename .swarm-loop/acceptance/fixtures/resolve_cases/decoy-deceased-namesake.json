@@ -28,11 +28,11 @@
       "fetched_at": "2026-02-11T11:20:24+00:00"
     },
     {
-      "doc_id": "4363ab4db7a51ae6",
+      "doc_id": "a8c5850fdf7e9766",
       "source_kind": "wikidata",
-      "url": "https://example.org/wikidata/Q4471820",
-      "title": "Idris Kavanagh (Q4471820) - item mirror",
-      "text": "Idris Kavanagh (Q4471820)\n\nItem mirror. Instance of: human. Occupation: marine archaeologist, author, university teacher. Employer: Ostlerhaus Institute. Work location: Halifax, Nova Scotia. Date of birth: 9 February 1948. Date of death: 4 November 2017.\n\nNotable works: The Cold Cargo, a popular history of container freight published in 1996; Salvage Rights, published in 2004; and a posthumous collection of essays on port labour.\n\nAwards: the Ostlerhaus Institute teaching medal, twice.\n\nArchives at: a maritime library in Austin, Texas, which acquired his working papers and correspondence in 2019 and has digitised roughly a third of them.\n\nDescribed by source: two obituaries and a university memorial page. The item has been stable since 2020 apart from the addition of the archive statement.",
+      "url": "https://example.org/wikidata/Q900000412",
+      "title": "Idris Kavanagh (Q900000412) - item mirror",
+      "text": "Idris Kavanagh (Q900000412)\n\nItem mirror. Instance of: human. Occupation: marine archaeologist, author, university teacher. Employer: Ostlerhaus Institute. Work location: Halifax, Nova Scotia. Date of birth: 9 February 1948. Date of death: 4 November 2017.\n\nNotable works: The Cold Cargo, a popular history of container freight published in 1996; Salvage Rights, published in 2004; and a posthumous collection of essays on port labour.\n\nAwards: the Ostlerhaus Institute teaching medal, twice.\n\nArchives at: a maritime library in Austin, Texas, which acquired his working papers and correspondence in 2019 and has digitised roughly a third of them.\n\nDescribed by source: two obituaries and a university memorial page. The item has been stable since 2020 apart from the addition of the archive statement.",
       "published_at": null,
       "fetched_at": "2026-02-11T11:20:48+00:00"
     },
@@ -71,7 +71,7 @@
       "disambiguator": "city"
     },
     {
-      "doc_id": "4363ab4db7a51ae6",
+      "doc_id": "a8c5850fdf7e9766",
       "match": "no",
       "confidence": 0.96,
       "evidence": "Employer: Ostlerhaus Institute. Work location: Halifax, Nova Scotia.",
@@ -99,6 +99,6 @@
       "9f5be1c613c6d00c"
     ],
     "strong_keys_present": [],
-    "note": "The fictional analogue of SPEC Q1. Two different people share the full name Idris Kavanagh: the target, a living staff researcher at Harrowgate Systems in Austin, and a decoy, a marine-archaeology author who taught at the Ostlerhaus Institute in Halifax and died in 2017. Three of the five documents are about the decoy and each is a trap for a name-match resolver: the name matches exactly, the subject matter overlaps (container freight, freight scheduling), and two of them even mention Austin, Texas -- the decoy's papers are archived there and his last manuscript was about central-Texas terminals. The ONLY thing that separates them is negative evidence, so all three decoy verdicts are `no` with evidence asserting a conflicting employer and city. Per DESIGN Decision 4 a single contradiction VETOES that document outright; confidences are never averaged against the matching name, and note that the decoy verdicts (0.96/0.94/0.91) are all more confident than the two target verdicts (0.74/0.69), so any implementation that pools or averages verdict confidence lands on the wrong person. The three vetoed documents must appear in Resolution.rejected and must not appear in accepted_doc_ids. Second trap: the corpus's only Wikidata item, Q4471820, belongs to the DECOY. Decision 4 admits a QID as a strong key only when it is matched on name AND detail; this item matches the name and contradicts every detail, so no wikidata_qid strong key may be taken and strong_keys_present is empty. Resolution comes from the second arm instead: two surviving `yes` verdicts citing different disambiguators (employer, city)."
+    "note": "The fictional analogue of SPEC Q1. Two different people share the full name Idris Kavanagh: the target, a living staff researcher at Harrowgate Systems in Austin, and a decoy, a marine-archaeology author who taught at the Ostlerhaus Institute in Halifax and died in 2017. Three of the five documents are about the decoy and each is a trap for a name-match resolver: the name matches exactly, the subject matter overlaps (container freight, freight scheduling), and two of them even mention Austin, Texas -- the decoy's papers are archived there and his last manuscript was about central-Texas terminals. The ONLY thing that separates them is negative evidence, so all three decoy verdicts are `no` with evidence asserting a conflicting employer and city. Per DESIGN Decision 4 a single contradiction VETOES that document outright; confidences are never averaged against the matching name, and note that the decoy verdicts (0.96/0.94/0.91) are all more confident than the two target verdicts (0.74/0.69), so any implementation that pools or averages verdict confidence lands on the wrong person. The three vetoed documents must appear in Resolution.rejected and must not appear in accepted_doc_ids. Second trap: the corpus's only Wikidata item, Q900000412, belongs to the DECOY. Decision 4 admits a QID as a strong key only when it is matched on name AND detail; this item matches the name and contradicts every detail, so no wikidata_qid strong key may be taken and strong_keys_present is empty. Resolution comes from the second arm instead: two surviving `yes` verdicts citing different disambiguators (employer, city). QID convention, chosen deliberately and not to be 'corrected' back: Q900000412 is a nine-digit identifier roughly an order of magnitude beyond Wikidata's highest allocated item id, so it cannot designate a real entity. An identifier inside the allocated range is a durable real-world reference no matter how fictional the prose around it is, and FROZEN-SPEC section 5 plus T-2's non-goals require fictional people everywhere with no exceptions; the frozen dossier corpus already uses the same out-of-range convention (Q900000317). The QID sits in the url, so the document's doc_id is sha1(url)[:16] of the NEW url -- renumbering it again means recomputing doc_id and every scripted_verdicts / accepted_doc_ids reference to it."
   }
 }
