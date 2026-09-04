@@ -1666,6 +1666,51 @@
       "defect": "`log.warning('fetch failed for %s: %s', full_url, exc)` prints an EMPTY reason for a timeout, because `str(httpx.ReadTimeout())` is ''. Live evidence from the build log: `fetch failed for https://web.archive.org/cdx/search/cdx?...: ` with nothing after the colon, twice. An operator reading that log learns a fetch failed and nothing about why. Log `type(exc).__name__` alongside the message.",
       "finding_id": "e291d9033014c193ec2fe1fa087d4c61086db75baad3122972c2129cb9eead30",
       "reproduction": "Read the live build log for a wayback CDX timeout. Reported by the LIVEFIX lane."
+    },
+    {
+      "id": "T-083",
+      "title": "R11 `home_or_property` REACHES THE GRAPH BY A ROUTE TASTE NEVER SEES. The live build put `city:basalt-colorado` and `city:homer-alaska` on brad-feld \u2014 his VACATION PROPERTIES \u2014 and `city:perth` on melanie-perkins, her birthplace rather than her city. These were joinable graph nodes and candidate MATCH REASONS, i.e. a host could have been told two members have Basalt, Colorado in common because one of them owns a house there. Taste rules on FACTS and never on HUBS, and `research._supported_hubs`' own docstring already records this shape for `city:pecan-street`. T-077's roster-veto removes them, but ONLY for a member whose roster states a place \u2014 a placeless member would keep them, and the veto lives in extract.py rather than in the privacy layer. The durable fix is that hubs pass through a taste gate, or that the R11 categories are consulted where hub labels are minted.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/taste.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/taste.py",
+      "defect": "R11 `home_or_property` REACHES THE GRAPH BY A ROUTE TASTE NEVER SEES. The live build put `city:basalt-colorado` and `city:homer-alaska` on brad-feld \u2014 his VACATION PROPERTIES \u2014 and `city:perth` on melanie-perkins, her birthplace rather than her city. These were joinable graph nodes and candidate MATCH REASONS, i.e. a host could have been told two members have Basalt, Colorado in common because one of them owns a house there. Taste rules on FACTS and never on HUBS, and `research._supported_hubs`' own docstring already records this shape for `city:pecan-street`. T-077's roster-veto removes them, but ONLY for a member whose roster states a place \u2014 a placeless member would keep them, and the veto lives in extract.py rather than in the privacy layer. The durable fix is that hubs pass through a taste gate, or that the R11 categories are consulted where hub labels are minted.",
+      "finding_id": "950d481709d8846d8bc168ac4ffb4fc7e3ccf9b6e5ef9b1e1901843b3e9024fb",
+      "reproduction": "Read the HEAD-build data/dossiers/brad-feld.json for city:basalt-colorado and city:homer-alaska. Reported by the CONNECT lane, whose fix is real but scoped to extraction rather than to privacy."
+    },
+    {
+      "id": "T-084",
+      "title": "One institution splits across three label lengths in a single build: fred-wilson.json carries `school:the-wharton-school`, `school:the-wharton-school-of-business` AND `school:the-wharton-school-of-business-at-the-university-of-pennsylvania`. Label-keyed identity splits them and the T-077 acronym fold does not reach them. Separately, 'The Wharton School of Business' and 'University of Pennsylvania' are the same institution with nothing in the strings relating them \u2014 only a knowledge base does, and the lane correctly refused to invent one. It pinned a test asserting those two stay apart so the acronym fix is not later mistaken for covering it. A length/prefix rule would merge the three Wharton spellings and would ALSO weld 'Foundry Group' to 'Foundry Seed', which is why it was not taken.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/extract.py",
+      "defect": "One institution splits across three label lengths in a single build: fred-wilson.json carries `school:the-wharton-school`, `school:the-wharton-school-of-business` AND `school:the-wharton-school-of-business-at-the-university-of-pennsylvania`. Label-keyed identity splits them and the T-077 acronym fold does not reach them. Separately, 'The Wharton School of Business' and 'University of Pennsylvania' are the same institution with nothing in the strings relating them \u2014 only a knowledge base does, and the lane correctly refused to invent one. It pinned a test asserting those two stay apart so the acronym fix is not later mistaken for covering it. A length/prefix rule would merge the three Wharton spellings and would ALSO weld 'Foundry Group' to 'Foundry Seed', which is why it was not taken.",
+      "finding_id": "b1bd48d12ddcce1b371c5cc7d8a1a64e0c2b6cb75ac171e0d1351729f2889246",
+      "reproduction": "Read data/dossiers/fred-wilson.json hub labels. Reported by the CONNECT lane."
+    },
+    {
+      "id": "T-085",
+      "title": "The T-077 field vocabulary is HAND-AUTHORED and lives in code rather than configuration, and the lane that wrote it saw the roster first. It kept the list generic and refused anything a DESIGN Decision 3 stop hub covers, and every assignment still requires document attestation \u2014 but the field layer's measured yield is partly a measurement of that list. It should move to configuration, which the lane did not own. Related honest limit the lane stated: the mechanical guard proves the phrase is IN the person's document; it cannot prove the phrase is PREDICATED OF the person. The prompt carries that half, and it appears to hold (Emmett Shear's documents say 'venture capital firm Y Combinator' and he did NOT get the field hub), but it is the model's judgement rather than a check.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/extract.py",
+      "defect": "The T-077 field vocabulary is HAND-AUTHORED and lives in code rather than configuration, and the lane that wrote it saw the roster first. It kept the list generic and refused anything a DESIGN Decision 3 stop hub covers, and every assignment still requires document attestation \u2014 but the field layer's measured yield is partly a measurement of that list. It should move to configuration, which the lane did not own. Related honest limit the lane stated: the mechanical guard proves the phrase is IN the person's document; it cannot prove the phrase is PREDICATED OF the person. The prompt carries that half, and it appears to hold (Emmett Shear's documents say 'venture capital firm Y Combinator' and he did NOT get the field hub), but it is the model's judgement rather than a check.",
+      "finding_id": "3b1bdfc80f1a4df1846ea7366be33eeb29db34ea6e5c8da85ee905f2fe9b12cf",
+      "reproduction": "Read the vocabulary constant in extract.py. Reported by the CONNECT lane as its own principal caveat."
     }
   ],
   "cut_list": [
