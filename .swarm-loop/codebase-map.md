@@ -223,6 +223,9 @@ is the seam T-1's tests use. Opt out with `@pytest.mark.network`; no frozen test
     delete it — do not commit it.
 12. **`BuildReport.people: list[dict]` validates nothing** — the one place in the contract
     with no schema, and where T-6 reports `zero_result_sources`. Validate on the way in.
+    **HANDLED as of cycle 5** — `research.py:91` declares `_SOURCE_KINDS` and `_fan_out`
+    applies it. Left in the list because the contract itself is still schemaless; do not
+    re-fix the T-6 side.
 13. **Repo furniture is load-bearing and cross-owned.** T-0 asserts `.gitignore` contains
     `.cache/` and `.env`, that `README.md` still contains `uv sync`,
     `python -m arrival build` and `pytest`, and that `HOURS.md` keeps its table. T-9 owns
@@ -263,9 +266,10 @@ uv run pytest .swarm-loop/acceptance -q -o addopts= -c .swarm-loop/acceptance/py
 Markers are the short `tN` **names** (`-m t4`), not the project's `--ticket T-N` option.
 `-c <frozen ini>` is what actually seals it: `--rootdir` alone does **not** stop configfile
 discovery — a two-line `pyproject.toml` took the suite from 93 collected to 12 and the pass
-rate from 15.05 to 100.0. Collection today: 120 total — t0 12 (all `guard`), t1 19, t2 14,
-t3 10, t4 14, t5 8, t6 11, t7 10, t8 14, t9 8. Scored per-ticket targets exclude
+rate from 15.05 to 100.0. Collection today: **122 total** — t0 12 (all `guard`), t1 19, t2 14,
+t3 10, t4 14, t5 8, **t6 13**, t7 10, t8 14, t9 8. (Was 120/t6 11 before freeze
+amendment #2 added two spread assertions; re-measured 2026-09-04 by the FIX-TASTE lane.) Scored per-ticket targets exclude
 `@pytest.mark.guard` and `acceptance_pass_rate` excludes `@pytest.mark.human_gate`:
-t1 19, t2 13, t3 10, t4 14, t5 8, t6 10, t7 10, t8 14. Ground truth lives only in
+t1 19, t2 13, t3 10, t4 14, t5 8, **t6 12**, t7 10, t8 14. Ground truth lives only in
 `.swarm-loop/acceptance/fixtures/` — the frozen suite never reads `tests/fixtures/`,
 because a gradee that can write the answer key is not being graded.

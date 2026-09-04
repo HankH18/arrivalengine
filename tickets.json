@@ -931,6 +931,96 @@
       "defect": "_sources dedupes Provenance by doc_id, but Provenance is per-FACT and carries `quote` and `confidence` \u2014 so the citation shown for a document is whichever SECTION reached it first, not the one belonging to the fact being read. Related, digest.py:432-441: _capped_meet sorts on Match.score with no tiebreaker, and score is round(100*raw/ref) so ties are the normal case; its own docstring promises matches arrive 'in any order'. Currently safe only because the sole caller is graph.match, whose sort is total \u2014 so T-8 has inherited a silent dependency on another module's list order.",
       "finding_id": "bba9c76da66ede27425a4892b9119c13c303fb96ea9e0f960fe53c96c481f8a6",
       "reproduction": "Read digest.py:487-494 and 432-441 with the docstring above each."
+    },
+    {
+      "id": "T-034",
+      "title": "CandidateHub.doc_id is the one model-supplied id in extract.py trusted with NO corroborating check, and it bulk-attaches a whole document's facts: `declared = by_id.get(candidate.doc_id.strip())` then `if not evidence and declared is not None: evidence = list(kept_by_doc.get(declared.doc_id, []))`. The sibling _source_doc (625-648) accepts a model doc_id only when the quote is genuinely IN that document and refuses rather than guesses when two documents match \u2014 this line throws that discipline away on the very next statement after a correct `if raw in id_map` whitelist. Consequences: wrong recency -> wrong Hub.recency -> wrong edge weight -> wrong T-5 score (graph.py:388); wrong _states_qid corroboration for a wd: QID, which wins the identity election outright (graph.py:245-248); and research._supported_hubs (441-464), whose whole job is to drop a hub whose evidence was excluded, is satisfied by BORROWED evidence from another document \u2014 reintroducing the R11 leak its own docstring says it exists to prevent. CandidateHub.doc_id is declared `doc_id: str = \"\"` at extract.py:222 with no Field and no description, so the model is never told what it means.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/extract.py:766",
+      "defect": "CandidateHub.doc_id is the one model-supplied id in extract.py trusted with NO corroborating check, and it bulk-attaches a whole document's facts: `declared = by_id.get(candidate.doc_id.strip())` then `if not evidence and declared is not None: evidence = list(kept_by_doc.get(declared.doc_id, []))`. The sibling _source_doc (625-648) accepts a model doc_id only when the quote is genuinely IN that document and refuses rather than guesses when two documents match \u2014 this line throws that discipline away on the very next statement after a correct `if raw in id_map` whitelist. Consequences: wrong recency -> wrong Hub.recency -> wrong edge weight -> wrong T-5 score (graph.py:388); wrong _states_qid corroboration for a wd: QID, which wins the identity election outright (graph.py:245-248); and research._supported_hubs (441-464), whose whole job is to drop a hub whose evidence was excluded, is satisfied by BORROWED evidence from another document \u2014 reintroducing the R11 leak its own docstring says it exists to prevent. CandidateHub.doc_id is declared `doc_id: str = \"\"` at extract.py:222 with no Field and no description, so the model is never told what it means.",
+      "finding_id": "a75b59ee1dfeb4c6c5b5051a8a24cf98b56ae8c0bab5381ced0bbf4eb48023de",
+      "reproduction": "Read extract.py:766-769 against _source_doc at extract.py:625-648; then follow kept_by_doc into research._supported_hubs at research.py:441-464. Reported by the FIX-TASTE lane while sweeping its own file for the same defect class."
+    },
+    {
+      "id": "T-035",
+      "title": "The model's invented CandidateFact.fact_id can poison our OWN id namespace. Both the model's claim and our generated id go into one id_map via setdefault, model FIRST: `claimed = candidate.fact_id.strip(); if claimed: id_map.setdefault(claimed, fact_id); id_map.setdefault(fact_id, fact_id)`. Our ids are f\"{doc.doc_id}-f{index}\" (line 730) and the prompt shows doc_id per block (527-535), so \"<doc_id>-f1\" is a guessable string. If candidate #0 claims it, id_map[\"<doc_id>-f1\"] = \"<doc_id>-f0\"; when fact #1 is really built one iteration later, setdefault(fact_id, fact_id) is a no-op because the key already exists. A hub referencing the correct, ours-by-construction id now resolves to the WRONG fact. Fix shape is the one just landed in taste.py: write our own entries with id_map[fact_id] = fact_id after a claimed-id pass, so ours always wins.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/extract.py:737",
+      "defect": "The model's invented CandidateFact.fact_id can poison our OWN id namespace. Both the model's claim and our generated id go into one id_map via setdefault, model FIRST: `claimed = candidate.fact_id.strip(); if claimed: id_map.setdefault(claimed, fact_id); id_map.setdefault(fact_id, fact_id)`. Our ids are f\"{doc.doc_id}-f{index}\" (line 730) and the prompt shows doc_id per block (527-535), so \"<doc_id>-f1\" is a guessable string. If candidate #0 claims it, id_map[\"<doc_id>-f1\"] = \"<doc_id>-f0\"; when fact #1 is really built one iteration later, setdefault(fact_id, fact_id) is a no-op because the key already exists. A hub referencing the correct, ours-by-construction id now resolves to the WRONG fact. Fix shape is the one just landed in taste.py: write our own entries with id_map[fact_id] = fact_id after a claimed-id pass, so ours always wins.",
+      "finding_id": "3dc46c26bf9a0550b8ae0c80e4d7cb48c410d57e90be73702edce376927031e3",
+      "reproduction": "Read extract.py:730-740. A candidate whose fact_id echoes the next fact's generated id displaces it. Same defect class as T-030 (taste), reported by that lane."
+    },
+    {
+      "id": "T-036",
+      "title": "The hub QID has the multi-candidate shape T-031 just repaired on the resolver side: _states_qid confirms the model's QID against ANY wikidata document in the evidence set, so two wikidata items in one person's corpus make canonical_hub_id a function of which item the model happened to name \u2014 with no evidence ranking and no refusal on ambiguity. hub_id's wd: prefix is the graph-wide join key, so an arrival-order/model-choice accident propagates to every person's matching.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/extract.py:777",
+      "defect": "The hub QID has the multi-candidate shape T-031 just repaired on the resolver side: _states_qid confirms the model's QID against ANY wikidata document in the evidence set, so two wikidata items in one person's corpus make canonical_hub_id a function of which item the model happened to name \u2014 with no evidence ranking and no refusal on ambiguity. hub_id's wd: prefix is the graph-wide join key, so an arrival-order/model-choice accident propagates to every person's matching.",
+      "finding_id": "3806e09d865cc0481844e620c603ab5613a124e80bc9e4d9635e53343ca163b7",
+      "reproduction": "Read extract._states_qid and extract.py:777-812 against the evidence-ranking `_best` and its tie-refusal now in resolve.py. Reported by the FIX-RESOLVE lane while falsifying its own packet's claim that the resolver's wikidata_qid was the graph-wide identifier."
+    },
+    {
+      "id": "T-037",
+      "title": "Duplicate claimed fact ids resolve FIRST-WINS via setdefault rather than being dropped. The schema (extract.py:203-209) asks for uniqueness in prose only (\"any string will do\"), so a model emitting 15 facts and reusing \"f1\" is ordinary input, not an attack. Every hub that pointed at the second fact silently claims the first as its evidence, and those evidence_fact_ids are printed as citations by digest.py:471-481 and web/render.py:125-141 \u2014 a 'Why we know this' line under a sentence that is not its evidence. taste._positions' delete-the-ambiguous-key rule ports over directly.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/extract.py:738",
+      "defect": "Duplicate claimed fact ids resolve FIRST-WINS via setdefault rather than being dropped. The schema (extract.py:203-209) asks for uniqueness in prose only (\"any string will do\"), so a model emitting 15 facts and reusing \"f1\" is ordinary input, not an attack. Every hub that pointed at the second fact silently claims the first as its evidence, and those evidence_fact_ids are printed as citations by digest.py:471-481 and web/render.py:125-141 \u2014 a 'Why we know this' line under a sentence that is not its evidence. taste._positions' delete-the-ambiguous-key rule ports over directly.",
+      "finding_id": "1df38cb6ae004f6cb2cfcccc7b5ec8882956f38d03863e6124bac099e471c766",
+      "reproduction": "Read extract.py:737-739. Two candidates sharing a claimed id; the second is unreachable through id_map."
+    },
+    {
+      "id": "T-038",
+      "title": "_finalise dedupes on doc_id = sha1(url)[:16], but wayback.py:30 builds its replay URL as https://web.archive.org/web/{timestamp}/{original_url}. Two captures of ONE original page therefore have two different replay URLs, two different doc_ids, and BOTH survive as documents of identical text \u2014 spending two of max_docs_total, two LLM verdicts, and potentially citing the same sentence twice from two 'different' sources. wayback.py:33 already parses a `digest` field, which is Wayback's own content hash and the natural dedupe key.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/connectors/base.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/connectors/base.py:204",
+      "defect": "_finalise dedupes on doc_id = sha1(url)[:16], but wayback.py:30 builds its replay URL as https://web.archive.org/web/{timestamp}/{original_url}. Two captures of ONE original page therefore have two different replay URLs, two different doc_ids, and BOTH survive as documents of identical text \u2014 spending two of max_docs_total, two LLM verdicts, and potentially citing the same sentence twice from two 'different' sources. wayback.py:33 already parses a `digest` field, which is Wayback's own content hash and the natural dedupe key.",
+      "finding_id": "b8eca4edf1fdeb192146d1680a5d5afbef22e69a982def141ada34c5eb0341f0",
+      "reproduction": "Read connectors/base.py:204-217 against wayback.py:30-33. Confirmed by the FIX-HTTP lane; its cache-key change does not affect this (the replay URLs are genuinely distinct requests)."
+    },
+    {
+      "id": "T-039",
+      "title": "A <title> anywhere in an XML document is routed to RawDoc.title and excluded from the extracted text, so an Atom/RSS feed whose entries carry only titles extracts to NOTHING and fetch_text returns None. This is correct for HTML \u2014 a quote must not be citable to a tab label \u2014 and arguably wrong for a feed, which is a source kind the connectors fetch. Pre-existing; behaviour unchanged by T-025/T-026, and it cost the FIX-HTTP lane one bad fixture before the cause was understood.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/http/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/http/extract.py",
+      "defect": "A <title> anywhere in an XML document is routed to RawDoc.title and excluded from the extracted text, so an Atom/RSS feed whose entries carry only titles extracts to NOTHING and fetch_text returns None. This is correct for HTML \u2014 a quote must not be citable to a tab label \u2014 and arguably wrong for a feed, which is a source kind the connectors fetch. Pre-existing; behaviour unchanged by T-025/T-026, and it cost the FIX-HTTP lane one bad fixture before the cause was understood.",
+      "finding_id": "4f813926a24cee88fb9325a99b761e20f637c7c4e87712a1ab44fbd20ee27b72",
+      "reproduction": "Fetch an Atom feed whose entries have titles and no content bodies; fetch_text returns None. Reported by the FIX-HTTP lane, which declined to fix it as a taste call on another ticket's surface."
     }
   ],
   "cut_list": [
