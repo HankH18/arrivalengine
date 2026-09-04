@@ -53,6 +53,25 @@ _DEFAULT_FIELDS = ["urlkey", "timestamp", "original", "mimetype", "statuscode", 
 #: are two addresses for one page, whatever their timestamps and urls say.
 DIGEST_FIELD = "digest"
 
+#: MIME families a capture cannot be prose in. Measured on the first live run that reached
+#: this connector with a real personal domain: `feld.com/*` returns captures of
+#: `1x1.gif`, `049b31d0.gif` and a stylesheet among its first fifty rows, and each of
+#: those cost a fetch, a `max_docs_total` slot and an LLM verdict to establish that a
+#: spacer GIF is not a biography. A NEGATIVE list rather than `filter=mimetype:text/html`:
+#: a large share of CDX rows are `warc/revisit`, whose real type the index does not carry,
+#: and a positive filter throws those good pages away with the images.
+_NON_DOCUMENT_MIME_PREFIXES = (
+    "image/", "video/", "audio/", "font/", "application/pdf", "application/zip",
+    "application/octet-stream", "application/x-", "application/font", "text/css",
+    "application/javascript", "text/javascript", "application/rss", "application/atom",
+)
+
+
+def _is_a_document(mimetype: str) -> bool:
+    """False when the CDX row's own `mimetype` says this capture is not prose."""
+    kind = mimetype.strip().lower().split(";", 1)[0]
+    return not kind.startswith(_NON_DOCUMENT_MIME_PREFIXES)
+
 
 def _capture_rank(row: dict[str, str]) -> tuple[bool, str]:
     """Which of two captures of the SAME content to keep. Higher wins.
@@ -191,6 +210,7 @@ class WaybackConnector(BaseConnector):
             for row in self._rows(payload)
             if row.get("timestamp")
             and row.get("original")
+            and _is_a_document(str(row.get("mimetype") or ""))
             and on_own_host(str(row["original"]), person)
         ]
 

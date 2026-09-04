@@ -34,18 +34,50 @@ So two rules, and both matter:
 
 Two steps, both on the free v2 API with no key: `search.json?q=` to find candidate
 organisations, then `organizations/{ein}.json` for the officer list.
+
+WHERE THE OFFICER LIST ACTUALLY LIVES NOW (T-074, measured live 2026-09-04).  The JSON
+detail endpoint no longer carries one.  `organizations/530196605.json` (the American
+National Red Cross, an organisation with thirteen filings on file) answers 200 with
+`organization` — the IRS Business Master File record, no `officers` key — and
+`filings_with_data` — the SOI financial extract, sixty-eight numeric columns and no
+`officers` key either.  The only officer-shaped field anywhere in that payload is
+`compnsatncurrofcr`, an aggregate compensation FIGURE, which is exactly the thing T-4
+excludes and R11 never displays.
+
+So the one rule this connector exists to enforce — *she is emitted only if the 990 names
+her* — could not fire against the live API at all, and the connector returned zero
+documents for every person on every run while its recorded tests stayed green, because
+the recorded corpus records an `officers` array the API does not send.
+
+The roster IS still published: it is on Nonprofit Explorer's own organisation PAGE, under
+"Key Employees and Officers", at the same `ORG_PAGE` url this connector already cites.  So
+the officer read is now two-tier — the JSON array when a payload carries one, and the
+organisation page when it does not.  The JSON tier is kept rather than replaced because it
+is the shape the API documented and may carry again, and because reading it costs the
+request the connector was already making.
+
+Compensation is dropped on both tiers, and on the HTML tier that is not incidental: the
+page puts three salary columns beside every name, and `_OfficerRows` reads the FIRST cell
+of a row and nothing else.
+
+*Also measured, and it is not a defect:* `search.json` answers **404 with a well-formed
+zero-results body** when a query matches nothing (`{"total_results": 0, "organizations":
+[]}`), and 200 when it matches something — including for multi-word queries.  A 404 from
+this endpoint means "no such charity", not "no such endpoint".
 """
 
 from __future__ import annotations
 
+from html.parser import HTMLParser
 from typing import Any
 
 from arrival.connectors.base import BaseConnector, affiliations, text_block
 from arrival.connectors.identity import US_STATES, carries_name, identifies, is_an_address
 from arrival.contracts import PersonRef, RawDoc
+from arrival.http.client import fetch_record
 from arrival.util import normalize_ws
 
-__all__ = ["ProPublicaConnector"]
+__all__ = ["ProPublicaConnector", "officers_on_page"]
 
 API = "https://projects.propublica.org/nonprofits/api/v2"
 ORG_PAGE = "https://projects.propublica.org/nonprofits/organizations/{ein}"
@@ -56,6 +88,20 @@ MAX_QUERIES = 3
 #: How many candidate organisations may be looked up before the budget is filled. Larger
 #: than `budget` because most candidates are about to be rejected for not naming her.
 MAX_CANDIDATES = 8
+
+#: How many organisation PAGES may be read per person when the JSON carries no roster.
+#: Smaller than `MAX_CANDIDATES` on purpose: the page is a third of a megabyte of HTML and
+#: the JSON call is a few kilobytes, so the fallback is a different kind of request and
+#: gets its own, tighter budget.
+MAX_PAGE_LOOKUPS = 4
+
+#: How many of an organisation's officers are rendered into `RawDoc.text`. The MATCH
+#: against the member is always made over the whole roster; only the printed neighbour
+#: list is capped.
+MAX_OFFICERS_SHOWN = 40
+
+#: The row class Nonprofit Explorer marks each officer with in its Compensation table.
+_OFFICER_ROW_CLASS = "employee-row"
 
 #: The name predicate, the state list and the address test all now live in
 #: `identity.py`: every one of them was written here and copied, and a second spelling of
@@ -115,10 +161,12 @@ class ProPublicaConnector(BaseConnector):
                     break
 
         docs: list[RawDoc] = []
+        pages_left = MAX_PAGE_LOOKUPS
         for row in rows:
             if len(docs) >= budget:
                 break
-            doc = await self._document(person, row)
+            doc, spent = await self._document(person, row, pages_left)
+            pages_left -= spent
             if doc is not None:
                 docs.append(doc)
         return docs
@@ -132,7 +180,22 @@ class ProPublicaConnector(BaseConnector):
             return []
         return [row for row in rows if isinstance(row, dict)]
 
-    async def _document(self, person: PersonRef, row: dict[str, Any]) -> RawDoc | None:
+    async def _officers_from_page(self, ein: str) -> list[str]:
+        """The roster off the organisation's own page. `[]` when the page has none.
+
+        `fetch_record` rather than `get_page`: the officer table is STRUCTURE, and
+        `fetch_text` hands back the extracted prose with the markup — and therefore the
+        row boundaries — already gone.
+        """
+        record = await fetch_record(ORG_PAGE.format(ein=ein), settings=self.settings)
+        if record is None:
+            return []
+        return officers_on_page(record.body)
+
+    async def _document(
+        self, person: PersonRef, row: dict[str, Any], pages_left: int = 0
+    ) -> tuple[RawDoc | None, int]:
+        """`(document, organisation pages fetched)` for one candidate organisation."""
         ein = str(row.get("ein") or "")
         detail = await self.get_json(f"{API}/organizations/{ein}.json")
 
@@ -146,12 +209,19 @@ class ProPublicaConnector(BaseConnector):
                 if isinstance(filings, list) and filings and isinstance(filings[0], dict):
                     officers = _officer_lines(filings[0].get("officers"))
 
+        # T-074: the live API sends no roster at all, so a JSON payload without one is the
+        # NORMAL case rather than a broken organisation. The page carries it.
+        spent = 0
+        if not officers and ein and pages_left > 0:
+            spent = 1
+            officers = await self._officers_from_page(ein)
+
         # The roster IS the filter. An organisation that does not name her is one that
         # exists near her, and a document saying otherwise is false attribution with a
         # real url and a real quote attached.
         named = [line for line in officers if _is_the_member(person.name, line)]
         if not named:
-            return None
+            return None, spent
 
         place = ", ".join(part for part in (row.get("city"), row.get("state")) if part)
 
@@ -166,19 +236,102 @@ class ProPublicaConnector(BaseConnector):
             names=named,
             context=[str(row.get("name") or ""), place, str(row.get("ntee_code") or "")],
         ):
-            return None
+            return None, spent
 
-        return self.doc(
-            ORG_PAGE.format(ein=ein),
-            title=str(row.get("name") or f"EIN {ein}"),
-            text=text_block(
-                str(row.get("name") or ""),
-                f"EIN {row.get('strein') or ein}" + (f" — {place}" if place else ""),
-                f"NTEE code {row['ntee_code']}" if row.get("ntee_code") else None,
-                f"{person.name} is listed as: {'; '.join(named)}",
-                ("Officers and directors: " + "; ".join(officers)) if officers else None,
+        return (
+            self.doc(
+                ORG_PAGE.format(ein=ein),
+                title=str(row.get("name") or f"EIN {ein}"),
+                text=text_block(
+                    str(row.get("name") or ""),
+                    f"EIN {row.get('strein') or ein}" + (f" — {place}" if place else ""),
+                    f"NTEE code {row['ntee_code']}" if row.get("ntee_code") else None,
+                    f"{person.name} is listed as: {'; '.join(named)}",
+                    # Capped: the organisation PAGE lists every officer of every filing
+                    # year on file, which for a national charity is 119 names. The hub
+                    # this connector exists to draw is "who else sits at that table", and
+                    # a hundred more names is not more table, it is 20k of RawDoc.text
+                    # spent on people nobody will meet.
+                    ("Officers and directors: " + "; ".join(officers[:MAX_OFFICERS_SHOWN]))
+                    if officers
+                    else None,
+                ),
             ),
+            spent,
         )
+
+
+class _OfficerRows(HTMLParser):
+    """`Name (Title)` for each `tr.employee-row` of a Nonprofit Explorer organisation page.
+
+    ONLY THE FIRST CELL OF EACH ROW IS READ, and that is the taste rule made structural
+    rather than promised. The three cells beside it are `Compensation`, `Related` and
+    `Other` — dollar figures for a named individual, the single most sensitive thing on
+    this page and a category T-4 excludes outright. A parser that collected the row and
+    filtered afterwards would be one refactor away from carrying salaries into `RawDoc.text`
+    for T-3 to quote; this one never has them in hand.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.officers: list[str] = []
+        self._in_row = False
+        self._cell = 0
+        self._in_span = False
+        self._name: list[str] = []
+        self._title: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = {key.lower(): (value or "") for key, value in attrs}
+        if tag == "tr":
+            self._in_row = _OFFICER_ROW_CLASS in values.get("class", "").split()
+            self._cell = 0
+            self._name = []
+            self._title = []
+            self._in_span = False
+        elif tag == "td" and self._in_row:
+            self._cell += 1
+            self._in_span = False
+        elif tag == "span" and self._in_row and self._cell == 1:
+            self._in_span = True
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "span":
+            self._in_span = False
+        elif tag == "tr" and self._in_row:
+            self._flush()
+
+    def handle_data(self, data: str) -> None:
+        if not self._in_row or self._cell != 1:
+            return
+        (self._title if self._in_span else self._name).append(data)
+
+    def close(self) -> None:  # pragma: no cover - a truncated page still yields its rows
+        super().close()
+        self._flush()
+
+    def _flush(self) -> None:
+        self._in_row = False
+        name = " ".join("".join(self._name).split())
+        title = " ".join("".join(self._title).split()).strip("()")
+        self._name = []
+        self._title = []
+        if not name:
+            return
+        line = f"{name} ({title})" if title else name
+        if line not in self.officers:
+            self.officers.append(line)
+
+
+def officers_on_page(markup: str) -> list[str]:
+    """`["Name (Title)"]` from an organisation page's Compensation table. Never raises."""
+    parser = _OfficerRows()
+    try:
+        parser.feed(markup)
+        parser.close()
+    except Exception:  # noqa: BLE001 - a page we cannot parse simply names no officers
+        return list(parser.officers)
+    return parser.officers
 
 
 def _officer_lines(officers: Any) -> list[str]:
