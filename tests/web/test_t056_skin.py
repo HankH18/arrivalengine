@@ -95,6 +95,7 @@ def _pages(client):
         "digest.html": client.get(digest_url),
         "debug.html": client.get(f"/debug/{ARRIVING}"),
         "not_found.html": client.get("/digest/no-such-digest"),
+        "graph.html": client.get("/graph"),
     }
     for name, response in pages.items():
         assert "<html" in response.text.lower(), f"{name} did not render a page"
