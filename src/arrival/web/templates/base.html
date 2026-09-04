@@ -1,0 +1,34 @@
+{# The whole design system, such as it is. SPEC's non-goals: no design system, no JS
+   framework, no mobile layout, "no CSS beyond a few inline rules". A host reads this off a
+   phone or a laptop in a lobby, so it is one readable column and nothing else. #}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Arrival Engine{% endblock %}</title>
+<style>
+  body { font: 16px/1.5 system-ui, sans-serif; margin: 0 auto; max-width: 46rem; padding: 1.5rem; color: #14161a; }
+  nav { font-size: 0.85rem; margin-bottom: 1.5rem; }
+  h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: 0.06em; margin: 1.75rem 0 0.4rem; color: #4a5058; }
+  p, li { margin: 0.4rem 0; }
+  .cite { font-size: 0.75rem; }
+  .quote { color: #4a5058; font-size: 0.9rem; }
+  .score { font-weight: 700; }
+  .absent { color: #6b7280; font-style: italic; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+  td, th { border-bottom: 1px solid #e2e5ea; padding: 0.2rem 0.4rem; text-align: left; }
+  details { margin: 0.4rem 0; font-size: 0.9rem; }
+  form { display: inline; }
+  code { font-size: 0.8rem; color: #4a5058; }
+  footer { margin-top: 2.5rem; font-size: 0.85rem; color: #4a5058; }
+</style>
+</head>
+<body>
+<nav><a href="/">Roster</a> &middot; <a href="/building">In the building</a></nav>
+<main>
+{% block content %}{% endblock %}
+</main>
+</body>
+</html>

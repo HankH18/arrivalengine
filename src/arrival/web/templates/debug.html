@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Debug &mdash; {{ person.name }}{% endblock %}
+{% block content %}
+{#
+  R15, the operator-only view: the FULL dossier, excluded facts and their reasons, the
+  rejected candidate documents, per-fact confidence and the raw hub list. This is the one
+  surface where withheld material is allowed to appear, and the demo depends on that: "we
+  found it and we chose not to show it" is unshowable otherwise.
+
+  Served only when DEBUG_VIEWS is on. R15 calls that a switch, not auth, and the switch
+  lives in the route, not in this template.
+#}
+<h1>{{ person.name }} <code>{{ person.person_id }}</code></h1>
+<p class="absent">Operator view. Everything below includes material the digest withholds.</p>
+
+<h2>Resolution</h2>
+<p>
+  Status <strong>{{ resolution.status }}</strong>, confidence {{ resolution.confidence }}.
+  {% if resolution.strong_keys %}
+  Strong keys: {% for key, value in resolution.strong_keys.items() %}<code>{{ key }}={{ value }}</code> {% endfor %}
+  {% else %}
+  No strong key was established.
+  {% endif %}
+</p>
+<p>Accepted documents: {% for doc in resolution.accepted_doc_ids %}<code>{{ doc }}</code> {% else %}<span class="absent">none</span>{% endfor %}</p>
+
+<h2>Rejected candidate documents</h2>
+{% if resolution.rejected %}
+<table class="rejected">
+  <tr>
+    <th scope="col">Document</th>
+    <th scope="col">Verdict</th>
+    <th scope="col">Confidence</th>
+    <th scope="col">Decided by</th>
+    <th scope="col">Evidence</th>
+  </tr>
+  {% for verdict in resolution.rejected %}
+  <tr>
+    <td><code>{{ verdict.doc_id }}</code></td>
+    <td>{{ verdict.match }}</td>
+    <td>{{ verdict.confidence }}</td>
+    <td>{{ verdict.disambiguator }}</td>
+    <td class="quote">&ldquo;{{ verdict.evidence }}&rdquo;</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p class="absent">No candidate document was rejected for this person.</p>
+{% endif %}
+
+<h2>Withheld from every host-facing page</h2>
+{% if withheld_rows %}
+<table class="withheld">
+  <tr>
+    <th scope="col">Fact</th>
+    <th scope="col">Reason</th>
+    <th scope="col">Category</th>
+    <th scope="col">Kind</th>
+    <th scope="col">Confidence</th>
+  </tr>
+  {% for row in withheld_rows %}
+  <tr>
+    <td>{{ row.fact.text }}<br><code>{{ row.fact.fact_id }}</code></td>
+    <td><strong>{{ row.reason }}</strong></td>
+    <td>{{ row.fact.category }}</td>
+    <td>{{ row.fact.provenance.source_kind }}</td>
+    <td>{{ row.fact.provenance.confidence }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p class="quote">A fact can be withheld for three independent reasons: the taste filter marked
+it excluded, its confidence is under {{ confidence_floor }}, or its source kind is off the
+display whitelist. The reason column says which one bit &mdash; two of these are usually not
+&ldquo;excluded&rdquo; at all.</p>
+{% else %}
+<p class="absent">Nothing was withheld for this person.</p>
+{% endif %}
+
+<h2>Every fact on file</h2>
+<table class="facts">
+  <tr>
+    <th scope="col">Fact</th>
+    <th scope="col">Category</th>
+    <th scope="col">Shown?</th>
+    <th scope="col">Confidence</th>
+    <th scope="col">Source</th>
+  </tr>
+  {% for row in fact_rows %}
+  <tr>
+    <td>{{ row.fact.text }}<br><code>{{ row.fact.fact_id }}</code></td>
+    <td>{{ row.fact.category }}</td>
+    <td>{% if row.shown %}shown{% else %}withheld &mdash; {{ row.reason }}{% endif %}</td>
+    <td>{{ row.fact.provenance.confidence }}</td>
+    <td>
+      <a href="{{ row.fact.provenance.url }}">{{ row.fact.provenance.source_kind }}</a>
+      <code>{{ row.fact.provenance.doc_id }}</code>
+      <br><span class="quote">&ldquo;{{ row.fact.provenance.quote }}&rdquo;</span>
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="absent">This dossier carries no facts at all.</td></tr>
+  {% endfor %}
+</table>
+
+<h2>Raw hubs</h2>
+<table class="hubs">
+  <tr>
+    <th scope="col">Hub</th>
+    <th scope="col">Label</th>
+    <th scope="col">Type</th>
+    <th scope="col">Recency</th>
+    <th scope="col">Evidence</th>
+  </tr>
+  {% for hub in hubs %}
+  <tr>
+    <td><code>{{ hub.hub_id }}</code></td>
+    <td>{{ hub.label }}</td>
+    <td>{{ hub.type }}</td>
+    <td>{{ hub.recency }}</td>
+    <td>{% for fact_id in hub.evidence_fact_ids %}<code>{{ fact_id }}</code> {% endfor %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="5" class="absent">No hubs, so this person joins nobody.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

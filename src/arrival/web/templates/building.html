@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}In the building{% endblock %}
+{% block content %}
+{# R6. The same answer `Accept: application/json` gets, laid out for a person. #}
+<h1>In the building</h1>
+{% if present %}
+<p>{{ present | length }} here now, most recent arrival last.</p>
+<ol class="present">
+  {% for person in present %}
+  <li>{{ person.name }} <code>{{ person.person_id }}</code></li>
+  {% endfor %}
+</ol>
+{% else %}
+<p class="absent">Nobody is here yet.</p>
+{% endif %}
+<p class="quote">Presence is held in memory by this process and clears on restart.</p>
+{% endblock %}
