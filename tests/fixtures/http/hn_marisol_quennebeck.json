@@ -1,0 +1,57 @@
+{
+  "kind": "hn",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "Algolia full-text search over HN stories. Every doc is cited to the HN item, not to the linked article, because the item is what is durable.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://hn.algolia.com/api/v1/search",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "nbHits": 3,
+        "hits": [
+          {
+            "objectID": "40112233",
+            "title": "Thornfield Loom: scheduling looms without a mainframe",
+            "author": "mquennebeck",
+            "points": 214,
+            "num_comments": 63,
+            "url": "https://thornfieldloom.example.com/notes/2024-scheduling",
+            "story_text": "Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.",
+            "created_at": "2024-04-02T15:11:00.000Z"
+          },
+          {
+            "objectID": "40112234",
+            "title": "The maintenance almanac, four years in",
+            "author": "mquennebeck",
+            "points": 96,
+            "num_comments": 28,
+            "url": "https://thornfieldloom.example.com/almanac",
+            "story_text": "Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.",
+            "created_at": "2023-10-19T11:40:00.000Z"
+          },
+          {
+            "objectID": "40112235",
+            "title": "Digitising a mill archive on a volunteer budget",
+            "author": "ilves_t",
+            "points": 58,
+            "num_comments": 14,
+            "url": "https://example.org/mill-archive",
+            "story_text": "Quennebeck chaired the Narragansett Mill Archive restoration committee before Thornfield Loom existed.",
+            "created_at": "2022-06-08T09:05:00.000Z"
+          }
+        ]
+      }
+    }
+  ]
+}

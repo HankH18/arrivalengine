@@ -1,0 +1,100 @@
+{
+  "kind": "github",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "search/users -> login, users/{login} -> profile, users/{login}/repos?sort=pushed. One repo is a FORK, which the connector must not cite as the member's own work.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://api.github.com/search/users",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "total_count": 1,
+        "incomplete_results": false,
+        "items": [
+          {
+            "login": "mquennebeck",
+            "id": 90210331,
+            "html_url": "https://github.com/mquennebeck",
+            "type": "User"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://api.github.com/users/mquennebeck",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "login": "mquennebeck",
+        "name": "Marisol Quennebeck",
+        "company": "Thornfield Loom",
+        "blog": "https://thornfieldloom.example.com/",
+        "location": "Providence, Rhode Island",
+        "bio": "Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.",
+        "public_repos": 17,
+        "followers": 240,
+        "created_at": "2016-08-19T11:04:12Z",
+        "html_url": "https://github.com/mquennebeck"
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://api.github.com/users/mquennebeck/repos",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": [
+        {
+          "name": "loom-scheduler",
+          "full_name": "mquennebeck/loom-scheduler",
+          "html_url": "https://github.com/mquennebeck/loom-scheduler",
+          "description": "Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.",
+          "language": "Python",
+          "stargazers_count": 312,
+          "pushed_at": "2024-06-11T08:30:00Z",
+          "fork": false
+        },
+        {
+          "name": "cpython",
+          "full_name": "mquennebeck/cpython",
+          "html_url": "https://github.com/mquennebeck/cpython",
+          "description": "The Python programming language",
+          "language": "C",
+          "stargazers_count": 4,
+          "pushed_at": "2024-06-02T12:00:00Z",
+          "fork": true
+        },
+        {
+          "name": "maintenance-almanac",
+          "full_name": "mquennebeck/maintenance-almanac",
+          "html_url": "https://github.com/mquennebeck/maintenance-almanac",
+          "description": "Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.",
+          "language": "TypeScript",
+          "stargazers_count": 96,
+          "pushed_at": "2024-05-28T17:45:00Z",
+          "fork": false
+        },
+        {
+          "name": "mill-archive-index",
+          "full_name": "mquennebeck/mill-archive-index",
+          "html_url": "https://github.com/mquennebeck/mill-archive-index",
+          "description": "Quennebeck chaired the Narragansett Mill Archive restoration committee before Thornfield Loom existed.",
+          "language": "Python",
+          "stargazers_count": 41,
+          "pushed_at": "2023-11-02T09:10:00Z",
+          "fork": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+{
+  "kind": "propublica",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "Three org searches (name, then affiliations) and one 990 detail call each. The PROVIDENCE RIVER CONSERVANCY row is deliberate: it is what a CITY-name query returns, and the subject is NOT on its board.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=Marisol+Quennebeck",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "total_results": 1,
+        "organizations": [
+          {
+            "ein": 814402257,
+            "strein": "81-4402257",
+            "name": "NARRAGANSETT MILL ARCHIVE",
+            "city": "PROVIDENCE",
+            "state": "RI",
+            "ntee_code": "A80"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=Thornfield+Loom",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "total_results": 0,
+        "organizations": []
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://projects.propublica.org/nonprofits/api/v2/search.json?q=Providence",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "total_results": 1,
+        "organizations": [
+          {
+            "ein": 50912344,
+            "strein": "05-0912344",
+            "name": "PROVIDENCE RIVER CONSERVANCY",
+            "city": "PROVIDENCE",
+            "state": "RI",
+            "ntee_code": "C32"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/814402257.json",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "organization": {
+          "ein": 814402257,
+          "name": "NARRAGANSETT MILL ARCHIVE",
+          "officers": [
+            {
+              "name": "Marisol Quennebeck",
+              "title": "Board chair"
+            },
+            {
+              "name": "Teodora Ilves",
+              "title": "Treasurer"
+            },
+            {
+              "name": "Abelard Nkemdirim",
+              "title": "Director"
+            }
+          ]
+        },
+        "filings_with_data": []
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://projects.propublica.org/nonprofits/api/v2/organizations/50912344.json",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "organization": {
+          "ein": 50912344,
+          "name": "PROVIDENCE RIVER CONSERVANCY",
+          "officers": [
+            {
+              "name": "Hollis Barrowman",
+              "title": "Executive director"
+            },
+            {
+              "name": "Ines Sarrazin",
+              "title": "Treasurer"
+            }
+          ]
+        },
+        "filings_with_data": []
+      }
+    }
+  ]
+}

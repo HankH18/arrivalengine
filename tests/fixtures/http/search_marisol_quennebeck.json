@@ -1,0 +1,55 @@
+{
+  "kind": "search",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "Tavily's POST /search when a key is configured, and the no-account DuckDuckGo HTML endpoint the connector falls back to when it is not. Both are recorded so the documented degradation path is exercised and not merely asserted.",
+  "responses": [
+    {
+      "method": "POST",
+      "url": "https://api.tavily.com/search",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "query": "Marisol Quennebeck Thornfield Loom",
+        "results": [
+          {
+            "url": "https://thornfieldloom.example.com/team/marisol-quennebeck",
+            "title": "Marisol Quennebeck — Thornfield Loom",
+            "content": "Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.",
+            "score": 0.94,
+            "published_date": "2024-05-02"
+          },
+          {
+            "url": "https://example.org/nwp/2023-4",
+            "title": "The maintenance almanac as a shop-floor protocol",
+            "content": "Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.",
+            "score": 0.81,
+            "published_date": "2023-09-07"
+          },
+          {
+            "url": "https://example.org/mill-archive",
+            "title": "Digitising a mill archive on a volunteer budget",
+            "content": "Quennebeck chaired the Narragansett Mill Archive restoration committee before Thornfield Loom existed.",
+            "score": 0.66,
+            "published_date": "2022-06-08"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://html.duckduckgo.com/html/",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<!doctype html><html><body><div class=\"result\"><a class=\"result__a\" href=\"/l/?uddg=https%3A%2F%2Fthornfieldloom.example.com%2Fteam%2Fmarisol-quennebeck\">Marisol Quennebeck — Thornfield Loom</a><div class=\"result__snippet\">Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.</div></div><div class=\"result\"><a class=\"result__a\" href=\"https://example.org/nwp/2023-4\">The maintenance almanac as a shop-floor protocol</a><div class=\"result__snippet\">Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.</div></div></body></html>"
+    }
+  ]
+}

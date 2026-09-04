@@ -110,8 +110,14 @@ async def fetch_record(
     and `fetch_json` parses it, and neither can be reconstructed from the other's output.
     """
     resolved = _settings_for(settings)
-    full_url = build_url(url, params)
-    key = _request_key(full_url, method, json_body)
+    try:
+        full_url = build_url(url, params)
+        key = _request_key(full_url, method, json_body)
+    except Exception as exc:  # noqa: BLE001 - an unaddressable request is a miss
+        # `urlencode` on an exotic param and `json.dumps` on a non-serialisable POST body
+        # both raise here, upstream of every other guard.
+        log.warning("cannot address %r: %s", url, exc)
+        return None
     root = _cache_root(resolved, cache_dir)
 
     if use_cache:
@@ -119,8 +125,6 @@ async def fetch_record(
         if cached is not None:
             # A cache hit costs the remote host nothing, so it does not spend a token.
             return cached
-
-    await limiter.acquire(full_url)
 
     request_headers = {
         "User-Agent": resolved.user_agent,  # SPEC C5
@@ -131,6 +135,11 @@ async def fetch_record(
         request_headers.update(headers)
 
     try:
+        # Inside the guard, not before it: the limiter reads the hostname out of the url,
+        # and `urlsplit` raises `ValueError: Invalid IPv6 URL` on a malformed one. A
+        # connector that builds a url out of scraped page text can hand that in, and it
+        # used to escape `fetch_text` as an exception instead of degrading to None.
+        await limiter.acquire(full_url)
         # A client per request rather than a shared one: `httpx.AsyncClient` binds to the
         # event loop it is used on, and this module is called from short-lived loops
         # (`asyncio.run` in the CLI and in tests) as well as from a long-lived server.

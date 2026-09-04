@@ -81,7 +81,24 @@ def read_record(root: Path, key: str) -> HttpRecord | None:
     if isinstance(envelope, dict) and isinstance(envelope.get("body"), str):
         body = envelope["body"]
         content_type = str(envelope.get("content_type") or "text/plain")
-        status = int(envelope.get("status") or 200)
+        # Type-checked rather than coerced. `int("ok")` and `int({"a": 1})` both raise,
+        # and this runs BEFORE `fetch_record`'s try block, so either one escaped all the
+        # way out of `fetch_text` and turned a corrupt cache file into a crashed build --
+        # the exact thing this function's docstring promises cannot happen.
+        #
+        # A present-but-unreadable status is a MISS, not a defaulted 200: the status is
+        # part of the record, and a file we cannot read in full is a file we should not
+        # serve. A miss costs one re-fetch; a wrong status is wrong for the life of the
+        # cache entry. `bool` is refused because it subclasses `int` and `True` is not a
+        # status code. An ABSENT status still means 200, which is what a hand-written
+        # fixture with no envelope metadata intends.
+        raw_status = envelope.get("status")
+        if raw_status is None:
+            status = 200
+        elif isinstance(raw_status, int) and not isinstance(raw_status, bool):
+            status = raw_status
+        else:
+            return None
     elif isinstance(payload.get("text"), str) and payload["text"].strip():
         # A hand-written fixture in plain `RawDoc` shape: its extracted text IS the body.
         body = payload["text"]

@@ -1,0 +1,114 @@
+{
+  "kind": "wikidata",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "wbsearchentities -> candidate QIDs, then wbgetentities for labels, claims and the enwiki sitelink. P856 is the official-website claim self_page falls back to.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://www.wikidata.org/w/api.php?action=wbsearchentities",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "searchinfo": {
+          "search": "Marisol Quennebeck"
+        },
+        "search": [
+          {
+            "id": "Q104882317",
+            "title": "Q104882317",
+            "label": "Marisol Quennebeck",
+            "description": "American textile-software co-founder"
+          }
+        ],
+        "success": 1
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://www.wikidata.org/w/api.php?action=wbgetentities",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "entities": {
+          "Q104882317": {
+            "type": "item",
+            "id": "Q104882317",
+            "labels": {
+              "en": {
+                "language": "en",
+                "value": "Marisol Quennebeck"
+              }
+            },
+            "descriptions": {
+              "en": {
+                "language": "en",
+                "value": "American textile-software co-founder"
+              }
+            },
+            "claims": {
+              "P31": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P31",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "id": "Q5"
+                      },
+                      "type": "wikibase-entityid"
+                    }
+                  }
+                }
+              ],
+              "P106": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P106",
+                    "datavalue": {
+                      "value": {
+                        "entity-type": "item",
+                        "id": "Q131524"
+                      },
+                      "type": "wikibase-entityid"
+                    }
+                  }
+                }
+              ],
+              "P856": [
+                {
+                  "mainsnak": {
+                    "snaktype": "value",
+                    "property": "P856",
+                    "datavalue": {
+                      "value": "https://thornfieldloom.example.com/",
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "sitelinks": {
+              "enwiki": {
+                "site": "enwiki",
+                "title": "Marisol Quennebeck",
+                "url": "https://en.wikipedia.org/wiki/Marisol_Quennebeck"
+              }
+            }
+          }
+        },
+        "success": 1
+      }
+    }
+  ]
+}

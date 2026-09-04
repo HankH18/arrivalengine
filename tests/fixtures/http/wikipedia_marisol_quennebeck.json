@@ -1,0 +1,75 @@
+{
+  "kind": "wikipedia",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "action=query search for candidate titles, then one REST page/summary per candidate.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://en.wikipedia.org/w/api.php?action=query&list=search",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "batchcomplete": true,
+        "query": {
+          "search": [
+            {
+              "ns": 0,
+              "title": "Marisol Quennebeck",
+              "pageid": 74110921
+            },
+            {
+              "ns": 0,
+              "title": "Thornfield Loom",
+              "pageid": 74110922
+            }
+          ]
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Marisol_Quennebeck",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "type": "standard",
+        "title": "Marisol Quennebeck",
+        "description": "American textile-software co-founder",
+        "extract": "Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms. Quennebeck chaired the Narragansett Mill Archive restoration committee before Thornfield Loom existed.",
+        "timestamp": "2024-03-11T09:22:41Z",
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Marisol_Quennebeck"
+          }
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://en.wikipedia.org/api/rest_v1/page/summary/Thornfield_Loom",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "type": "standard",
+        "title": "Thornfield Loom",
+        "description": "textile scheduling company",
+        "extract": "Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.",
+        "timestamp": "2024-01-05T14:02:00Z",
+        "content_urls": {
+          "desktop": {
+            "page": "https://en.wikipedia.org/wiki/Thornfield_Loom"
+          }
+        }
+      }
+    }
+  ]
+}
