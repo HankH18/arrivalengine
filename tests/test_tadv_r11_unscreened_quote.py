@@ -106,11 +106,6 @@ def test_the_clean_half_really_is_shown(digest_page):
 
 # --------------------------------------------------------------------------- the leak
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: Provenance.quote is rendered verbatim on the digest and is "
-    "screened by nothing; taste rules only on Fact.text. Remove this marker when fixed.",
-)
 def test_an_r11_quote_never_reaches_the_digest(digest_page):
     """R11 binds to what a host SEES, not to the sentence the extractor wrote."""
     assert DIRTY_QUOTE not in digest_page

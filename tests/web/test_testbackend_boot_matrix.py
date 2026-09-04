@@ -25,6 +25,7 @@ read-only to this ticket), the literal filenames this module writes, and CPython
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -398,31 +399,55 @@ def test_the_switch_is_absent_by_default(corpus, monkeypatch):
 
 
 @pytest.mark.parametrize("value", DEBUG_REFUSED)
-def test_a_debug_views_value_pydantic_cannot_read_fails_the_boot_naming_the_field(
-    corpus, monkeypatch, value
+def test_a_debug_views_value_pydantic_cannot_read_boots_with_the_switch_off(
+    corpus, monkeypatch, caplog, value
 ):
-    """The edge the packet asks about, and it is NOT a 404 — it is a dead app.
+    """The edge this module found, now decided: an unreadable value means OFF (T-090).
 
-    `get_settings` deliberately re-raises `ValidationError` unwrapped ("It already IS the
-    diagnosis this guard exists to supply"), and `web/app.py` ends with `app = create_app()`,
-    so `DEBUG_VIEWS=` — an env var exported with no value, which is what `export
-    DEBUG_VIEWS=` and a bare `DEBUG_VIEWS=` line in a `.env` both produce — takes the whole
-    service down at import rather than turning the switch off.
+    JUSTIFIED TEST EDIT — T-090, and the only assertion in this module that was touched.
+    This test previously read:
 
-    The assertion is on the DIAGNOSIS, which is the part that has to be true for an
-    operator to recover: the error names `debug_views` and quotes the value it refused.
-    Whether failing is the right answer at all is a product question this ticket reports
-    rather than decides.
+        with pytest.raises(ValidationError) as raised:
+            create_app(dossier_dir=corpus, llm=LLMDouble())
+        message = str(raised.value)
+        assert "debug_views" in message
+        assert repr(value) in message or value in message
+
+    i.e. it required a malformed `DEBUG_VIEWS` to take the app down at construction. Three
+    reasons that is wrong INDEPENDENTLY of the fix, not merely inconvenient:
+
+    1. **Its own author declined to assert it as a requirement.** The docstring it carried
+       said, verbatim: "Whether failing is the right answer at all is a product question
+       this ticket reports rather than decides." It recorded an observation. T-090 is the
+       ticket that decides it, and it decides the other way.
+    2. **It pins a total outage on a deployed service.** `web/app.py` ends with a
+       module-level `app = create_app()`, so this is read at IMPORT: every value in
+       `DEBUG_REFUSED` — `""` among them, which is what `export DEBUG_VIEWS=` and a bare
+       `DEBUG_VIEWS=` line in a `.env` both produce — took the whole site down before a
+       single route existed. Reproduced by execution.
+    3. **It contradicts R15.** R15 calls `/debug` "a switch, not auth". A switch has a safe
+       position; refusing to serve the product at all is not one of its positions.
+
+    Nothing is weakened. The **diagnosis** the old assertion cared about is still required,
+    and still names the field and quotes the value — it has moved from a fatal traceback,
+    where it takes the product with it, to a WARNING, where an operator can read it and fix
+    the variable while the site stays up. The behavioural assertion is STRICTER than before:
+    the old test checked only that a message was raised, while this one additionally pins
+    which position the switch lands in (`False`) and proves the route really is closed.
     """
-    from pydantic import ValidationError
-
     monkeypatch.setenv("DEBUG_VIEWS", value)
     get_settings.cache_clear()
-    with pytest.raises(ValidationError) as raised:
-        create_app(dossier_dir=corpus, llm=LLMDouble())
-    message = str(raised.value)
-    assert "debug_views" in message
-    assert repr(value) in message or value in message
+
+    with caplog.at_level(logging.WARNING, logger="arrival.config"):
+        app = create_app(dossier_dir=corpus, llm=LLMDouble())
+
+    assert app.state.debug_views is False
+    with TestClient(app, raise_server_exceptions=False) as client:
+        assert client.get(f"/debug/{KNOWN_ID}").status_code == 404
+
+    # The diagnosis the old assertion required, kept intact: the field and the value.
+    assert "DEBUG_VIEWS" in caplog.text
+    assert repr(value) in caplog.text or (value and value in caplog.text)
 
 
 def test_the_switch_is_read_once_at_factory_time_and_does_not_flip_under_a_running_app(

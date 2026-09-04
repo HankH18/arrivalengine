@@ -202,19 +202,6 @@ MALFORMED_MULTIPART: list[tuple[str, bytes]] = [
 ]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "OPEN DEFECT, reproduced on the live deploy. `web/app.py:80` calls "
-        "`await request.form()` outside any try, so `python_multipart.exceptions."
-        "MultipartParseError` escapes `_payload` and FastAPI answers 500. This falsifies "
-        "`_payload`'s own docstring (`web/app.py:73-74`): 'Nothing here can raise: a "
-        "malformed body yields {}, which resolves to no person, which is a 404.' "
-        "`src/` is read-only to this ticket, so the defect is reported rather than fixed; "
-        "strict=True makes this test FAIL the day the guard lands, which is when the "
-        "xfail should be deleted."
-    ),
-)
 @pytest.mark.parametrize("route", POST_ROUTES)
 def test_a_malformed_multipart_body_is_a_4xx_and_not_a_traceback(client, route):
     """`POST /arrive` and `POST /leave` must refuse a malformed multipart body, not 500.

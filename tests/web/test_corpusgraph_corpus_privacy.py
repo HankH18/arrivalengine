@@ -26,6 +26,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from arrival.contracts import Dossier, Fact, Hub, PersonRef, Provenance, Resolution
+from arrival.graph import WITHHELD_HUB_LABEL
 from arrival.taste import CONFIDENCE_FLOOR, NEVER_DISPLAYABLE_KINDS, is_displayable
 from arrival.web.app import create_app
 from doubles import LLMDouble
@@ -191,7 +192,27 @@ def test_a_hub_whose_every_carrier_is_withheld_says_so_instead_of_showing_an_emp
     directory = _write(tmp_path / "all-withheld", people)
     page = _corpus_page(directory)
 
-    assert "Harbor Fund" in page
+    # JUSTIFIED TEST EDIT — T-087. This line read `assert "Harbor Fund" in page`.
+    #
+    # It required the LABEL of a hub whose every carrier's evidence is taste-excluded to be
+    # printed on a host-facing page. That is the defect T-087 is about, and it is wrong
+    # independently of the fix: a hub label is minted FROM the evidence facts, so when all
+    # of that evidence is withheld the label can be the withheld thing itself. Reproduced
+    # before the fix, on this very shape: two members carrying a fact excluded
+    # `home_or_property` produced the Meet row **"Both rooted in Ravensworth Hill."** — the
+    # street they live on, in the sentence R18 says a host reads OUT LOUD to their face.
+    # The gate cannot tell that case from this one, where the label happens to be innocuous,
+    # so it withholds both; `tests/test_tadv_r11_hub_label_bypass.py` is the module that
+    # states the requirement.
+    #
+    # THE PROPERTY THIS TEST EXISTS FOR IS UNTOUCHED, and it is the one its docstring names:
+    # a carrier is never DROPPED for having nothing showable. Both carriers are still
+    # asserted present below, the honest sentence is still counted twice, and the hub row
+    # itself is still asserted present — under a label that says it is withheld rather than
+    # under one that leaks. Nothing here is loosened: an equality on the page's content
+    # replaces a weaker containment, and the leak is now pinned closed as well.
+    assert WITHHELD_HUB_LABEL in page
+    assert "Harbor Fund" not in page
     assert "Mockingbird Terrace" not in page
     assert page.count("Nothing behind this we are willing to show.") == 2
     assert "Kit Known" in page and "Lee Known" in page

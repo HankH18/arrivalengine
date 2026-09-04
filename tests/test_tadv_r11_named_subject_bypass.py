@@ -101,20 +101,38 @@ def test_noun_anchored_categories_survive_a_proper_name_subject(category, _prono
 def test_a_keep_is_final_and_never_reaches_the_classifier():
     """Why a `keep` is expensive: `apply_taste` only sends `unsure` facts to the LLM.
 
-    Pinning the premise the two xfails below rest on — that these sentences are not merely
-    unreviewed by the rules but affirmatively cleared, with the fail-closed path bypassed.
+    A `keep` is an AFFIRMATIVE clearance with the fail-closed path bypassed, which is what
+    made the pronoun anchoring a leak rather than a gap. The property is unchanged and
+    still worth pinning; what changed is which sentence demonstrates it.
+
+    JUSTIFIED TEST EDIT — T-086, and the only assertion in this module that was touched.
+    This test previously opened::
+
+        assert rule_verdict("Brad Feld lives in Boulder, Colorado.").decision == "keep"
+
+    That assertion pinned THE DEFECT ITSELF as the expected behaviour: it required the
+    filter to affirmatively clear a sentence naming the two towns a living member lives in.
+    It was written as the *premise* of the strict xfails below — "this is what is wrong
+    today" — and by construction it had to become false the moment the defect was fixed;
+    the module docstring says as much ("a fix turns these RED"). It is wrong independent of
+    any implementation: SPEC R11 forbids surfacing "where they live", and the sibling test
+    `test_naming_the_member_does_not_change_the_r11_verdict` — a strict xfail written by the
+    same lane, now passing and unmarked — asserts the opposite of it directly. Keeping both
+    is a contradiction, and the one that encodes the requirement wins.
+
+    Nothing is weakened: the sentence is still asserted on, with the OPPOSITE and stricter
+    expectation, and a genuine professional keep is added so the "a keep exists and is
+    final" half still has a witness. Net assertions: three, up from two.
     """
-    assert rule_verdict("Brad Feld lives in Boulder, Colorado.").decision == "keep"
+    # The keep half of the property, on a sentence R11 has no claim on at all.
+    assert rule_verdict("They founded a cancer-imaging startup.").decision == "keep"
+    # Both spellings of the residence claim are now withheld -- see the edit note above.
+    assert rule_verdict("Brad Feld lives in Boulder, Colorado.").decision != "keep"
     assert rule_verdict("He lives in Boulder, Colorado.").decision != "keep"
 
 
 # --------------------------------------------------------------------------- what leaks
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: home_or_property and family cues are pronoun-anchored, so "
-    "naming the member defeats them. Remove this marker when it is fixed.",
-)
 @pytest.mark.parametrize(
     ("category", "pronoun_form", "name_form"),
     PRONOUN_AND_NAME_PAIRS,
@@ -172,22 +190,12 @@ def test_the_committed_corpus_is_not_empty():
     assert any(is_displayable(f) for d in dossiers for f in d.facts)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: displayable facts in data/dossiers/ state where living "
-    "members live and what property they own. Remove this marker when it is fixed.",
-)
 def test_no_displayable_fact_states_where_a_member_lives():
     """R11: "their home address, property records or where they live" — never displayed."""
     offenders = _offenders(WHERE_THEY_LIVE)
     assert offenders == [], "\n" + "\n".join(offenders)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: displayable facts in data/dossiers/ name a member's partner, "
-    "child and friends. Remove this marker when it is fixed.",
-)
 def test_no_displayable_fact_names_a_members_partner_child_or_friend():
     """R11: "their family, spouse, children or personal relationships" — never displayed."""
     offenders = _offenders(WHO_THEY_ARE_CLOSE_TO)

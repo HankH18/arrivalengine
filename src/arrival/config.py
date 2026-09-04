@@ -10,13 +10,24 @@ Every field maps to the same-named upper-case env var (`contact_email` -> `CONTA
 
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import ValidationError, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 __all__ = ["ENV_FILE", "Settings", "SettingsError", "env_file_path", "get_settings"]
+
+log = logging.getLogger(__name__)
+
+#: The boolean vocabulary `Settings.debug_views` accepts, after stripping and lowercasing.
+#: Pydantic's own sets, kept verbatim so no value that worked before changes meaning.
+#: Anything in NEITHER set is a misconfiguration and reads as False -- see
+#: `Settings._debug_views_fails_closed` for why that is the safe position rather than a
+#: swallowed error.
+_TRUE_TOKENS = frozenset({"1", "true", "t", "yes", "y", "on"})
+_FALSE_TOKENS = frozenset({"0", "false", "f", "no", "n", "off"})
 
 #: The environment file every `Settings()` reads, RELATIVE to the process working
 #: directory — which is the opposite of `dossier_dir`'s anchoring below, deliberately and
@@ -101,6 +112,67 @@ class Settings(BaseSettings):
 
     # --- surfaces
     debug_views: bool = False  # R15: /debug/{person_id} is 404 unless this is on
+
+    @field_validator("debug_views", mode="before")
+    @classmethod
+    def _debug_views_fails_closed(cls, value: object) -> object:
+        """Anything unrecognised means OFF, and never a dead service (T-090).
+
+        **The outage this repairs, reproduced by execution.** ``arrival.web.app`` ends with
+        a module-level ``app = create_app()``, so ``Settings()`` is read at IMPORT. Pydantic
+        parses a bool from a fixed vocabulary and raises ``ValidationError`` on anything
+        else, and ``get_settings`` re-raises that unwrapped. So ``DEBUG_VIEWS`` set to
+        ``""``, ``"2"``, ``"-1"``, ``"maybe"``, ``"1.0"``, ``"null"``, ``"enabled"`` or
+        ``"False "`` with a trailing space did not turn the switch off — it killed the
+        process before a single route existed. ``export DEBUG_VIEWS=`` and a bare
+        ``DEBUG_VIEWS=`` line in a ``.env`` both produce the empty string, and pasting a
+        value with a trailing space into a hosting dashboard produces the last one. **The
+        service is deployed.** Any of those takes the whole site down at boot.
+
+        **Why fail closed rather than fail loudly.** R15 calls ``/debug`` a switch, and a
+        switch has a safe position. The two errors are not remotely symmetric: refusing to
+        boot takes down a live product for every user over a value that concerns one
+        operator page, while reading an unrecognised value as "off" costs that operator a
+        debug view they can restore by writing ``1``. The diagnosis an operator needs is not
+        lost — it moves from a fatal traceback to a WARNING naming the field and quoting the
+        value, which is where a recoverable misconfiguration belongs.
+
+        **The vocabulary is pydantic's own and is matched EXACTLY** (case-insensitively, and
+        nothing else): every value that worked before still works and still means the same
+        thing, and every value that did not now means OFF instead of dead.
+
+        Whitespace is deliberately NOT stripped, and that decision goes one way for a
+        reason. Stripping would make `"False "` OFF — right — but it would also make `" 1 "`
+        turn the switch ON, and `/debug` is the one page R15 permits to show material the
+        taste filter withheld. Turning that on from a value the operator did not exactly
+        type is the wrong direction of error for this particular switch, so a padded value
+        of ANY kind is unrecognised and lands OFF with the warning. An operator who meant
+        `1` reads the warning and writes `1`.
+
+        **The other settings on this class need no equivalent, and that is checked rather
+        than assumed:** ``debug_views`` is the ONLY non-string, non-Path field here.
+        ``contact_email`` and the two model ids are ``str``, ``cache_dir`` and
+        ``dossier_dir`` are ``Path``, and the four credentials are ``str | None`` — none of
+        those can fail to parse from an environment variable, so no env var other than
+        ``DEBUG_VIEWS`` can take the boot down through validation. The remaining import-time
+        hazard is an unreadable ``.env``, which ``get_settings`` already converts into a
+        ``SettingsError`` naming the path.
+        """
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, int | float):
+            return bool(value)
+        text = str(value).lower()
+        if text in _TRUE_TOKENS:
+            return True
+        if text not in _FALSE_TOKENS:
+            log.warning(
+                "DEBUG_VIEWS=%r is not a boolean this service recognises; reading it as "
+                "OFF. Write one of %s to turn the debug views on.",
+                value,
+                ", ".join(sorted(_TRUE_TOKENS)),
+            )
+        return False
 
     # Where the committed dossiers live: DESIGN §Data models pins
     # `data/dossiers/{person_id}.json`, which is what T-6's build writes and what T-9

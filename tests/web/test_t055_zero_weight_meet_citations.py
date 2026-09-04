@@ -242,7 +242,21 @@ async def test_the_shared_hubs_are_still_checkable_from_the_evidence_list():
     html = render("digest.html", **digest_view(digest, dossier))
     sources = html[html.index('id="why-we-know-this"') :]
 
-    for quote in (AUSTIN_QUOTE, REMOTE_QUOTE):
+    # JUSTIFIED TEST EDIT — T-086. This loop ran over `(AUSTIN_QUOTE, REMOTE_QUOTE)`.
+    # AUSTIN_QUOTE is the citation for `runa-okonkwo-f16`, "Has lived in Austin since 2014."
+    # — a statement of where a member lives, which SPEC R11 names outright ("their home
+    # address, property records or where they live") as something the digest never surfaces.
+    # The rule layer's home cues were anchored on `they|he|she`, so a fact writing its
+    # subject any other way was affirmatively KEPT; T-086 anchors them on the predicate
+    # instead, and the fact is now withheld. Requiring its quote to be RENDERED is therefore
+    # requiring an R11 violation, which is wrong independently of any implementation.
+    #
+    # The property this test exists for is untouched and still has a witness: a zero-weight
+    # hub's evidence stays on the audit surface, which REMOTE_QUOTE (`f17`, professional and
+    # displayable) demonstrates exactly as before. Nothing is loosened — the Austin case
+    # moves from "must be present" to the STRICTER "must be absent", so the pair still
+    # covers both hubs and the module now also pins the R11 outcome for one of them.
+    for quote in (REMOTE_QUOTE,):
         assert quote in sources, (
             f"{quote!r} backs a hub the reasoning table still lists, and it is no longer "
             "anywhere in the evidence list — the table's zero rows are now unverifiable"
@@ -252,3 +266,8 @@ async def test_the_shared_hubs_are_still_checkable_from_the_evidence_list():
             f"{quote!r} is rendered but no longer names {ZERO_SCORING_NAME}'s row, so a host "
             f"cannot tell which claim it supports:\n{entry}"
         )
+
+    assert AUSTIN_QUOTE not in sources, (
+        "R11: the Austin quote cites a fact stating where a member lives, so it is withheld "
+        "and must not appear on an audit surface a host reads"
+    )

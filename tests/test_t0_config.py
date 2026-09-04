@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import subprocess
@@ -226,16 +227,78 @@ def test_no_env_file_at_all_is_not_an_error(in_tmp_cwd):
     assert get_settings().contact_email == "arrival-engine@example.com"
 
 
-def test_a_bad_field_value_still_raises_pydantic_s_own_error(in_tmp_cwd):
-    """`ValidationError` subclasses `ValueError`, so a careless `except ValueError` would
-    have swallowed it into a vaguer message. It already names the field and the value,
-    which is strictly better than anything this module could say about it."""
+def test_a_bad_debug_views_value_turns_the_switch_off_instead_of_killing_the_service(
+    in_tmp_cwd, caplog
+):
+    """T-090: an unreadable `DEBUG_VIEWS` fails CLOSED, and the diagnosis is a warning.
+
+    JUSTIFIED TEST EDIT — T-090. This test previously read:
+
+        (in_tmp_cwd / ENV_FILE).write_text("DEBUG_VIEWS=notabool\\n", encoding="utf-8")
+        with pytest.raises(ValidationError) as excinfo:
+            get_settings()
+        assert "debug_views" in str(excinfo.value).lower()
+        assert not isinstance(excinfo.value, SettingsError)
+
+    i.e. it required an unreadable `DEBUG_VIEWS` to raise out of `get_settings`. That
+    encoded a **total production outage as the contract**, and it is wrong independently of
+    any implementation, on evidence measured against the deployed service:
+    `arrival/web/app.py` ends with a module-level `app = create_app()`, so `Settings()` is
+    read at IMPORT — which means `DEBUG_VIEWS` set to `""`, `"2"`, `"-1"`, `"maybe"`,
+    `"1.0"`, `"null"` or `"False "` with a trailing space did not turn a debug page off, it
+    killed the whole service before a single route existed. `export DEBUG_VIEWS=` and a bare
+    `DEBUG_VIEWS=` line in a `.env` both produce the empty string, and pasting a value with
+    a trailing space into a hosting dashboard produces the last one. R15 calls `/debug` a
+    switch, and a switch has a safe position; taking a live product down for every user over
+    one operator page is not it.
+
+    The property the old test actually cared about — that `get_settings` does not swallow a
+    `ValidationError` into the vaguer `SettingsError`, because `ValidationError` subclasses
+    `ValueError` — is NOT dropped. It is worth keeping and it is now pinned directly, on the
+    handler rather than on a field, by
+    `test_get_settings_never_swallows_a_validation_error_into_settings_error` below. That is
+    also the stronger test: `debug_views` was the only field on `Settings` that could fail
+    to parse from an environment variable at all (every other field is `str`, `Path` or
+    `str | None`), so this property was one field-type change away from being untestable.
+    """
     (in_tmp_cwd / ENV_FILE).write_text("DEBUG_VIEWS=notabool\n", encoding="utf-8")
 
-    with pytest.raises(ValidationError) as excinfo:
-        get_settings()
+    with caplog.at_level(logging.WARNING, logger="arrival.config"):
+        settings = get_settings()
 
-    assert "debug_views" in str(excinfo.value).lower()
+    assert settings.debug_views is False
+    assert "DEBUG_VIEWS" in caplog.text
+    assert "notabool" in caplog.text
+
+
+def test_get_settings_never_swallows_a_validation_error_into_settings_error(in_tmp_cwd):
+    """The property the edit above preserves, pinned on the handler that implements it.
+
+    `get_settings` catches `ValidationError` FIRST and re-raises it untouched, precisely
+    because `ValidationError` subclasses `ValueError` and the `except (OSError, ValueError)`
+    clause below it would otherwise rewrite pydantic's own field-and-value diagnosis into
+    the vaguer "could not be read". Asserted by making `Settings()` raise one, so the guard
+    is tested even though no environment variable can currently produce one.
+    """
+    import arrival.config as config_module
+
+    error = ValidationError.from_exception_data("Settings", [])
+
+    class Exploding:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise error
+
+    original = config_module.Settings
+    config_module.Settings = Exploding  # type: ignore[misc]
+    try:
+        get_settings.cache_clear()
+        with pytest.raises(ValidationError) as excinfo:
+            get_settings()
+    finally:
+        config_module.Settings = original  # type: ignore[misc]
+        get_settings.cache_clear()
+
+    assert excinfo.value is error
     assert not isinstance(excinfo.value, SettingsError)
 
 

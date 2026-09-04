@@ -95,6 +95,7 @@ __all__ = [
     "DISPLAYABLE_KINDS",
     "EXCLUSION_POLICY",
     "NEVER_DISPLAYABLE_KINDS",
+    "QUOTE_WITHHELD",
     "R11_CATEGORIES",
     "RuleVerdict",
     "TasteRuling",
@@ -103,6 +104,8 @@ __all__ = [
     "apply_taste_rules",
     "is_displayable",
     "rule_verdict",
+    "screen_quote",
+    "screen_quotes",
 ]
 
 
@@ -278,6 +281,44 @@ def _is_attributive(text: str, match: re.Match[str]) -> bool:
     return _head_noun_follows(text, match.end()) or _product_verb_precedes(text, match.start())
 
 
+#: **PRINCIPLE 4 — THE SUBJECT IS THE MEMBER, HOWEVER THE SENTENCE SPELLS IT.**
+#:
+#: A ``Fact`` is, by construction, a claim about the person whose dossier it sits in:
+#: ``extract`` writes one per member and ``Fact.person_id`` names them. So the SUBJECT of
+#: an R11 sentence needs no proof — only its PREDICATE has to be recognised. Anchoring a
+#: cue on ``they|he|she`` therefore does not test whether the fact is about the member; it
+#: tests only whether the extractor happened to write a pronoun, and this corpus writes
+#: proper names ("Brad Feld lives in Boulder, Colorado and Homer, Alaska."), possessive
+#: proper names ("Melanie Perkins's husband"), or no subject at all ("Currently lives in
+#: New York City.").
+#:
+#: Measured before the fix: six of six home/family pairs flipped from withheld to KEPT when
+#: the pronoun was replaced by the member's name, and eight displayable facts on the
+#: committed corpus stated where a living member lives or named their partner, child or
+#: friends. Health, legal, wealth and political were untouched, because their cues are
+#: anchored on NOUNS (``cancer``, ``divorce``, ``net worth``, ``registered Democrat``) —
+#: which is the control proving the defect was the cue SPELLING and not proper nouns.
+#:
+#: The repair is applied in exactly two shapes, and NOT by widening every pronoun in the
+#: file, because the direction of error is not symmetric (see T-069 and principle 3):
+#:
+#: 1. :data:`_POSSESSIVE` — used only where a possessive pronoun already anchored a
+#:    ``family`` or ``home_or_property`` cue. The four noun-anchored categories keep their
+#:    pronoun-only possessives: they demonstrably survive the rename, so widening them
+#:    would buy nothing and spend the over-block budget T-069 defended.
+#: 2. Subject-FREE predicates, below — "lives in <Place>", "owns a house", "multiple
+#:    homes", a named intimate relation, "is friends with". Each is a claim that R11 names
+#:    outright ("where they live", "their family, spouse, children or personal
+#:    relationships") and that no professional reading of a fact about a member survives.
+#:
+#: The possessive half. ``their|his|her`` as before, or the member named outright.
+#: Case-SENSITIVE on the name via a scoped ``(?-i:...)`` flag, because every pattern here
+#: is compiled ``IGNORECASE`` and a bare ``[A-Z]`` under that flag matches anything at all.
+#: Up to four capitalised words so "Melanie Perkins's" and "Jean-Luc de la Vallière's"
+#: both land, and both curly and straight apostrophes are accepted because the extractor
+#: emits whichever the source page used.
+_POSSESSIVE = r"(?:their|his|her|(?-i:[A-Z][\w’'-]*(?:\s+[A-Z][\w’'-]*){0,3})['’]s)"
+
 #: Relative nouns. Bare `partner` is deliberately absent — "a partner at Marram Ventures"
 #: is a job title and the word alone cannot tell the two apart; the QUALIFIED forms
 #: ("their partner of twenty years", "they and their partner", "their life partner") are
@@ -385,7 +426,32 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         ),
     ),
     "family": (
-        _rx(rf"\b(?:their|his|her)\s+(?:[\w'’-]+\s+){{0,2}}{_RELATIVE}\b"),
+        # Principle 4: the possessive may be a pronoun OR the member named outright, and
+        # the gap widens from two modifiers to three. "Brad Feld's son", "his 9 month old
+        # son" -- the second is a committed fact that reached the digest because "9",
+        # "month" and "old" are three words and the gap allowed two.
+        _rx(rf"\b{_POSSESSIVE}\s+(?:[\w'’-]+\s+){{0,3}}{_RELATIVE}\b"),
+        # Principle 4, the subject-free half. A named INTIMATE relation is an R11 fact
+        # whatever grammar introduces it: "Co-founded Canva with boyfriend Cliff Obrecht"
+        # carries no possessive at all and was a committed, displayable fact.
+        #
+        # Deliberately only the intimate subset. `son`, `daughter`, `mother`, `father`,
+        # `sister` and `brother` stay possessive-anchored above, because English uses them
+        # professionally without a possessive all the time -- "the father of the internet",
+        # "a sister company", "the mother of modern portfolio theory" -- and a bare rule on
+        # them would be the over-block T-069 exists to prevent. `wife`, `husband`,
+        # `spouse`, `boyfriend`, `girlfriend`, `fiancé` and `widow` have no such reading.
+        _rx(
+            r"\b(?:boyfriends?|girlfriends?|fianc(?:é|e)e?s?|spouses?|wife|wives|"
+            r"husbands?|widow|widower)\b"
+        ),
+        # R11 names "personal relationships" and friendship is the plainest one there is.
+        # Narrow on purpose: `friends WITH` only. "a friend of the court" is an amicus
+        # brief and "a friend of the show" is a podcast, and both would be over-blocks.
+        _rx(
+            r"\b(?:is|are|was|were|remains?|became|become|stayed|stays)\s+"
+            r"(?:close\s+|old\s+|good\s+|long-?time\s+|personal\s+)?friends\s+with\b"
+        ),
         _rx(r"\bmarried\s+(?:to|since)\b|\b(?:has|have|had)\s+been\s+married\b"),
         # "They married an architect in June" names a spouse just as plainly as
         # "married to"; only the preposition differed, and the sentence leaked.
@@ -396,8 +462,8 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
         # and a partner at a venture firm is a job. The qualifier is what tells them apart,
         # so the bare possessive defers in ``_WEAK`` rather than being ruled here.
         _rx(
-            r"\b(?:their|his|her)\s+(?:life|domestic|romantic|long-?term|civil)\s+partner\b|"
-            r"\b(?:their|his|her)\s+partner\s+of\s+[\w-]+\s+years?\b|"
+            rf"\b{_POSSESSIVE}\s+(?:life|domestic|romantic|long-?term|civil)\s+partner\b|"
+            rf"\b{_POSSESSIVE}\s+partner\s+of\s+[\w-]+\s+years?\b|"
             r"\b(?:they|he|she)\s+and\s+(?:their|his|her)\s+partner\b"
         ),
         # The end of a relationship, and the arrangements a court makes about children.
@@ -462,7 +528,37 @@ _STRONG: dict[str, tuple[re.Pattern[str], ...]] = {
             r"(?:show|list|record|for)\b|\bon\s+the\s+deed\b|"
             r"\bmortgages?\b|\btax\s+assessor\b|\bevict(?:ed|ion)\b"
         ),
-        _rx(rf"\b(?:their|his|her)\s+(?:[\w'’-]+\s+){{0,2}}{_DWELLING}\b"),
+        _rx(rf"\b{_POSSESSIVE}\s+(?:[\w'’-]+\s+){{0,3}}{_DWELLING}\b"),
+        # Principle 4: R11 names "where they live" outright, and a residence claim needs
+        # no subject to be one -- "Currently lives in New York City." is a committed,
+        # displayable fact with no subject at all.
+        #
+        # THE OBJECT IS WHAT MAKES THIS SAFE, and it is required. A capitalised word (or
+        # `the` plus one) after `in` is a PLACE, which is the whole R11 claim. Without that
+        # guard this fires on the relative clause in "the converted grain silo they live in
+        # and the acre of pasture behind it" -- a T-069 specimen that must keep reaching
+        # the classifier rather than being settled here -- because there the phrase has no
+        # object at all. The lower-case objects ("lives in a converted barn") are left to
+        # the WEAK pronoun cue below and to the classifier, exactly as before.
+        _rx(
+            r"\b(?:lives?|lived|living|resides?|resided|residing)\s+in\s+"
+            r"(?:the\s+)?(?-i:[A-Z])"
+        ),
+        # Owning a dwelling, without the pronoun the STRONG pattern below still requires.
+        # "Brad Feld owns homes in Aspen, Tucson, Boulder, and Basalt." is committed and
+        # displayable today. `built` is deliberately NOT in this verb list -- "built
+        # Overwatch, a home automation dashboard" would be an over-block, and the
+        # pronoun-anchored pattern below still carries `built` where a subject is stated.
+        _rx(
+            r"\b(?:owns?|owned|owning|bought|buys?|purchased|purchases?)\s+"
+            r"(?:(?:a|an|the|two|three|four|five|six|several|multiple|both|his|her|their)"
+            r"\s+)*"
+            rf"(?:[\w'’-]+\s+){{0,2}}{_DWELLING}s?\b"
+        ),
+        # Keeping several homes is a property fact on its own. `properties` is deliberately
+        # absent -- "a schema with multiple properties" is ordinary engineering prose on
+        # this roster and would be a plain over-block.
+        _rx(r"\b(?:multiple|several|two|three|four|five|six)\s+(?:homes|houses|residences)\b"),
         # The BUYER must be the person. "Their company purchased a warehouse estate" is a
         # commercial acquisition and was a measured over-block; the subject principle is
         # what separates it from "they bought the house on Halberd Row".
@@ -590,7 +686,7 @@ _WEAK: dict[str, tuple[re.Pattern[str], ...]] = {
         # Bare `their partner`, which the STRONG layer deliberately will not rule on. The
         # lookahead keeps "a partner AT Marram Ventures" out: a partner introduced by a
         # preposition is a firm, and that is how an investor roster talks.
-        _rx(r"\b(?:their|his|her)\s+partner\b(?!\s+(?:at|in|on|for|to)\b)"),
+        _rx(rf"\b{_POSSESSIVE}\s+partner\b(?!\s+(?:at|in|on|for|to)\b)"),
         _rx(r"\b(?:parental|paternity|maternity)\s+leave\b|\bseparation\b|\bcustody\b"),
         _rx(r"\bschool\s+(?:pick-?up|run|drop-?off|gate)\b|\bpick-?up\s+window\b"),
         _rx(r"\b(?:day\s?care|nursery|creche|kindergarten|pre-?school)\b"),
@@ -1033,17 +1129,89 @@ async def apply_taste(facts: Iterable[Fact], llm: LLMClient | None) -> list[Fact
 def is_displayable(fact: Fact) -> bool:
     """R12: may this fact reach a screen?
 
-    Three INDEPENDENT clauses, deliberately not collapsed:
+    FOUR INDEPENDENT clauses, deliberately not collapsed:
 
-    1. it survived the taste filter (R11);
-    2. its provenance confidence is at least :data:`CONFIDENCE_FLOOR` (0.7, inclusive);
-    3. its source kind is on :data:`DISPLAYABLE_KINDS`.
+    1. it survived the taste filter when the corpus was built (R11);
+    2. **the rule layer does not rule it out NOW** — see below;
+    3. its provenance confidence is at least :data:`CONFIDENCE_FLOOR` (0.7, inclusive);
+    4. its source kind is on :data:`DISPLAYABLE_KINDS`.
 
-    Clause 3 bites on its own: an ``fec`` filing can be a perfectly tasteful, high
+    Clause 4 bites on its own: an ``fec`` filing can be a perfectly tasteful, high
     confidence, non-excluded fact and still never be shown.
+
+    **WHY CLAUSE 2 EXISTS, AND WHY IT IS DELIBERATELY ONLY ``exclude``.**
+
+    ``Fact.excluded`` is a value FROZEN INTO JSON at corpus-build time. It records what
+    the filter believed on the day ``research.build_dossier`` ran, and the dossiers are
+    committed to the repository and served for months afterwards. So clause 1 alone makes
+    every R11 repair a promise that only takes effect for people whose dossiers are rebuilt
+    — and the corpus this product actually ships describes ten real, living people whose
+    facts were extracted under the pronoun-anchored rules principle 4 replaces. Without
+    this clause the fix above is inert on the deployed site until somebody re-runs the
+    build; with it, a redeploy is enough.
+
+    It is also defence in depth in the direction that matters: the gate is what a screen
+    asks, so a dossier hand-edited, restored from a backup, or produced by an older build
+    cannot put an R11 sentence on a page merely by carrying ``excluded: false``.
+
+    **Only ``exclude``, never ``unsure``.** An ``unsure`` verdict is the rule layer
+    correctly declining to answer, and ``apply_taste`` exists precisely so the classifier
+    can then clear such a fact — a stored ``excluded: false`` on an ``unsure`` sentence is
+    usually an LLM ``keep``, which is a real ruling made with the whole sentence in view.
+    Re-deriving ``unsure`` here would silently overturn every one of those and empty the
+    product. An ``exclude``, by contrast, is a named R11 marker predicated of the member;
+    ``apply_taste`` never offers those to the classifier either, so enforcing them here
+    changes no intended behaviour — it only closes the gap where the STORED flag predates
+    the current rule set.
     """
     if fact.excluded:
+        return False
+    if rule_verdict(fact.text).decision == "exclude":
         return False
     if fact.provenance.confidence < CONFIDENCE_FLOOR:
         return False
     return fact.provenance.source_kind in DISPLAYABLE_KINDS
+
+
+# --------------------------------------------------------------------------- R11 on the quote
+
+#: What replaces a ``Provenance.quote`` the rule layer excludes. A sentence rather than an
+#: empty string: ``digest.html`` renders the quote under every Lately bullet and in every
+#: source entry, and a blank one reads as a rendering bug rather than as a decision.
+QUOTE_WITHHELD = "[Quote withheld: it carries material this digest does not surface.]"
+
+
+def screen_quote(fact: Fact) -> Fact:
+    """Apply R11 to ``fact.provenance.quote``, which nothing else ever screens.
+
+    ``apply_taste_rules`` is ``rule_verdict(fact.text)`` — the extractor's one-line
+    paraphrase and nothing else — while ``digest.html`` renders ``provenance.quote``
+    verbatim under every Lately bullet, under "Not on the first page", and for every entry
+    in "Why we know this". A quote is up to 400 characters of somebody else's prose lifted
+    out of a fetched document, and it was the one string on a host-facing page that had
+    never been asked whether it is R11 material. A clean, ``keep``-verdicted fact carrying
+    a dirty quote therefore put that sentence on the page twice.
+
+    **The fact is kept and only the quote is replaced**, which is the whole point. The
+    claim in ``fact.text`` was ruled on and cleared on its own merits; suppressing it
+    because its citation is dirty would discard a professional fact over a defect in the
+    evidence we chose to quote for it. What the reader loses is the quotation, not the
+    fact — and :data:`QUOTE_WITHHELD` says so on the page.
+
+    Only an ``exclude`` redacts, for the same reason :func:`is_displayable` re-checks only
+    ``exclude``: a quote is one sentence torn out of a document, so ``unsure`` on it is
+    common and near-meaningless, and redacting on it would blank most citations in the
+    corpus. Returns ``fact`` unchanged when there is nothing to do, so the common case
+    makes no copy.
+    """
+    quote = fact.provenance.quote
+    if not quote or rule_verdict(quote).decision != "exclude":
+        return fact
+    return fact.model_copy(
+        update={"provenance": fact.provenance.model_copy(update={"quote": QUOTE_WITHHELD})}
+    )
+
+
+def screen_quotes(facts: Iterable[Fact]) -> list[Fact]:
+    """:func:`screen_quote` over a sequence, preserving order."""
+    return [screen_quote(fact) for fact in facts]

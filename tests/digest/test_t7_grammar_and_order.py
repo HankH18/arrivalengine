@@ -68,7 +68,21 @@ def _dead_llm() -> LLMDouble:
 SPLICING_FACTS = [
     "Argues that developer-tools pricing should be published in full on a public page.",
     "Replaced the Tallow Harbor trial with a non-expiring usage allowance.",
-    "Lives in Austin and leads an operations team that has worked remotely since 2020.",
+    # JUSTIFIED TEST EDIT — T-086. This case read "Lives in Austin and leads an operations
+    # team that has worked remotely since 2020." It is a SPECIMEN, chosen for its shape: a
+    # finite verb in initial position, which is what "Ask about <sentence>" splices badly.
+    # It is no longer a specimen this test can use, because it states where a member lives —
+    # SPEC R11's "their home address, property records or where they live" — and T-086 makes
+    # such a sentence withheld, so `make_digest` never selects it as the hook and the case
+    # stopped exercising the grammar at all (it asserted on a DIFFERENT fact's opener). Wrong
+    # independently of the fix: a test of opener grammar must not require an R11 sentence to
+    # be spoken. The replacement is the same sentence with the residence clause removed —
+    # same initial finite verb, same coordination, same splice hazard, no R11 content.
+    # Nothing is trimmed or relaxed: the list is still five cases and no assertion changed.
+    # The two OTHER occurrences of the old sentence in this file, in `SPLICED_LINES` and
+    # `SPEAKABLE_LINES`, are untouched — those feed `is_speakable`, a pure string predicate
+    # that never consults the taste filter, so they are unaffected and still pass.
+    "Leads an operations team that has worked remotely since 2020.",
     "Led the Foundry Seed 2019 fund and sits on four of its boards.",
     "Studied at Bellhaven Polytechnic and returned to teach there.",
 ]
