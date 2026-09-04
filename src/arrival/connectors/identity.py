@@ -35,9 +35,10 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Iterable, Sequence
+from typing import TypeVar
 from urllib.parse import urlsplit
 
-from arrival.connectors.base import affiliations, hosts_in, urls_in
+from arrival.connectors.base import affiliations, urls_in
 from arrival.contracts import PersonRef
 from arrival.util import normalize_ws
 
@@ -54,12 +55,21 @@ __all__ = [
     "is_shared_host",
     "mentions_name",
     "on_own_host",
-    "own_hosts",
     "roster_terms",
     "tokens",
 ]
 
 _WORD = re.compile(r"[^0-9a-z]+")
+
+#: Spelled with `TypeVar` rather than PEP 695 `def choose_one[T](...)`, and the `noqa`
+#: is the point rather than an oversight. This project runs on 3.12, where both are
+#: correct, but the repo's own static tooling is executed by the SYSTEM interpreter,
+#: which is 3.9 here -- and a module it cannot parse contributes ZERO call sites to a
+#: reachability answer while still exiting cleanly. Measured: with the PEP 695 form,
+#: the wiring check reported every symbol in this file as `UNDEFINED ... defined
+#: NOWHERE`, which is the false-alarm direction today and the false-OK direction the
+#: moment somebody greps this file for dead code.
+T = TypeVar("T")
 
 #: Names and postal codes of the US states, plus DC. A `detail` ending in one of these is
 #: an address. An address is fine as CORROBORATION ("Providence" in a GitHub location
@@ -176,17 +186,24 @@ def best_affiliation(person: PersonRef) -> str:
     what four connectors were doing — hands the search engine a CITY whenever the roster
     happens to list the city first, and "Marisol Quennebeck Providence" is a query about a
     city.  Addresses are skipped here and only here; `roster_terms` still checks them.
+
+    The address test has to be applied to the DETAIL and not to the term.  `affiliations`
+    has already split `"Providence, Rhode Island"` into `["Providence", "Rhode Island"]`,
+    and by then the structure that made it an address is gone: `"Providence"` on its own
+    is just a word that is not a state.  Measured — an earlier version of this function
+    tested the term and returned `"Providence"` for exactly this roster.
+
+    Every detail being an address returns `""`, and the query is then the bare name. That
+    is the honest query: appending a city to a name is the defect, not a weaker version
+    of the fix.
     """
-    terms = affiliations(person.details)
-    for term in terms:
-        if normalize_ws(term) not in US_STATES and not is_an_address(term):
-            return term
-    return next(iter(terms), "")
-
-
-def own_hosts(person: PersonRef) -> list[str]:
-    """The hostnames the roster itself gave for this person."""
-    return hosts_in(person.details)
+    for detail in person.details:
+        if is_an_address(detail):
+            continue
+        for term in affiliations([detail]):
+            if normalize_ws(term) not in US_STATES:
+                return term
+    return ""
 
 
 def is_shared_host(host: str) -> bool:
@@ -302,7 +319,7 @@ def identifies(
     )
 
 
-def choose_one[T](
+def choose_one(  # noqa: UP047 - see the TypeVar note above; 3.9 tooling must parse this
     candidates: Sequence[T],
     score: Callable[[T], int],
     *,

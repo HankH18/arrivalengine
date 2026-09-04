@@ -159,3 +159,56 @@ def test_the_decoy_world_still_lets_connectors_find_the_actual_member(monkeypatc
         f"corroborated: {found}. A predicate that refuses everyone passes the "
         "stranger test and is not a fix."
     )
+
+
+def test_the_decision_follows_the_ROSTER_and_not_the_corpus(monkeypatch, tmp_path):
+    """The anti-cheat, and the answer to "could this be passed by reading the fixture?".
+
+    A test whose expected output is a file the author also owns measures nothing: the
+    author implements, runs it, and writes down whatever came out. This corpus is not that
+    — there is no stored expected output anywhere, only a world — but "no golden file" is
+    an argument, and an argument is not evidence. This test is the evidence.
+
+    The two people here are indistinguishable to a connector in every observable respect:
+    identical name, identical response shapes, identical status codes, comparable
+    richness, and the STRANGER ranked first in every result list. Exactly one thing
+    separates them, and it does not arrive over the wire at all — which of them
+    `PersonRef.details` corroborates.
+
+    So: same corpus, byte for byte, and the roster's details moved to the other person.
+    Every correct answer inverts. A connector that passed
+    `test_no_connector_emits_a_document_about_a_same_name_stranger` by hardcoding
+    something about this fixture — a blocked company name, a blocked host, "take the
+    second hit instead of the first" — passes that test and fails this one, because
+    nothing it can see changed and the required output did.
+
+    Independently, the opposite failure is closed by a corpus this branch cannot touch:
+    the frozen suite requires EVERY connector to return >= 1 document at budget 5 and
+    exactly 1 at budget 1 from its own inlined corpus, so "refuse everything" cannot pass
+    either. The two gates pull in opposite directions on two different worlds, and both
+    have to hold.
+    """
+    from t1_decoy import PERSON_MIRROR, about_the_member
+
+    wrong: dict[str, list[str]] = {}
+    right: dict[str, int] = {}
+    for kind in _kinds(tmp_path):
+        docs, _ = _drive(kind, PERSON_MIRROR, monkeypatch, tmp_path)
+        theirs = [f"{doc.url}" for doc in docs if about_the_member(doc)]
+        if theirs:
+            wrong[kind] = theirs
+        found = [doc for doc in docs if about_the_stranger(doc)]
+        if found:
+            right[kind] = len(found)
+
+    assert not wrong, (
+        "with the roster naming Halvard Freight Systems in Tucson, these connectors still "
+        f"returned the Thornfield person's documents: {wrong}. The corpus did not change; "
+        "the roster did. A connector deciding identity from the response instead of from "
+        "`details` cannot tell these two runs apart."
+    )
+    assert len(right) >= 5, (
+        f"only these connectors found the person the roster actually describes: {right}. "
+        "The mirror roster corroborates the Halvard person exactly as the first roster "
+        "corroborates the Thornfield one, so the same connectors should succeed."
+    )

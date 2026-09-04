@@ -47,6 +47,8 @@ __all__ = [
     "STRANGER_HOST",
     "STRANGER_MARK",
     "STRANGER_SITE",
+    "PERSON_MIRROR",
+    "about_the_member",
     "about_the_stranger",
     "decoy_router",
 ]
@@ -115,6 +117,45 @@ PERSON_NO_SITE = PersonRef(
 PERSON_SHARED_SITE = PersonRef(
     person_id="marisol-quennebeck", name=MEMBER_NAME, details=[*_DETAILS, SHARED_PROFILE]
 )
+
+
+#: THE ANTI-CHEAT ROSTER, and the reason this corpus is not an answer key.
+#:
+#: The two people in this world are identical in every respect a connector can observe —
+#: same name, same response shapes, same status codes, comparable richness — and the
+#: stranger is ranked FIRST everywhere. They differ in exactly one thing: which of them
+#: `PersonRef.details` corroborates. So this roster hands the corroboration to the OTHER
+#: one, against the identical corpus, and the correct answer inverts. A connector that
+#: passed the contract by hardcoding anything about this fixture's content — a blocked
+#: company, a blocked host, "prefer the second hit" — fails here, because nothing in the
+#: served bytes changed and the expected output did.
+PERSON_MIRROR = PersonRef(
+    person_id="marisol-quennebeck",
+    name=MEMBER_NAME,
+    details=[
+        f"dock scheduling, {STRANGER_COMPANY}",
+        f"{STRANGER_CITY}, {STRANGER_STATE}",
+        STRANGER_SITE,
+    ],
+)
+
+
+def about_the_member(doc: Any) -> bool:
+    """The mirror of `about_the_stranger`: is this document about the Thornfield person?"""
+    url = str(getattr(doc, "url", ""))
+    text = f"{getattr(doc, 'title', '')}\n{getattr(doc, 'text', '')}"
+    host = (urlsplit(url).hostname or "").lower()
+    return (
+        host == HER_HOST
+        or HER_COMPANY.lower() in text.lower()
+        or HER_CITY.lower() in text.lower()
+        or HER_LOGIN in url
+        or HER_LOGIN in text
+        or HER_QID in url
+        or HER_EIN in url
+        or HER_CIK in url
+        or url.rstrip("/") == SHARED_PROFILE.rstrip("/")
+    )
 
 
 def about_the_stranger(doc: Any) -> bool:
@@ -524,17 +565,24 @@ def _propublica_org(ein: str) -> dict[str, Any]:
 
 
 def _wayback_cdx(target: str) -> list[list[str]]:
-    """CDX rows for whatever URL PATTERN the connector asked for.
+    """CDX rows for a url pattern — matched on the HOST, deliberately ignoring the path.
 
-    This is the whole wayback question in one function: a query for `{host}/*` on a shared
-    platform enumerates *everybody's* captures, and a query anchored on the roster's own
-    path enumerates hers.  The router answers each one honestly, so the connector's choice
-    of query is what decides which rows it sees.
+    A REAL CDX ENDPOINT IS NOT A PROMISE.  It prefix-matches on `urlkey`, honours
+    `matchType` inconsistently across the several spellings of the query, and is free to
+    return more than was asked for; the connector receives whatever arrives.  So this
+    router answers a path-anchored query with everything on the host, which is the
+    unhelpful-but-legal behaviour, and that makes the connector's own row check the thing
+    that has to be right.
+
+    Measured: with this function honouring the path, reverting wayback's row filter left
+    the entire suite green — the query change was covering for it, and a defence nothing
+    fails over is a defence somebody deletes. The path anchoring is still graded, by
+    `test_wayback_anchors_a_shared_platform_query_on_the_roster_s_own_path`.
     """
     header = [
         "urlkey", "timestamp", "original", "mimetype", "statuscode", "digest", "length"
     ]
-    pattern = target.rstrip("*").rstrip("/")
+    wanted_host = target.split("://", 1)[-1].split("/", 1)[0].lower()
     captures = [
         ("20180614101500", HER_SITE),
         ("20200211084500", f"{HER_SITE}about"),
@@ -544,8 +592,8 @@ def _wayback_cdx(target: str) -> list[list[str]]:
     ]
     rows = [header]
     for index, (timestamp, url) in enumerate(captures):
-        bare = url.split("://", 1)[-1].rstrip("/")
-        if not bare.startswith(pattern.split("://", 1)[-1].rstrip("/")):
+        host = (urlsplit(url).hostname or "").lower()
+        if wanted_host and host != wanted_host:
             continue
         rows.append(
             [
