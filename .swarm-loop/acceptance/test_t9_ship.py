@@ -365,6 +365,13 @@ def test_readme_documents_the_free_tier_cold_start_warm_up(repo_root):
     )
 
 
+# GUARD, not a scored T-9 criterion. T-0 deliberately shipped the README skeleton with
+# every required heading, so this is green at baseline BY DESIGN -- which is exactly
+# what `guard` means. Unmarked it fed a free point into any criteria_t9 metric and was
+# the single passing test in the scored set. It still grades something real: T-9 must
+# not REMOVE the structure T-0 established. The section CONTENT is graded by the
+# sibling tests, which are red until T-9 writes it.
+@pytest.mark.guard
 def test_readme_contains_the_required_sections(repo_root):
     """R16 / S8: the README carries every section the submission is graded on."""
     text = _read(repo_root / "README.md")
