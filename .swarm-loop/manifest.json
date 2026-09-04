@@ -56,7 +56,7 @@
     ".swarm-loop/acceptance/fixtures/dossiers/sil-vantorre.json": "c69ceded62c3f1146751ed9b5da6acc0454bb73206dd6707863a8772e6957665",
     ".swarm-loop/acceptance/fixtures/dossiers/theo-baptiste.json": "955dabd56478c05bf897fb81066cd5bc677ccf6aca6df0a52a2675d289fb89a8",
     ".swarm-loop/goals.json": "3f233012e473835e4324a160f6f9d77c9d388baaf98c85ceec4f25fb4c79044a",
-    "tickets.json": "b501a4d2810bf37fe91dc4cccb409a7c8a0c9bfb44c863c95dfeb3d5338ecfef"
+    "tickets.json": "1da0dbb27b674469bf2190db4dfef1ee3823a09726ee1f2a8405c3fce51c308d"
   },
   "targets": {
     "acceptance_pass_rate": 100.0,
@@ -73,5 +73,5 @@
     "criteria_t8": 14.0
   },
   "goals_canon": "f3e73e360652df75e86a404267563ff8786e47d3a3528bb6ce1fbe5572aebb28",
-  "log_seq": 4
+  "log_seq": 5
 }
