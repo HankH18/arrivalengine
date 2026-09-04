@@ -571,6 +571,111 @@
         "DO NOT attempt the live network build or the Render deploy - those are human gates"
       ],
       "estimate_hours": 1
+    },
+    {
+      "id": "T-010",
+      "title": "hub_id is not stable across dossiers, so two people who genuinely share a rare hub can score 0. Three ways the same entity gets two ids: (a) _collect_hubs groups on (candidate.type, key) and canonical_hub_id embeds the type, so one dossier calling it investor and another company yields investor:foundry-seed-2019 and company:foundry-seed-2019; (b) whether a person's dossier happened to include a Wikidata document decides between wd:Q4242 and the slug form; (c) _merge_groups keeps the FIRST group's type when two groups collapse to one id, and which is first depends on LLM output ordering. This defeats T-5's core promise \u2014 rare shared hubs outrank generic ones \u2014 silently, to zero. graph.py's own docstring warns 'the graph stops joining people who should join'; this is that.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/extract.py:557",
+      "defect": "hub_id is not stable across dossiers, so two people who genuinely share a rare hub can score 0. Three ways the same entity gets two ids: (a) _collect_hubs groups on (candidate.type, key) and canonical_hub_id embeds the type, so one dossier calling it investor and another company yields investor:foundry-seed-2019 and company:foundry-seed-2019; (b) whether a person's dossier happened to include a Wikidata document decides between wd:Q4242 and the slug form; (c) _merge_groups keeps the FIRST group's type when two groups collapse to one id, and which is first depends on LLM output ordering. This defeats T-5's core promise \u2014 rare shared hubs outrank generic ones \u2014 silently, to zero. graph.py's own docstring warns 'the graph stops joining people who should join'; this is that.",
+      "finding_id": "c3a7c190fef1d36c6f34247c0bc5951b91b17bee8273d01b30eba1487d2de21e",
+      "reproduction": "Verifier's probe3.py P2, real Dossiers through build_graph/match: (a) both dossiers say investor -> score=100.0 'Both backed by Foundry Seed 2019.'; (b) one investor one company, SAME entity -> score=0.0 'Nothing in common on the record yet.' path=[]; (c) one dossier had a Wikidata doc, the other did not -> score=0.0. FIX DIRECTION: make hub identity independent of the type and of whether a Wikidata doc happened to be retrieved \u2014 T-5 already solved the analogous problem inside build_graph with _hub_identity; the same reconciliation is missing upstream in extract."
+    },
+    {
+      "id": "T-011",
+      "title": "T-3 acceptance 3 says 'the same label across two docs yields ONE Hub with merged evidence_fact_ids'. It does not, when the model gives that label two different types: _collect_hubs groups on (candidate.type, slug(label)). The frozen test that grades this only ever supplies type='company' in both documents, so its green proves the same-type case only. NOTE FOR THE RECORD: the T-3 lane's final message claimed it had committed a fix for exactly this, and the orchestrator forwarded that claim into the merge commit without checking. There is no such commit \u2014 git log -- src/arrival/extract.py has two commits and the only post-initial one changes two '=' to '+=' in ExtractionStats.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/extract.py:557",
+      "defect": "T-3 acceptance 3 says 'the same label across two docs yields ONE Hub with merged evidence_fact_ids'. It does not, when the model gives that label two different types: _collect_hubs groups on (candidate.type, slug(label)). The frozen test that grades this only ever supplies type='company' in both documents, so its green proves the same-type case only. NOTE FOR THE RECORD: the T-3 lane's final message claimed it had committed a fix for exactly this, and the orchestrator forwarded that claim into the merge commit without checking. There is no such commit \u2014 git log -- src/arrival/extract.py has two commits and the only post-initial one changes two '=' to '+=' in ExtractionStats.",
+      "finding_id": "604532a462da46b596655d50df052801c40a4f16cd4366addd6792feed5d5a9f",
+      "reproduction": "Verifier's exercise_extract.py: same label + SAME type in both docs -> 1 hub investor:foundry-seed-2019 ev=('DA-f0','DB-f0'). Same label + DIFFERENT type (investor vs company) -> 2 hubs, evidence split. Confirm the claimed fix is absent: git show 789bfc8 -- src/arrival/extract.py."
+    },
+    {
+      "id": "T-012",
+      "title": "_document_block can be replaced by `return \"\"` \u2014 sending the LLM ZERO document text \u2014 and all 10 frozen T-3 criteria plus all 46 tests/extract tests still pass. The scripted double keys on document ids appearing in the prompt rather than on the corpus text, so nothing anywhere asserts the model is actually shown the documents it is extracting from. This is the sharpest stub-blindness result in the batch: the extractor's entire input can vanish and every gate stays green. Related, same class: ExtractionStats counters can be replaced by the constant 999 with the frozen suite and tests/extract both green, because the frozen tests never pass stats= \u2014 so acceptance 2's 'and counted' clause is graded by nothing.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py:_document_block"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/extract.py:_document_block",
+      "defect": "_document_block can be replaced by `return \"\"` \u2014 sending the LLM ZERO document text \u2014 and all 10 frozen T-3 criteria plus all 46 tests/extract tests still pass. The scripted double keys on document ids appearing in the prompt rather than on the corpus text, so nothing anywhere asserts the model is actually shown the documents it is extracting from. This is the sharpest stub-blindness result in the batch: the extractor's entire input can vanish and every gate stays green. Related, same class: ExtractionStats counters can be replaced by the constant 999 with the frozen suite and tests/extract both green, because the frozen tests never pass stats= \u2014 so acceptance 2's 'and counted' clause is graded by nothing.",
+      "finding_id": "36c89351d55877e01bd0d24050b02000bc9fc3b7b66ad499cdd0548836b0dd2a",
+      "reproduction": "Verifier's sabotage in an isolated copy with caches purged: _document_block -> return \"\"; frozen t3 stays 10/10 and tests/extract stays 46 passed. Same for ExtractionStats counters -> 999."
+    },
+    {
+      "id": "T-013",
+      "title": "Match.path is order-dependent: 360 of 720 dossier permutations produce a different path for the same input. Scores, contributions and why ARE order-independent (verified across all 720 permutations x 5 PYTHONHASHSEED values, byte-identical fingerprints) \u2014 so the lane's commit 'make build_graph independent of the order dossiers arrive in' is real but incomplete, and the orchestrator repeated its over-claim. Root cause: when two people share no hub, _path falls through to nx.shortest_path(weight='cost'), and Dijkstra breaks equal-cost ties by adjacency insertion order, which is dossier order. The guard test asserts only node attributes and the edge SET, never calls match(), and tries forward-vs-reversed only \u2014 2 of 720.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/graph.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/graph.py:330",
+      "defect": "Match.path is order-dependent: 360 of 720 dossier permutations produce a different path for the same input. Scores, contributions and why ARE order-independent (verified across all 720 permutations x 5 PYTHONHASHSEED values, byte-identical fingerprints) \u2014 so the lane's commit 'make build_graph independent of the order dossiers arrive in' is real but incomplete, and the orchestrator repeated its over-claim. Root cause: when two people share no hub, _path falls through to nx.shortest_path(weight='cost'), and Dijkstra breaks equal-cost ties by adjacency insertion order, which is dossier order. The guard test asserts only node attributes and the edge SET, never calls match(), and tries forward-vs-reversed only \u2014 2 of 720.",
+      "finding_id": "ca77f2cef0441021a7c571785b6b0f3c46a3d90ab1678c30c55cfe22e03ed168",
+      "reproduction": "Verifier's repro_path.py, six dossiers, same objects: order [alice,bob,carol,dan,eve,frank] -> path via person:bob; order [alice,carol,dan,bob,eve,frank] -> path via person:dan. Line trace: graph.py:330 is MISS under the frozen t3+t5 suite, HIT under the worker suite \u2014 executed, never checked for determinism."
+    },
+    {
+      "id": "T-014",
+      "title": "_merge_groups' cross-id merge branch (existing.add_evidence / existing.recency = max) is executed by ZERO tests in the repo \u2014 confirmed by sys.settrace line-trace over the entire 394-test suite AND over the frozen suite, both MISS. It is also order-dependent: when two _HubGroups canonicalise to one hub_id it keeps the FIRST group's label and type, and 'first' is the model's output ordering. Since type drives TYPE_BOOST (investor 1.5 vs city 0.5), LLM output ordering can move the score. This is the same defect class T-5 fixed in build_graph via _hub_identity; the identical bug sits upstream in extract, unfixed and untested.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/extract.py:576",
+      "defect": "_merge_groups' cross-id merge branch (existing.add_evidence / existing.recency = max) is executed by ZERO tests in the repo \u2014 confirmed by sys.settrace line-trace over the entire 394-test suite AND over the frozen suite, both MISS. It is also order-dependent: when two _HubGroups canonicalise to one hub_id it keeps the FIRST group's label and type, and 'first' is the model's output ordering. Since type drives TYPE_BOOST (investor 1.5 vs city 0.5), LLM output ordering can move the score. This is the same defect class T-5 fixed in build_graph via _hub_identity; the identical bug sits upstream in extract, unfixed and untested.",
+      "finding_id": "13fa479ed61b458f9975a6e02552c9a63a892d56fcaaa0ba835ec46c229503b5",
+      "reproduction": "Verifier's probe3.py P1 \u2014 one Wikidata doc, two candidate hubs sharing qid=Q4242, only the model's list order permuted: order (0,1) -> wd:Q4242 label='Foundry Seed 2019' type=investor; order (1,0) -> wd:Q4242 label='Foundry Capital' type=company."
+    },
+    {
+      "id": "T-015",
+      "title": "Three holes in the citation guard, which is the hallucination guard the whole product's trustworthiness rests on. (1) NO MINIMUM QUOTE LENGTH and no word-boundary requirement: a single-character quote 'a' is cited against every document, so a degenerate quote is a universal citation. (2) The _source_doc cross-document fallback means a quote drawn from a DIFFERENT document is KEPT and silently RE-ATTRIBUTED to the fact's document \u2014 url, source_kind and published_at all taken from the wrong doc. The guard therefore certifies 'this span exists somewhere in this batch', not 'in the document this fact is about'. (3) A typographic apostrophe is a FALSE NEGATIVE: normalize_ws collapses whitespace and casefolds but does not normalise Unicode punctuation, so a curly apostrophe drops a legitimate fact. The guard correctly drops paraphrases, ellipsis-joins, one-word changes and empty quotes.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/extract.py:is_cited"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/extract.py:is_cited",
+      "defect": "Three holes in the citation guard, which is the hallucination guard the whole product's trustworthiness rests on. (1) NO MINIMUM QUOTE LENGTH and no word-boundary requirement: a single-character quote 'a' is cited against every document, so a degenerate quote is a universal citation. (2) The _source_doc cross-document fallback means a quote drawn from a DIFFERENT document is KEPT and silently RE-ATTRIBUTED to the fact's document \u2014 url, source_kind and published_at all taken from the wrong doc. The guard therefore certifies 'this span exists somewhere in this batch', not 'in the document this fact is about'. (3) A typographic apostrophe is a FALSE NEGATIVE: normalize_ws collapses whitespace and casefolds but does not normalise Unicode punctuation, so a curly apostrophe drops a legitimate fact. The guard correctly drops paraphrases, ellipsis-joins, one-word changes and empty quotes.",
+      "finding_id": "b2e872e730dceddf3aaa58b81b4ca780fbfe5566b8045960559fd410c64a1ef6",
+      "reproduction": "Verifier's exercise_extract.py, 13 probes against real documents. Single character 'a' -> KEPT, is_cited true against both documents. Quote from doc D1 with doc_id='D1' on a fact about D2 -> KEPT and re-attributed to D2. 'Jane O\u2019Neil' vs source \"O'Neil\" -> dropped."
+    },
+    {
+      "id": "T-016",
+      "title": "Match.path can name a hub that Match.why denies, and it reproduces on the frozen corpus itself. _why names only hubs with contribution > 0; _path routes through components[0] even when its contribution is 0. T-5 acceptance 3 makes the path the picture of the why, so the two contradicting each other is a defect in the product's exposed reasoning (R10).",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/graph.py:_path"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/graph.py:_path",
+      "defect": "Match.path can name a hub that Match.why denies, and it reproduces on the frozen corpus itself. _why names only hubs with contribution > 0; _path routes through components[0] even when its contribution is 0. T-5 acceptance 3 makes the path the picture of the why, so the two contradicting each other is a defect in the product's exposed reasoning (R10).",
+      "finding_id": "5cea665c63ee25ee93d48819e2c45caf0037f3ea0c253994d78ec861b12daf4b",
+      "reproduction": "On the frozen corpus: mira-hollowell -> why='Nothing in common on the record yet.' while path=['person:runa-okonkwo','hub:city:austin','person:mira-hollowell']."
     }
   ],
   "cut_list": [
