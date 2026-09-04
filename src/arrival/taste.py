@@ -32,6 +32,18 @@ DESIGN Decision 6 stages that judgment:
                        cannot tell a sabbatical from a medical leave, and guessing a
                        category would invent the very thing R11 protects.
 
+**A ruling is addressed by POSITION, never by the id the model echoed.** The classifier is
+asked to key its answers by fact id, so every id that comes back is a string the model
+chose, and this stage is the one where mis-addressing is most expensive: a verdict landing
+on the wrong fact does not lose a fact, it PUBLISHES one — the R11 sentence keeps the
+innocent fact's ``keep``. So an echoed id is treated as a *claim* to be resolved against
+the ids that call actually sent (:func:`_positions`), and what survives is stored under
+**our** index into the unsure list. This is the same refusal ``resolve._verdict_from``
+states outright ("the doc_id is OURS, never the model's echo of it") and
+``extract._collect_facts`` implements with its ``id_map``. Anything unresolvable — an id no
+prompt carried, two contradictory rulings for one id, an id two facts in one prompt share
+— is not a ruling at all, and the fact it might have been about fails closed.
+
 ``is_displayable`` is a separate, later gate with three *independent* clauses (R12): not
 excluded, confidence >= 0.7, and a whitelisted source kind. They are deliberately not
 collapsed — a fact can be perfectly tasteful and still be undisplayable because it came
@@ -40,6 +52,7 @@ from a source kind (``fec``, ``courtlistener``) the design never permits on scre
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
@@ -48,6 +61,8 @@ from typing import Literal, get_args
 from pydantic import BaseModel, Field
 
 from arrival.contracts import ExclusionReason, Fact, LLMClient, LLMError, SourceKind
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "CONFIDENCE_FLOOR",
@@ -553,6 +568,8 @@ _CLASSIFIER_SYSTEM = (
 def _classifier_prompt(facts: Sequence[Fact]) -> str:
     lines = [
         "Rule on each of the following facts. Return one ruling per fact, keyed by its id.",
+        "Use only the ids listed below, copied exactly, and rule on each id at most once. "
+        "An id that is not in this list is discarded, and so is a fact you rule on twice.",
         "",
     ]
     for fact in facts:
@@ -566,10 +583,95 @@ def _classifier_prompt(facts: Sequence[Fact]) -> str:
 _BATCH_SIZE = 20
 
 
-async def _classify(facts: Sequence[Fact], llm: LLMClient) -> dict[str, str]:
+def _positions(batch: Sequence[Fact], offset: int) -> dict[str, int]:
+    """The ids THIS call is entitled to answer about → our index for each.
+
+    The index, not the id, is the identity: it is ours, it is unique, and it cannot be
+    written by a model. Everything downstream addresses a fact by it.
+
+    An id carried by TWO facts in the same prompt is deleted rather than resolved. Both
+    sentences appear under that id, so no ruling in the response can be attributed to one
+    of them rather than the other, and applying it to both is precisely how one sentence's
+    ``keep`` becomes another sentence's licence to be displayed. Dropping it costs two
+    facts; guessing publishes one. (Nothing in the pipeline produces a duplicate — T-3
+    numbers facts ``{doc_id}-f{n}`` from a counter shared across batches — so this is a
+    guard on the contract, not a repair of a known caller.)
+
+    A BLANK id is left out for the same reason. ``Fact.fact_id`` has no minimum length,
+    and a response object with no ``fact_id`` at all reads as ``""`` — so an empty string
+    would otherwise be an id that a model gets for free by omitting the field.
+    """
+    positions: dict[str, int] = {}
+    ambiguous: set[str] = set()
+    for index, fact in enumerate(batch, start=offset):
+        key = fact.fact_id.strip()
+        if not key:
+            continue
+        if key in positions:
+            ambiguous.add(key)
+        positions[key] = index
+    for fact_id in ambiguous:
+        del positions[fact_id]
+        log.info(
+            "two facts in one taste batch share the id %r; both fail closed because no "
+            "ruling in the answer can be attributed to one of them",
+            fact_id,
+        )
+    return positions
+
+
+def _absorb(response: object, batch: Sequence[Fact], offset: int, rulings: dict[int, str]) -> None:
+    """Fold one classifier answer into ``rulings``, keyed by our index.
+
+    Two kinds of noise are discarded here rather than stored:
+
+    * **an id this call did not send.** It may be invented, or — the case that actually
+      bites — it may name a fact from an EARLIER batch. ``rulings`` outlives one call, so
+      before this check a batch-2 answer echoing a batch-1 id overwrote a ruling that was
+      already made and already correct, and a ``health`` exclusion became a ``keep``.
+    * **two rulings for one id that disagree.** That is not an answer, it is two; taking
+      the later one makes the outcome a function of the order the model emitted its list,
+      and half of those orders publish an R11 sentence. Repetition is not contradiction,
+      so the check compares verdicts rather than counting rulings.
+    """
+    positions = _positions(batch, offset)
+    answered: dict[int, str] = {}
+    conflicted: set[int] = set()
+
+    for ruling in getattr(response, "rulings", []) or []:
+        claimed = str(getattr(ruling, "fact_id", "") or "").strip()
+        index = positions.get(claimed) if claimed else None
+        if index is None:
+            log.info(
+                "discarding a taste ruling for %r; that id was not one of the %d facts this "
+                "call asked about",
+                claimed,
+                len(batch),
+            )
+            continue
+        verdict = str(getattr(ruling, "verdict", "") or "").strip()
+        if index in answered and answered[index] != verdict:
+            conflicted.add(index)
+        answered[index] = verdict
+
+    for index in conflicted:
+        del answered[index]
+        log.info(
+            "discarding contradictory taste rulings for %r; a fact ruled two different ways "
+            "has not been ruled on",
+            batch[index - offset].fact_id,
+        )
+    rulings.update(answered)
+
+
+async def _classify(facts: Sequence[Fact], llm: LLMClient) -> dict[int, str]:
     """Ask the classifier about ``facts``. A failed call yields no rulings, not an error —
-    the caller fails closed on anything it did not get an answer for."""
-    rulings: dict[str, str] = {}
+    the caller fails closed on anything it did not get an answer for.
+
+    Keys are indices into ``facts``, never the ids the model echoed back. See
+    :func:`_absorb`.
+    """
+    rulings: dict[int, str] = {}
     for start in range(0, len(facts), _BATCH_SIZE):
         batch = facts[start : start + _BATCH_SIZE]
         try:
@@ -582,8 +684,7 @@ async def _classify(facts: Sequence[Fact], llm: LLMClient) -> dict[str, str]:
             )
         except LLMError:
             continue
-        for ruling in getattr(response, "rulings", []) or []:
-            rulings[ruling.fact_id] = ruling.verdict
+        _absorb(response, batch, start, rulings)
     return rulings
 
 
@@ -593,8 +694,13 @@ async def apply_taste(facts: Iterable[Fact], llm: LLMClient | None) -> list[Fact
     The rule layer runs first and settles what it can. **Only** the facts it marked unsure
     reach ``llm`` — a deterministic case must never cost a call, and a case the rules
     cannot settle must never be answered by them. Anything still unsure once the classifier
-    has spoken (including a classifier that shrugged, errored, or was not supplied) is
-    excluded with reason ``low_confidence``.
+    has spoken (including a classifier that shrugged, errored, was not supplied, or
+    answered about some fact other than this one) is excluded with reason
+    ``low_confidence``.
+
+    ``rulings`` is keyed by a fact's POSITION in ``unsure``, which is why the walk below
+    keeps its own counter instead of looking a fact up by its id. That is the whole point:
+    the position is ours and the id came back from a model. See :func:`_absorb`.
 
     Returns every input fact, in order, excluded flag set. Nothing is dropped: the digest
     layer needs the excluded ones to count them, and ``/debug`` needs to show them.
@@ -602,16 +708,18 @@ async def apply_taste(facts: Iterable[Fact], llm: LLMClient | None) -> list[Fact
     ruled = [(fact, rule_verdict(fact.text)) for fact in facts]
     unsure = [fact for fact, verdict in ruled if verdict.decision == "unsure"]
 
-    rulings: dict[str, str] = {}
+    rulings: dict[int, str] = {}
     if unsure and llm is not None:
         rulings = await _classify(unsure, llm)
 
     out: list[Fact] = []
+    position = 0
     for fact, verdict in ruled:
         if verdict.decision != "unsure":
             out.append(_decide(fact, verdict))
             continue
-        answer = rulings.get(fact.fact_id, "unsure")
+        answer = rulings.get(position, "unsure")
+        position += 1
         if answer == "keep":
             out.append(_decide(fact, RuleVerdict("keep")))
         elif answer in R11_CATEGORIES:
