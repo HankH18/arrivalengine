@@ -1,6 +1,6 @@
 {
   "person": {
-    "person_id": "teodoro-vance",
+    "person_id": "alpha",
     "name": "Teodoro Vance",
     "details": [
       "CTO of Northgate Labs",
@@ -8,7 +8,7 @@
     ]
   },
   "resolution": {
-    "person_id": "teodoro-vance",
+    "person_id": "alpha",
     "status": "resolved",
     "strong_keys": {
       "company_domain": "northgatelabs.example",

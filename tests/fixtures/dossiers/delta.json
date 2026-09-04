@@ -1,6 +1,6 @@
 {
   "person": {
-    "person_id": "hollis-trent",
+    "person_id": "delta",
     "name": "Hollis Trent",
     "details": [
       "Founder of Tessellate",
@@ -8,7 +8,7 @@
     ]
   },
   "resolution": {
-    "person_id": "hollis-trent",
+    "person_id": "delta",
     "status": "resolved",
     "strong_keys": {
       "company_domain": "tessellate.example",

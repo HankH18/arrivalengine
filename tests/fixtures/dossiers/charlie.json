@@ -1,6 +1,6 @@
 {
   "person": {
-    "person_id": "selin-ardahan",
+    "person_id": "charlie",
     "name": "Selin Ardahan",
     "details": [
       "Founder of Quillmark",
@@ -8,7 +8,7 @@
     ]
   },
   "resolution": {
-    "person_id": "selin-ardahan",
+    "person_id": "charlie",
     "status": "resolved",
     "strong_keys": {
       "company_domain": "quillmark.example"

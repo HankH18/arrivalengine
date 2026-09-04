@@ -31,10 +31,19 @@ DOC_DIR = FIXTURES / "http"
 # `{person_id}.json` (DESIGN §Data models), exactly as in the frozen grading corpus. The
 # ids used to be the bare mnemonics, so 0 of 4 satisfied the rule the whole system states,
 # and a reader learned that person ids are arbitrary handles.
-ALPHA = "teodoro-vance"
-BRAVO = "nadia-ellingsworth"
-CHARLIE = "selin-ardahan"
-DELTA = "hollis-trent"
+# MNEMONIC ids, deliberately NOT slug(person.name) -- a decision, not an oversight.
+# contracts.py, DESIGN and SPEC all state person_id == slug(name) as the product
+# invariant, and the FROZEN grading corpus satisfies it for all five of its people.
+# These are T-0's own unit fixtures, which nothing scored ever reads: the frozen suite
+# never asserts the invariant and never opens tests/fixtures/ (both verified by grep).
+# What DOES name them is ticket text T-5 and T-8 are built against --
+# match(g,'charlie',['alpha','bravo','delta']) and GET /debug/charlie, seven lines
+# across tickets.json and TASKS.md. Renaming these to slugs was tried, bought nothing
+# measurable, and broke all seven, so it was reverted at integration.
+ALPHA = "alpha"
+BRAVO = "bravo"
+CHARLIE = "charlie"
+DELTA = "delta"
 PEOPLE = (ALPHA, BRAVO, CHARLIE, DELTA)
 
 #: The paired RawDoc fixtures keep the mnemonic filenames they were committed under.
