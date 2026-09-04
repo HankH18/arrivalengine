@@ -172,6 +172,41 @@ def test_the_default_policy_is_durable_successes_and_short_lived_misses():
     )
 
 
+def test_under_the_DEFAULT_policy_a_miss_gets_an_expiry_and_a_success_does_not(
+    monkeypatch, tmp_path
+):
+    """The default policy, exercised with nothing monkeypatched.
+
+    White-box on the stored envelope on purpose. Every other test in this file drives the
+    lifetime by moving `NEGATIVE_TTL_SECONDS`, which means all of them would still pass if
+    the shipped DEFAULT were `None` -- the exact defect T-025 reports. Reading what was
+    actually written is the only assertion here that fails when the default regresses.
+    """
+    settings = settings_for(tmp_path)
+
+    _serve(monkeypatch, _html(_JS_SHELL))
+    assert asyncio.run(fetch_text(_URL, settings=settings)) is None
+    empty_entry = json.loads(
+        (settings.cache_dir / f"{doc_id(_URL)}.json").read_text(encoding="utf-8")
+    )
+
+    good_url = "https://ttl.example.com/real"
+    _serve(monkeypatch, _html(_REAL_PAGE))
+    assert asyncio.run(fetch_text(good_url, settings=settings)) is not None
+    good_entry = json.loads(
+        (settings.cache_dir / f"{doc_id(good_url)}.json").read_text(encoding="utf-8")
+    )
+
+    assert empty_entry["http"].get("expires_at"), (
+        "an unextractable 200 was stored with no expiry, so it is cached permanently: "
+        "one transient JS-shell response poisons this URL for the life of the cache"
+    )
+    assert good_entry["http"].get("expires_at") is None, (
+        "a successful, extractable response must cache durably; expiring it would undo "
+        "the reason the cache exists and would rot the recorded-fixture path"
+    )
+
+
 def test_the_positive_expiry_mechanism_exists_even_though_the_default_declines_to_use_it(
     monkeypatch, tmp_path
 ):
