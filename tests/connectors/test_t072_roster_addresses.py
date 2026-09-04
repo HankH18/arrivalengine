@@ -324,3 +324,44 @@ def test_a_roster_that_names_a_feed_gets_the_feed_read_as_one(monkeypatch, tmp_p
         "a feed entry carries its date as a field, and that date is the whole reason "
         "TASKS T-1 acceptance 2 asks for the feed at all"
     )
+
+
+def test_a_feed_entry_pointing_at_another_feed_is_not_read_as_prose(monkeypatch, tmp_path):
+    """The other end of the same guard: `is_feed_url` on the ENTRY target.
+
+    A short entry falls through to the page fetcher, so a feed whose entry points at
+    `/rss` handed an XML document to the HTML extractor and emitted flattened markup as
+    the member's own writing.
+    """
+    seeded = PersonRef(
+        person_id="marisol-quennebeck",
+        name="Marisol Quennebeck",
+        details=["co-founder, Thornfield Loom", f"{SITE}/feed"],
+    )
+    # Both entries are BELOW `MIN_ENTRY_CHARS`, so both take the fetch-the-page branch.
+    rss = (
+        '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+        f"<title>Thornfield Loom</title><link>{HOME}</link>"
+        f"<item><title>Subscribe</title><link>{SITE}/rss</link>"
+        "<pubDate>Thu, 02 May 2024 09:14:00 GMT</pubDate><description>RSS</description></item>"
+        f"<item><title>Notes</title><link>{SITE}/notes/3</link>"
+        "<pubDate>Fri, 03 May 2024 09:14:00 GMT</pubDate><description>New</description></item>"
+        "</channel></rss>"
+    )
+
+    def router(request):
+        path, _ = parts(request)
+        if path in ("/feed", "/rss"):
+            return rss
+        return _page("Notes", LINE)
+
+    docs, requested = search("self_page", router, monkeypatch, tmp_path, person=seeded)
+
+    assert not any(url.endswith("/rss") for url in requested), (
+        "the feed listed its own address as an entry and the connector fetched it as a "
+        f"page; asked {requested!r}"
+    )
+    assert any(url.endswith("/notes/3") for url in requested), (
+        "the real entry beside it must still be read"
+    )
+    assert docs
