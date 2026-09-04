@@ -33,10 +33,22 @@ def test_help_returns_0(capsys):
         assert "usage: python -m arrival" in capsys.readouterr().out
 
 
-def test_build_is_reserved_for_t6(capsys):
-    """Until T-6 lands, `build` must fail loudly rather than pretend to work."""
+# justify-test-edit -- the assertion below was RETIRED, not weakened, and the reasoning
+# is recorded because an unjustified test edit is indistinguishable from reward hacking
+# after the fact.
+#
+# WAS: test_build_is_reserved_for_t6, asserting `"not implemented yet" in stderr`.
+# REQUIREMENT IT ENCODED: `build` must fail loudly rather than pretend to work.
+# WOULD IT STILL FAIL IF MY CHANGE WERE REVERTED? Yes -- and that is exactly why it goes.
+#     The "change" here is T-6 landing, and the test's OWN docstring scoped it "Until T-6
+#     lands". Its precondition has ended by its own terms; it is obsolete, not wrong, and
+#     keeping it would require the CLI to keep lying about being unimplemented.
+# THE REQUIREMENT IS PRESERVED, not dropped: `build` must still fail loudly on a bad
+#     roster, and the exit-code half of the original assertion is kept verbatim.
+def test_build_reports_a_missing_roster_rather_than_pretending_to_work(capsys):
+    """T-6 has landed, so `build` runs. It must still fail loudly on a bad roster."""
     assert main(["build", "--roster", "x.yaml"]) == 2
-    assert "not implemented yet" in capsys.readouterr().err
+    assert "roster" in capsys.readouterr().err
 
 
 def test_main_accepts_injected_dependencies():
