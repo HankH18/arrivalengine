@@ -1,0 +1,610 @@
+{
+  "cycle": 2,
+  "max_cycles": 34,
+  "generated": "2026-09-03T23:07:21",
+  "all_targets_met": false,
+  "harness_integrity": "intact",
+  "harness_notes": [],
+  "pending_remeasure": [],
+  "pre_amendment_metrics": [],
+  "errors_recomputed_for": [],
+  "selection_regressions": [],
+  "stale_metrics": [],
+  "manual_records": [],
+  "manual_records_trusted": false,
+  "escalated_metrics": [],
+  "goal_amendments": 0,
+  "last_amended_at": null,
+  "last_amend_reason": null,
+  "metrics": [
+    {
+      "id": "criteria_t8",
+      "name": "T-8: Web app serves arrive, debug and the demo driver",
+      "direction": "maximize",
+      "target": 14.0,
+      "latest_cycle": 2,
+      "latest_value": 0.0,
+      "latest_error": 14.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:05",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": 0.0,
+      "r2": 1.0,
+      "projected_error_at_final_cycle": 14.0,
+      "verdict": "stalled",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 14.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:08",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 14.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:51",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 0.0,
+          "error": 14.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:05",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t6",
+      "name": "T-6: Pipeline builds dossiers end to end and degrades on failure",
+      "direction": "maximize",
+      "target": 10.0,
+      "latest_cycle": 2,
+      "latest_value": 0.0,
+      "latest_error": 10.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:04",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": 0.0,
+      "r2": 1.0,
+      "projected_error_at_final_cycle": 10.0,
+      "verdict": "stalled",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:07",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:49",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:04",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t7",
+      "name": "T-7: Digest renders Meet and Lately with reasons",
+      "direction": "maximize",
+      "target": 10.0,
+      "latest_cycle": 2,
+      "latest_value": 0.0,
+      "latest_error": 10.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:04",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": 0.0,
+      "r2": 1.0,
+      "projected_error_at_final_cycle": 10.0,
+      "verdict": "stalled",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:07",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:50",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:04",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "acceptance_pass_rate",
+      "name": "Frozen acceptance pass rate (%)",
+      "direction": "maximize",
+      "target": 100.0,
+      "latest_cycle": 2,
+      "latest_value": 66.39,
+      "latest_error": 33.61,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:06:59",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": -26.89,
+      "r2": 0.9399705565925448,
+      "projected_error_at_final_cycle": 0.0,
+      "verdict": "converging_on_track",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 12.61,
+          "error": 87.39,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:04",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 27.73,
+          "error": 72.27,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:45",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 66.39,
+          "error": 33.61,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:06:59",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "acceptance_collected",
+      "name": "Frozen acceptance tests collected (count)",
+      "direction": "maximize",
+      "target": 120.0,
+      "latest_cycle": 2,
+      "latest_value": 120.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:06:59",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 120.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:04",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 120.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:45",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 120.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:06:59",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "build_succeeds",
+      "name": "Package imports and the CLI honours its contract (0/1)",
+      "direction": "maximize",
+      "target": 1.0,
+      "latest_cycle": 2,
+      "latest_value": 1.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:06:59",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 1.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:04",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 1.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:45",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 1.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:06:59",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "lint_errors",
+      "name": "Ruff diagnostics under the frozen config (count)",
+      "direction": "minimize",
+      "target": 0.0,
+      "latest_cycle": 2,
+      "latest_value": 0.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:06:59",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:04",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:46",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 0.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:06:59",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t1",
+      "name": "T-1: Connectors return cited RawDocs from recorded fixtures",
+      "direction": "maximize",
+      "target": 19.0,
+      "latest_cycle": 2,
+      "latest_value": 19.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:01",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 19.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:05",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 19.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:46",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 19.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:01",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t2",
+      "name": "T-2: Entity resolution accepts the target and rejects namesakes",
+      "direction": "maximize",
+      "target": 13.0,
+      "latest_cycle": 2,
+      "latest_value": 13.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:01",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 13.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:05",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 13.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:47",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 13.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:01",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t3",
+      "name": "T-3: Extractor emits schema-valid facts and hubs",
+      "direction": "maximize",
+      "target": 10.0,
+      "latest_cycle": 2,
+      "latest_value": 10.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:02",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 10.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:06",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 10.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:47",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 10.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:02",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t4",
+      "name": "T-4: Taste filter excludes what R11 forbids and keeps what matters",
+      "direction": "maximize",
+      "target": 14.0,
+      "latest_cycle": 2,
+      "latest_value": 14.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:03",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 14.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:06",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 0.0,
+          "error": 14.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:48",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 14.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:03",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    },
+    {
+      "id": "criteria_t5",
+      "name": "T-5: Matching ranks rare shared hubs above generic ones",
+      "direction": "maximize",
+      "target": 8.0,
+      "latest_cycle": 2,
+      "latest_value": 8.0,
+      "latest_error": 0.0,
+      "latest_source": "measure",
+      "latest_timestamp": "2026-09-03T23:07:03",
+      "latest_selected": null,
+      "latest_deselected": null,
+      "selection_regressed": false,
+      "pre_amendment": false,
+      "n_points": 3,
+      "error_slope_per_cycle": null,
+      "r2": null,
+      "projected_error_at_final_cycle": null,
+      "verdict": "at_target",
+      "history": [
+        {
+          "cycle": 0,
+          "value": 0.0,
+          "error": 8.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T21:21:07",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 1,
+          "value": 8.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T22:30:49",
+          "selected": null,
+          "deselected": null
+        },
+        {
+          "cycle": 2,
+          "value": 8.0,
+          "error": 0.0,
+          "source": "measure",
+          "timestamp": "2026-09-03T23:07:03",
+          "selected": null,
+          "deselected": null
+        }
+      ]
+    }
+  ],
+  "note": "Linear fit over per-cycle error. With <=10 points this is trend detection, not inference; treat slope/projection as a steering signal, not a statistical claim."
+}
