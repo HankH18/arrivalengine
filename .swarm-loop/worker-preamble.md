@@ -196,7 +196,14 @@ Never trust the installer's exit code.
   A definition with zero call sites is **unfinished work wearing a green suite** — a suite
   cannot fail over code nothing runs, which is why your own green does not settle it.
   `TESTS ONLY` is the same defect with a passing test on top. Read the verdicts, not just
-  the exit code: `DECORATOR-REGISTERED` does not fail the run (it is how routes and CLI
+  the exit code. **A nested-handler app factory produces UNREACHED verdicts that are NOT
+  findings:** when route handlers are closures inside a `_register_routes(app)` function —
+  which is what "every handler closes over its own app" requires, and the only way two apps
+  can coexist in one process — `reachable` reports the view functions they call as
+  UNREACHED rather than DECORATOR-REGISTERED, because it cannot cross the decorator hop
+  into a nested closure. A correct web ticket therefore yields several UNREACHED verdicts
+  that look like defects and are not; confirm by eye and by actually serving the route, and
+  say so in DECISIONS. `DECORATOR-REGISTERED` does not fail the run (it is how routes and CLI
   commands are wired) but is not an all-clear either — confirm by eye that the table is
   imported and mounted, and say so in DECISIONS. Exit 3 is the tool refusing your
   arguments, never a finding about your code.
