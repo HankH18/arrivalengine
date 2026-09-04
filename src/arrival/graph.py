@@ -55,6 +55,7 @@ from collections.abc import Iterable, Sequence
 import networkx as nx
 
 from arrival.contracts import Dossier, Hub, HubContribution, Match, PersonRef
+from arrival.taste import is_displayable
 from arrival.util import slug
 
 log = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ __all__ = [
     "REF_SHARERS",
     "REF_TYPE_BOOST",
     "TYPE_BOOST",
+    "WITHHELD_HUB_LABEL",
     "WIKIDATA_PREFIX",
     "build_graph",
     "hub_idf",
@@ -126,6 +128,16 @@ _WHY_PHRASE: dict[str, str] = {
     "person": "both know {label}",
 }
 _WHY_FALLBACK = "both connected to {label}"
+
+#: What replaces a hub's LABEL when every fact evidencing it, across every carrier, is
+#: withheld. See :func:`_nameable_hub_ids`.
+#:
+#: A label rather than a removal, because the hub itself is NOT removed: it keeps its node,
+#: its edges, its idf and its contribution, so the score and the reasoning table still say
+#: "you two do share something and here is what it is worth". Only the NAME goes. It reads
+#: as a table cell on ``/graph``, ``/corpus`` and the R10 score-components table, and
+#: :func:`_why` refuses to speak it at all.
+WITHHELD_HUB_LABEL = "Withheld connection"
 
 #: What a pair with no shared hub worth anything gets. Still a plain spoken sentence.
 _WHY_NOTHING_SHARED = "Nothing in common on the record yet."
@@ -515,6 +527,63 @@ def _one_hub_per_person(
     )
 
 
+def _nameable_hub_ids(
+    dossiers: Sequence[Dossier], canonical: dict[str, str]
+) -> set[str]:
+    """The canonical hub ids that may have their LABEL rendered on a host-facing page.
+
+    **The defect this closes (T-087).** Hub labels passed no taste gate at all. Two members
+    each carrying a fact excluded ``home_or_property`` — the sentence naming the street they
+    live on — produced the Meet row **"Both rooted in Ravensworth Hill."** The fact TEXT was
+    correctly suppressed everywhere; the label carrying the same secret was rendered in the
+    spoken ``why`` (which R18 says a host reads OUT LOUD, in a lobby, to the member it is
+    about), in the R10 score-components table, on ``/graph`` and on ``/corpus``.
+
+    **Why the gate is HERE and not at the four display sites.** ``build_graph`` is the one
+    place a hub label is elected, and every host-facing surface reads the result of that
+    election rather than the stored ``Hub.label``: ``/graph`` and ``/corpus`` read
+    ``graph.nodes[node]["label"]``, and the R10 table and :func:`_why` read the edge's
+    ``Hub`` object, which :func:`_one_hub_per_person` has already overwritten with the
+    elected label. One gate here therefore covers all four, and it covers them **at boot**,
+    on the corpus already committed — no rebuild, no re-extraction. Placing it at the four
+    display sites instead would be four gates in three files to keep in step, and placing it
+    at hub MINTING (``extract.py``) would fix only corpora built after the change, which is
+    the half of the problem that is not on fire.
+
+    **Why ``research._supported_hubs`` does not already cover it.** It applies the same
+    rule, correctly, and it is a BUILD-TIME step: ``build_dossier`` calls it once, between
+    ``apply_taste`` and writing the JSON, and nothing in the display path calls it ever
+    again. So it protects a dossier built after the taste rules were right, and does nothing
+    for the ten committed dossiers whose facts were ruled by the pronoun-anchored rules
+    principle 4 replaces — those facts become withheld the moment ``is_displayable``
+    re-checks them, and their hubs then need a gate that runs at display time. It also keys
+    on ``Fact.excluded`` alone, where a display gate must ask the full R12 question.
+
+    **The rule, and it is deliberately the weakest one that works.** A hub is withheld only
+    when EVERY carrier's resolvable evidence for it is undisplayable. One displayable
+    evidence fact anywhere keeps the label, so the matching design (T-5 acceptance 1: hubs
+    take part whatever taste said) is untouched, and so is every hub in a corpus with
+    nothing excluded.
+
+    Following ``_supported_hubs`` exactly on the two edges that matter: an evidence id that
+    resolves to no fact is **left alone rather than judged on silence**, and a hub with no
+    evidence ids at all is nameable. Hubs are constructed without evidence all over the test
+    corpora and in ``extract._roster_city_hub``; judging those on absence would redact the
+    graph wholesale.
+    """
+    nameable: set[str] = set()
+    for dossier in dossiers:
+        known = {fact.fact_id: fact for fact in dossier.facts}
+        for hub in dossier.hubs:
+            hub_id = canonical[_identity_key(hub)]
+            if hub_id in nameable:
+                continue
+            evidence = [known[fid] for fid in hub.evidence_fact_ids if fid in known]
+            if not evidence or any(is_displayable(fact) for fact in evidence):
+                nameable.add(hub_id)
+    return nameable
+
+
 def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     """Build the bipartite person/hub graph.
 
@@ -543,6 +612,10 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     # be written until every dossier has been seen -- and the identity election needs it too,
     # for the same reason.
     canonical = _canonical_hub_ids(dossiers)
+    # R11 (T-087): which hubs may be NAMED. Computed here, over the whole population, for
+    # the same reason idf is -- the answer is a property of every carrier at once, and a
+    # hub one person cannot name is nameable if somebody else evidenced it cleanly.
+    nameable = _nameable_hub_ids(dossiers, canonical)
     carriers: dict[str, set[str]] = {}
     described: dict[str, list[tuple[str, str]]] = {}
     held: dict[str, dict[str, list[Hub]]] = {}
@@ -581,6 +654,15 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
         source = person_node(person_id)
         for hub_id in sorted(held[person_id]):
             hub_type, label = _hub_identity(described[hub_id])
+            if hub_id not in nameable:
+                # R11 (T-087). The hub keeps everything that makes it a MATCH -- its node,
+                # its edges, its idf, its boost, its contribution -- and loses only the
+                # name, because the name is the part a host says out loud.
+                log.info(
+                    "withholding the label of hub %s: every fact evidencing it is withheld",
+                    hub_id,
+                )
+                label = WITHHELD_HUB_LABEL
             hub = _one_hub_per_person(held[person_id][hub_id], hub_id, hub_type, label)
             idf = hub_idf(n_people, len(carriers[hub_id]))
             boost = TYPE_BOOST.get(hub_type, DEFAULT_TYPE_BOOST)
@@ -688,7 +770,7 @@ def _path(
     """
     if arriving not in graph or other not in graph:
         return []
-    top = next((c for c in components if c.contribution > 0), None)
+    top = next(iter(_nameable(components)), None)
     if top is None:
         return []
     via = hub_node(top.hub.hub_id)
@@ -766,6 +848,27 @@ def _spoken_label(label: str, hub_type: str) -> str:
     return label[: len(label) - len(stripped)] + stripped[:1].lower() + stripped[1:]
 
 
+def _nameable(components: Sequence[HubContribution]) -> list[HubContribution]:
+    """The components a sentence may actually cite, in order.
+
+    Two filters, and they are separate requirements that happen to compose:
+
+    * ``contribution > 0`` -- citing a hub the clamp zeroed claims credit for a connection
+      worth nothing (T-016);
+    * the label was not withheld by :func:`_nameable_hub_ids` -- R11. A withheld hub still
+      SCORES, and the R10 table still lists it under :data:`WITHHELD_HUB_LABEL`, but no
+      sentence names it: "Both rooted in Withheld connection." would be an absurd line to
+      read aloud and would advertise the withholding to the member's face.
+
+    Shared by :func:`_why` and :func:`_path` so the two cannot disagree. T-016 is explicit
+    that a path routed through a hub the why refuses to name is a defect ("the path is the
+    picture of the why"), and withholding a label creates exactly that opportunity.
+    """
+    return [
+        c for c in components if c.contribution > 0 and c.hub.label != WITHHELD_HUB_LABEL
+    ]
+
+
 def _why(components: Sequence[HubContribution]) -> str:
     """A deterministic sentence naming up to two top hubs by LABEL. No LLM, ever.
 
@@ -777,7 +880,7 @@ def _why(components: Sequence[HubContribution]) -> str:
     capital is applied here, AFTER the clauses are joined, and every phrase in
     :data:`_WHY_PHRASE` opens on "both", so a label is never the word that gets capitalised.
     """
-    named = [c for c in components if c.contribution > 0][:_WHY_MAX_HUBS]
+    named = _nameable(components)[:_WHY_MAX_HUBS]
     if not named:
         return _WHY_NOTHING_SHARED
     clauses = [

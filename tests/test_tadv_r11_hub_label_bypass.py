@@ -126,11 +126,6 @@ def test_the_fixture_really_did_exclude_the_fact(leaky_app):
 
 # --------------------------------------------------------------------------- what leaks
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: graph._why speaks the label of a hub whose only evidence is "
-    "a fact excluded as home_or_property. Remove this marker when it is fixed.",
-)
 def test_the_spoken_why_line_never_names_an_excluded_hub(leaky_digest):
     """R11 + R18: the sentence a host says out loud must not carry withheld material."""
     _client, digest = leaky_digest
@@ -139,33 +134,18 @@ def test_the_spoken_why_line_never_names_an_excluded_hub(leaky_digest):
     assert not any(SECRET in line for line in spoken), spoken
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: digest.html's data-reasoning table prints hub.label with no "
-    "taste gate. Remove this marker when it is fixed.",
-)
 def test_the_digest_page_never_prints_an_excluded_hub_label(leaky_digest):
     """R11: the digest is host-facing top to bottom, disclosure blocks included."""
     _client, digest = leaky_digest
     assert SECRET not in digest
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: /graph prints hub.label with no taste gate. Remove this "
-    "marker when it is fixed.",
-)
 def test_the_graph_page_never_prints_an_excluded_hub_label(leaky_digest):
     """R17's page is host-facing: /debug is the only view permitted withheld material."""
     client, _digest = leaky_digest
     assert SECRET not in client.get("/graph").text
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="OPEN R11 DEFECT: /corpus prints every hub label for every person with no "
-    "taste gate. Remove this marker when it is fixed.",
-)
 def test_the_corpus_page_never_prints_an_excluded_hub_label(leaky_digest):
     """/corpus is the demo page and states its own R11 footer; it is host-facing."""
     client, _digest = leaky_digest
