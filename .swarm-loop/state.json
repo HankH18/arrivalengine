@@ -11,12 +11,21 @@
   "stall_count": 0,
   "goal_stall_limit": 3,
   "goal_stall_count": 0,
-  "head_history": [],
+  "head_history": [
+    {
+      "cycle": 0,
+      "head": "226fa4aa4b326dcc7ff72c83e7484bb9c6ce7789",
+      "changed": true,
+      "tracked_files": 115,
+      "codebase": "bd8d958264bd57c97ac44486790bca1f93c582ec485a9953b9e025e897fef449"
+    }
+  ],
   "worktree_root": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-worktrees",
   "created": "2026-09-03T19:45:00",
   "protected_paths": [
     ".swarm-loop/acceptance",
-    ".swarm-loop/goals.json"
+    ".swarm-loop/goals.json",
+    "tickets.json"
   ],
   "ticket_graph": "tickets.json",
   "scratch_root": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-scratch"

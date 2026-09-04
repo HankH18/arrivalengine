@@ -1,1 +1,13 @@
 cycle,metric_id,value,error,timestamp,source,selected,deselected
+0,acceptance_pass_rate,12.61,87.39,2026-09-03T21:21:04,measure,,
+0,acceptance_collected,120.0,0.0,2026-09-03T21:21:04,measure,,
+0,build_succeeds,1.0,0.0,2026-09-03T21:21:04,measure,,
+0,lint_errors,0.0,0.0,2026-09-03T21:21:04,measure,,
+0,criteria_t1,0.0,19.0,2026-09-03T21:21:05,measure,,
+0,criteria_t2,0.0,13.0,2026-09-03T21:21:05,measure,,
+0,criteria_t3,0.0,10.0,2026-09-03T21:21:06,measure,,
+0,criteria_t4,0.0,14.0,2026-09-03T21:21:06,measure,,
+0,criteria_t5,0.0,8.0,2026-09-03T21:21:07,measure,,
+0,criteria_t6,0.0,10.0,2026-09-03T21:21:07,measure,,
+0,criteria_t7,0.0,10.0,2026-09-03T21:21:07,measure,,
+0,criteria_t8,0.0,14.0,2026-09-03T21:21:08,measure,,
