@@ -235,3 +235,45 @@ def test_wayback_never_spends_a_fetch_on_a_capture_that_is_not_a_document(
         "an image; dropping those loses good pages"
     )
     assert docs
+
+
+def test_a_roster_that_names_a_feed_gets_the_feed_read_as_one(monkeypatch, tmp_path):
+    """T-061's other half: `is_feed_url` guarded crawled links and not SEED urls.
+
+    A roster line naming `https://site/feed` went straight to the page fetcher, so the
+    one address carrying DATED prose was extracted as flattened XML and emitted as a
+    single undated `self_page` document — which is the exact outcome the feed reader
+    exists to prevent, arriving through the one path nothing checked.
+    """
+    feed_seed = PersonRef(
+        person_id="marisol-quennebeck",
+        name="Marisol Quennebeck",
+        details=["co-founder, Thornfield Loom", f"{SITE}/feed"],
+    )
+    post = f"{SITE}/notes/2024-05-scheduling"
+    rss = (
+        '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel>'
+        f"<title>Thornfield Loom</title><link>{HOME}</link>"
+        f"<item><title>Scheduling looms</title><link>{post}</link>"
+        "<pubDate>Thu, 02 May 2024 09:14:00 GMT</pubDate>"
+        f"<description>{LINE}</description></item>"
+        "</channel></rss>"
+    )
+
+    def router(request):
+        path, _ = parts(request)
+        if path == "/feed":
+            return rss
+        return _page("Scheduling looms", LINE)
+
+    docs, requested = search("self_page", router, monkeypatch, tmp_path, person=feed_seed)
+
+    assert any(url.endswith("/feed") for url in requested), f"asked {requested!r}"
+    assert docs, "the feed the roster named produced no document"
+    assert all(doc.url != f"{SITE}/feed" for doc in docs), (
+        "the feed itself was emitted as a document; a reader does not want the XML"
+    )
+    assert any(doc.published_at is not None for doc in docs), (
+        "a feed entry carries its date as a field, and that date is the whole reason "
+        "TASKS T-1 acceptance 2 asks for the feed at all"
+    )

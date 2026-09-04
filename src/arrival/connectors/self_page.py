@@ -211,6 +211,15 @@ class SelfPageConnector(BaseConnector):
         for url in seeds:
             if len(docs) >= budget:
                 break
+            if is_feed_url(url):
+                # T-061's other half. The skip list stopped a CRAWLED link that is a feed
+                # from being read as a page; a seed the ROSTER wrote went straight to the
+                # page fetcher, so `https://site.example/feed` was extracted as prose and
+                # emitted as one `self_page` document of flattened XML — no entries, no
+                # dates, and the one thing this connector reads a feed for lost. A feed is
+                # a feed whoever named it.
+                feeds.append((url, url))
+                continue
             doc, markup = await self._page(url, visited)
             if doc is None:
                 continue
@@ -260,7 +269,11 @@ class SelfPageConnector(BaseConnector):
         for entry in parse_feed(record.body, record.url):
             if len(docs) >= limit:
                 break
-            if entry.url in visited:
+            if entry.url in visited or is_feed_url(entry.url):
+                # `is_feed_url` here for the same reason it guards `_page_links`: an entry
+                # whose target is itself a feed is not prose, and the fallback branch below
+                # would hand it to the page fetcher and emit flattened XML as the member's
+                # own writing.
                 continue
             # A feed may syndicate somebody else's writing. An entry pointing off the
             # member's own web space is exactly the outward crawl this module refuses.
