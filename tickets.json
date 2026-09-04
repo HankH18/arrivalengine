@@ -1951,6 +1951,51 @@
       "defect": "CLI exit-code and validation gaps. (a) A read-only `--out` exits 1 rather than 2: `out.mkdir()` raises inside build_all and lands in build_command's catch-all, so a wrapper reads 'retry me' instead of 'fix your arguments' \u2014 while an unreadable roster and an unreadable .env are both correctly 2. (b) NEGATIVE BUDGETS ARE ACCEPTED SILENTLY: `--max-docs -1` exits 0, because contracts.Budget declares these as bare `int` with no `ge=0`, which makes build_command's ValidationError handler for a bad budget UNREACHABLE by any input.",
       "finding_id": "49707b003194b917ed2449d350067c623a17e845c999424d301ed63fd81ab432",
       "reproduction": "python -m arrival build --out /a/read-only/dir ; python -m arrival build --max-docs -1. Reported by the TESTBACKEND lane."
+    },
+    {
+      "id": "T-102",
+      "title": "T-094's TWIN IN THE SIBLING MODULE. `f\"A corpus map of {len(roster)} people and {stats['hubs']} hubs, {len(shared)} of them shared.\"` does not pluralise, while corpus.html:178 correctly renders `hub{{ '' if stats.hubs == 1 else 's' }}` \u2014 so a one-hub corpus gives a visible caption saying '1 hub' and a screen-reader text alternative saying '1 hubs'. Same at corpus_graph.py:766. Latent on the current corpus (123 hubs) but identical in kind to the /graph defect just fixed, and graph_view._count is now available to fix it the same way. Also corpus_graph.py:589: the SVG hub sublabel renders '1 people' for a single-carrier hub \u2014 verified latent on production since only multi-carrier hubs are drawn.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/corpus_graph.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/web/corpus_graph.py:773",
+      "defect": "T-094's TWIN IN THE SIBLING MODULE. `f\"A corpus map of {len(roster)} people and {stats['hubs']} hubs, {len(shared)} of them shared.\"` does not pluralise, while corpus.html:178 correctly renders `hub{{ '' if stats.hubs == 1 else 's' }}` \u2014 so a one-hub corpus gives a visible caption saying '1 hub' and a screen-reader text alternative saying '1 hubs'. Same at corpus_graph.py:766. Latent on the current corpus (123 hubs) but identical in kind to the /graph defect just fixed, and graph_view._count is now available to fix it the same way. Also corpus_graph.py:589: the SVG hub sublabel renders '1 people' for a single-carrier hub \u2014 verified latent on production since only multi-carrier hubs are drawn.",
+      "finding_id": "5db72b4b949afd4fb6f7fb9fed2e996a424ce3879ef61d9a0c074c51ec096a89",
+      "reproduction": "Build a corpus with exactly one hub and read the /corpus SVG aria-label against its figcaption. Found by the WEBPOLISH lane while fixing the /graph twin."
+    },
+    {
+      "id": "T-103",
+      "title": "HEAD returns 405 on every route. FastAPI does not add HEAD to GET routes the way Starlette does. The WEBPOLISH lane deliberately declined this with the reasoning stated: Render health-checks /building with GET, browsers use GET, there is no observed symptom, and the fix touches all six route registrations in a file other lanes read concurrently. Fix when the file is quiet: @app.api_route(path, methods=['GET','HEAD']) per route.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/app.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "LOW",
+      "location": "src/arrival/web/app.py",
+      "defect": "HEAD returns 405 on every route. FastAPI does not add HEAD to GET routes the way Starlette does. The WEBPOLISH lane deliberately declined this with the reasoning stated: Render health-checks /building with GET, browsers use GET, there is no observed symptom, and the fix touches all six route registrations in a file other lanes read concurrently. Fix when the file is quiet: @app.api_route(path, methods=['GET','HEAD']) per route.",
+      "finding_id": "9cc1c2eda639e464e9f1e87c3f81fff3cc020b272fb87622a59a60fe45d03cc1",
+      "reproduction": "curl -I https://arrival-engine.onrender.com/building -> 405. Reported and declined by the WEBPOLISH lane."
+    },
+    {
+      "id": "T-104",
+      "title": "The 404 template hardcodes 'Digests live in this process's memory and clear on restart' as its second paragraph. That is now ALSO shown on the off-roster ARRIVAL page, because T-096 made form POSTs render HTML rather than JSON \u2014 so a host who typo'd a name is told something about digest lifetimes. Guarding it with an {% if %} needs an owner of that template.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/web/templates/not_found.html"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "LOW",
+      "location": "src/arrival/web/templates/not_found.html",
+      "defect": "The 404 template hardcodes 'Digests live in this process's memory and clear on restart' as its second paragraph. That is now ALSO shown on the off-roster ARRIVAL page, because T-096 made form POSTs render HTML rather than JSON \u2014 so a host who typo'd a name is told something about digest lifetimes. Guarding it with an {% if %} needs an owner of that template.",
+      "finding_id": "ad9575b4d588fad4429c37126f26400da4046454b05a70bdbfa76626e7fadfc5",
+      "reproduction": "POST a form with an off-roster name and read the rendered page. Reported by the WEBPOLISH lane, outside its ownership."
     }
   ],
   "cut_list": [
