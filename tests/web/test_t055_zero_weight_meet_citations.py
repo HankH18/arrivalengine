@@ -209,7 +209,8 @@ async def test_the_reasoning_table_still_shows_the_clamped_hubs_the_marker_no_lo
     start = meet.index(ZERO_SCORING_NAME)
     row_html = meet[start : meet.index("</li>", start)]
 
-    why = row_html[row_html.index('class="why"') : row_html.index("</p>", row_html.index('class="why"'))]
+    opens = row_html.index('class="why"')
+    why = row_html[opens : row_html.index("</p>", opens)]
     assert not _CITE.search(why), f"the zero-scoring row still renders a citation marker: {why!r}"
 
     assert "data-reasoning" in row_html, "the row lost its R10 reasoning affordance entirely"
