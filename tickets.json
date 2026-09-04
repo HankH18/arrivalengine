@@ -1216,6 +1216,36 @@
       "defect": "A single-word hub label ending in -s, -ed or -ing SILENTLY DELETES a Meet row's reasoning. Nine of the ten _WHY_PHRASE templates in graph.py put the label directly after a BARE preposition, and digest._reads_as_a_verb treats a capitalised, non-hyphenated, non-ALL-CAPS word ending in s/ed/ing as a verb \u2014 so _splices_a_clause fires, is_speakable refuses the line, and _speakable_match falls back to WHY_OF_LAST_RESORT. Traced through the real path (digest._speakable_match), not just the predicate: 'Both connected to Databricks.' -> 'Worth a hello; nothing quotable on the record yet.'; 'Both connected to Reuters.' -> BLANKED; 'Both building on Kubernetes.' -> BLANKED; 'Both deep in Sailing.' -> BLANKED. Databricks, Reuters and Kubernetes are ordinary hub labels for this product's population. Invisible today only because neither corpus contains such a label. The _reads_as_a_verb docstring anticipates the FACT case ('...at Reuters on the data team') and calls rejection 'the safe direction', which is right for a fact \u2014 it falls through to the next candidate \u2014 but WRONG for a why, where the fallback is not another candidate but an admitted blank. The fix belongs in digest, not graph: a hub label arriving through _WHY_PHRASE is a noun BY CONSTRUCTION, so the why path can tell the verb detector so. Fixing it from graph would mean rewording templates to dodge a downstream heuristic, coupling the two modules and colliding with test_why_phrasing_varies_by_hub_type. Two stale references to fold in while there: digest.py:~337's _reads_as_a_verb docstring and tests/digest/test_t7_grammar_and_order.py:141 both cite 'Both deep in Developer-tools go-to-market.' as graph's output, which T-041 has now lower-cased.",
       "finding_id": "d70bfeb46dabbfdacc842f9588ee6ef6f673edb5e19ac52ceccefa0083649203",
       "reproduction": "Force a single-word hub label ending in -s into a Meet row and follow digest._speakable_match. Reported by the FIX-WHY lane, which left a live tripwire \u2014 test_every_corpus_hub_label_yields_a_speakable_why goes red the day either corpus gains such a label."
+    },
+    {
+      "id": "T-053",
+      "title": "`_elect` breaks a QID tie LEXICOGRAPHICALLY: `min(..., key=lambda kv: (-kv[1], kv[0]))`. This is the identical defect just repaired in extract._HubGroup.qid, one stage downstream \u2014 two dossiers stating different QIDs for one label bucket elect the alphabetically smaller one. A QID is an identity, not a description: some spelling must win for a label, but an arbitrary winner for an identifier welds two entities onto one graph node, and `wd:` wins the canonical_hub_ids election outright (graph.py:250-251). T-036's fix reduces how often extraction EMITS a contested QID but cannot reach the cross-dossier election. The shape of the repair is the one now in extract._hub_qid: rank on evidence, refuse on a tie, and keep _most_common only for type and label where a lexicographic tiebreak is correct.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/graph.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/graph.py:196",
+      "defect": "`_elect` breaks a QID tie LEXICOGRAPHICALLY: `min(..., key=lambda kv: (-kv[1], kv[0]))`. This is the identical defect just repaired in extract._HubGroup.qid, one stage downstream \u2014 two dossiers stating different QIDs for one label bucket elect the alphabetically smaller one. A QID is an identity, not a description: some spelling must win for a label, but an arbitrary winner for an identifier welds two entities onto one graph node, and `wd:` wins the canonical_hub_ids election outright (graph.py:250-251). T-036's fix reduces how often extraction EMITS a contested QID but cannot reach the cross-dossier election. The shape of the repair is the one now in extract._hub_qid: rank on evidence, refuse on a tie, and keep _most_common only for type and label where a lexicographic tiebreak is correct.",
+      "finding_id": "ed60891ca72086d6c7e1cbfec369a02be0684abb398efd686f5828bbe1713713",
+      "reproduction": "Read graph.py:196-203 against the merged extract._hub_qid and _unambiguous. Reported by the FIX-EXTRACT2 lane, outside its ownership."
+    },
+    {
+      "id": "T-054",
+      "title": "ZERO validators in the whole file. `hub_id`, `evidence_fact_ids`, `recency` (documented `# 0..1`) and `Provenance.quote` (documented `# MUST be a substring of RawDoc.text`) are enforced by COMMENTS only. A fabricated quote or a dangling evidence id validates cleanly and surfaces as a wrong footnote on a host-facing page. `extract.cited_span` is the only enforcement anywhere and nothing downstream re-checks it \u2014 so every guarantee about displayed evidence rests on one function in one module. Note this file is frozen by convention (T-0 owns it) rather than by the harness manifest, so the change is available; but it is the widest-blast-radius file in the project and every module imports it, so it needs its own lane and a full-suite re-measure, not a drive-by.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/contracts.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/contracts.py",
+      "defect": "ZERO validators in the whole file. `hub_id`, `evidence_fact_ids`, `recency` (documented `# 0..1`) and `Provenance.quote` (documented `# MUST be a substring of RawDoc.text`) are enforced by COMMENTS only. A fabricated quote or a dangling evidence id validates cleanly and surfaces as a wrong footnote on a host-facing page. `extract.cited_span` is the only enforcement anywhere and nothing downstream re-checks it \u2014 so every guarantee about displayed evidence rests on one function in one module. Note this file is frozen by convention (T-0 owns it) rather than by the harness manifest, so the change is available; but it is the widest-blast-radius file in the project and every module imports it, so it needs its own lane and a full-suite re-measure, not a drive-by.",
+      "finding_id": "83d5654abf504d715f0a1bf5b9360ec1457ca74ccf17e4e84884294eedded575",
+      "reproduction": "grep for `field_validator|model_validator|Field(` in src/arrival/contracts.py. Reported by the FIX-EXTRACT2 lane."
     }
   ],
   "cut_list": [
