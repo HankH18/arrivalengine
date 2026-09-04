@@ -34,8 +34,14 @@ from pathlib import Path
 import pytest
 from t5_graph_helpers import filler, make_dossier, make_hub
 
-from arrival.contracts import Dossier
-from arrival.digest import _splices_a_clause, is_speakable
+from arrival.contracts import Dossier, Match
+from arrival.digest import (
+    SPOKEN_WORD_CAP,
+    WHY_OF_LAST_RESORT,
+    _speakable_match,
+    _splices_a_clause,
+    is_speakable,
+)
 from arrival.graph import build_graph, match
 
 #: T-5 owns `graph.py`; T-041 is the repair ticket. The harness's ticket ids are single
@@ -89,18 +95,24 @@ def _corpus_labels() -> list[tuple[str, str, str]]:
     return out
 
 
-def _why_for(label: str, hub_type: str) -> str:
-    """The ``why`` a pair sharing exactly one hub of this ``(label, type)`` receives.
+def _match_for(label: str, hub_type: str) -> Match:
+    """The ``Match`` a pair sharing exactly one hub of this ``(label, type)`` receives.
 
     Built through ``build_graph``/``match`` rather than by calling the private renderer, so
-    what is measured is the sentence the product actually emits.
+    what is measured is what the product actually emits — including ``contributions``, which
+    is where the matcher records that these words are a hub's LABEL.
     """
     hub = make_hub(f"{hub_type}:only", label, hub_type)
     a = make_dossier("a", "A", [hub])
     b = make_dossier("b", "B", [hub])
     matches = match(build_graph([a, b, *filler(4)]), "a", ["b"])
     assert matches and matches[0].contributions, f"{label!r}/{hub_type} scored nothing"
-    return matches[0].why
+    return matches[0]
+
+
+def _why_for(label: str, hub_type: str) -> str:
+    """The ``why`` that pair receives, as ``graph`` emits it."""
+    return _match_for(label, hub_type).why
 
 
 # --------------------------------------------------- the defect, on the corpus that had it
@@ -158,9 +170,76 @@ def test_every_corpus_hub_label_yields_a_speakable_why(label, hub_type):
 
     The corpora's own pairings leave most labels clamped to zero contribution and therefore
     unnamed; this reaches the ones a real arrival with a different roster would reach.
+
+    T-064 — WHY THIS GRADES THROUGH ``_speakable_match`` AND NOT THROUGH THE BARE JUDGE.
+    This assertion was written in 2d1ce59 as ``assert is_speakable(why)``. Thirty-four
+    minutes later ec9ee37 ("fix(digest): a hub label is a noun, so naming one stops blanking
+    the Meet row", T-052) changed the product path: ``digest._speakable_match`` now calls
+    ``is_speakable(why, noun_phrases=labels)``, declaring every label out of
+    ``Match.contributions``, because the matcher has already said which words are a name.
+    The bare call is therefore no longer the judgement the product makes, and it is wrong in
+    the direction that costs a cycle to diagnose — it goes RED on a correct product. Measured
+    at HEAD, with no change of mine in the tree: the company label "Reuters Media Group"
+    gives ``is_speakable(why) is False`` while ``_speakable_match`` returns "Both connected
+    to Reuters Media Group." unblanked. It is a false alarm waiting for either corpus to gain
+    such a label.
+
+    The tripwire's VALUE is unchanged and is what is asserted here: an unspeakable why is not
+    shown, it is BLANKED to ``WHY_OF_LAST_RESORT``, which deletes a Meet row's exposed
+    reasoning outright (R10). That harm is what goes red below. It is not neutered into
+    always passing —
+    ``test_the_tripwire_still_fires_for_a_label_the_product_genuinely_cannot_speak``
+    constructs a label that still trips it.
     """
-    why = _why_for(label, hub_type)
-    assert is_speakable(why), f"{hub_type} {label!r} produces an unspeakable why: {why!r}"
+    row = _match_for(label, hub_type)
+    spoken = _speakable_match(row)
+
+    assert spoken.why != WHY_OF_LAST_RESORT, (
+        f"{hub_type} {label!r} produces a why the product cannot speak, so T-7 blanks the "
+        f"Meet row's reasoning to {WHY_OF_LAST_RESORT!r}. graph emitted: {row.why!r}"
+    )
+    # ...and it is speakable by the judgement the product actually applies, stated here
+    # rather than inferred from `_speakable_match`'s internal structure.
+    assert is_speakable(spoken.why, noun_phrases=[c.hub.label for c in row.contributions]), (
+        f"{hub_type} {label!r}: the product shows {spoken.why!r}, which R18 refuses"
+    )
+
+
+def test_the_tripwire_still_fires_for_a_label_the_product_genuinely_cannot_speak():
+    """T-064's other half: the retargeted tripwire is not a test that cannot fail.
+
+    Retargeting a tripwire at the product path is the move that quietly turns it green
+    forever, so the predicate the parametrized test above asserts is exercised here on a
+    label constructed to defeat it — and it must go red.
+
+    A label of ``SPOKEN_WORD_CAP + 1`` tokens whose head reads as a verb is the case.
+    ``_speakable_match`` declares the label as a noun phrase, but ``speakable`` then
+    TRUNCATES the line to the word cap, and ``_noun_phrase_spans`` only covers tokens where
+    the whole phrase appears in order — so the declaration stops matching, "Reuters" is left
+    capitalised, ending in "-s" and directly after the bare preposition "to" with words still
+    following it, and ``_splices_a_clause`` refuses the repair. R18 has no third option, so
+    the row's reasoning is blanked.
+
+    Nothing here grades against a table in this file: the cap is ``digest.SPOKEN_WORD_CAP``,
+    the verdict is ``digest._speakable_match``'s, and the blank is ``digest.WHY_OF_LAST_RESORT``.
+    """
+    label = "Reuters " + " ".join(f"w{n}" for n in range(SPOKEN_WORD_CAP))
+    row = _match_for(label, "company")
+
+    # The bar the parametrized tripwire applies, applied by hand to a hostile label.
+    spoken = _speakable_match(row)
+    assert spoken.why == WHY_OF_LAST_RESORT, (
+        "a label the product cannot read aloud no longer trips the tripwire, so the "
+        f"parametrized test above can no longer fail: {spoken.why!r}"
+    )
+
+    # Companion control: the SAME head, inside the cap, is fine — so the red above is the
+    # label's unspeakability and not "any label containing 'Reuters'".
+    short = _speakable_match(_match_for("Reuters Media Group", "company"))
+    assert short.why != WHY_OF_LAST_RESORT, (
+        f"a speakable label was blanked too, so the check above proves nothing: {short.why!r}"
+    )
+    assert "Reuters Media Group" in short.why, short.why
 
 
 # ------------------------------------------------------------- proper nouns must survive
