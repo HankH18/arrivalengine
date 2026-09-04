@@ -47,6 +47,7 @@ Two things this module deliberately does NOT do:
 
 from __future__ import annotations
 
+import logging
 import math
 from collections.abc import Iterable, Sequence
 
@@ -54,6 +55,8 @@ import networkx as nx
 
 from arrival.contracts import Dossier, Hub, HubContribution, Match, PersonRef
 from arrival.util import slug
+
+log = logging.getLogger(__name__)
 
 __all__ = [
     "DEFAULT_TYPE_BOOST",
@@ -99,8 +102,9 @@ PERSON_PREFIX = "person:"
 HUB_PREFIX = "hub:"
 
 #: The prefix ``extract.canonical_hub_id`` gives an id Wikidata resolved. An id carrying it
-#: names an ENTITY rather than a spelling, so it wins the identity election in
-#: :func:`_canonical_hub_ids` however few carriers stated it.
+#: names an ENTITY rather than a spelling, so it beats every ``{type}:{slug(label)}`` id in
+#: :func:`_canonical_hub_ids`'s identity election however few carriers stated it -- but it
+#: does NOT beat a competing QID by sorting first. See :func:`_elect_qid`.
 WIKIDATA_PREFIX = "wd:"
 
 #: Deterministic, speakable phrasing per hub type (R18: read aloud, so no ids, no
@@ -203,15 +207,55 @@ def _hub_identity(descriptions: Sequence[tuple[str, str]]) -> tuple[str, str]:
 
 
 def _elect(counts: dict[str, int]) -> str:
-    """Most common wins, ties broken lexicographically.
+    """Most common wins, ties broken lexicographically. For DESCRIPTIONS only.
 
-    The one voting rule this module has, factored out so the type vote, the label vote and
-    the hub-id vote cannot drift apart. ``extract._most_common`` deliberately duplicates it
-    for the WITHIN-dossier half of the same problem; ``graph`` sits downstream of ``extract``,
-    so importing upward would invert the dependency. If this tie-break ever changes, that
-    copy has to change with it.
+    The type vote and the label vote, factored out so they cannot drift apart.
+    ``extract._most_common`` deliberately duplicates it for the WITHIN-dossier half of the
+    same problem; ``graph`` sits downstream of ``extract``, so importing upward would invert
+    the dependency. If this tie-break ever changes, that copy has to change with it.
+
+    **It is not used for the QID vote, and that asymmetry is the point** (T-053, the
+    graph-side half of T-036). A type and a label are DESCRIPTIONS of one node: every
+    candidate describes the same thing, some spelling has to win, and a lexicographic
+    tie-break at least makes the winner a function of the SET rather than of the order the
+    dossiers arrived in. A QID is an IDENTITY -- a claim about WHICH entity this is -- and
+    alphabetical order is not evidence about that. ``Q4242`` beating ``Q7777`` because "4"
+    sorts before "7" is arrival order in a better costume. See :func:`_elect_qid`.
     """
     return min(counts.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+
+
+def _elect_qid(carriers: dict[str, set[str]]) -> str | None:
+    """The QID the carriers corroborate, or ``None`` when two of them are equally attested.
+
+    ``carriers`` maps each stated ``wd:`` id to the set of ``person_id``s that stated it.
+    Ranking is on that count and REFUSES a tie -- ``extract._unambiguous`` and
+    ``extract._hub_qid``, ported to the one place they cannot reach. (T-036 makes each
+    dossier's QID a reading of that person's OWN documents; it has no second dossier to
+    compare against, so a disagreement BETWEEN dossiers first becomes visible here.)
+
+    **People, not occurrences.** The reason a QID gains weight from a second carrier is that
+    each carrier's QID was corroborated against a different person's independently retrieved
+    documents. One dossier naming the same QID twice is one reading repeated, not two, and
+    ``build_graph`` accepts two dossiers for one ``person_id`` -- so the vote is over the
+    set of people, while the type and label votes keep counting occurrences (which is what
+    keeps them agreeing with :func:`_hub_identity`).
+
+    A single stated QID still wins outright however few carriers state it: there is no
+    competing claim about the entity, and the slug-form ids it beats are the ABSENCE of one.
+    Only two QIDs in genuine competition can produce a refusal.
+    """
+    if not carriers:
+        return None
+    ranked = sorted(carriers.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+    if len(ranked) > 1 and len(ranked[0][1]) == len(ranked[1][1]):
+        log.info(
+            "refusing to name a hub by QID: %s are stated by equally many carriers, so an "
+            "alphabetical winner would be arrival order wearing the costume of evidence",
+            [qid for qid, _ in ranked[:2]],
+        )
+        return None
+    return ranked[0][0]
 
 
 def _identity_key(hub: Hub) -> str:
@@ -229,21 +273,51 @@ def _identity_key(hub: Hub) -> str:
 def _canonical_hub_ids(dossiers: Sequence[Dossier]) -> dict[str, str]:
     """Elect ONE ``hub_id`` per real hub, keyed by :func:`_identity_key`.
 
-    Two rules, in order:
+    Three rules, in order:
 
-    1. **A ``wd:`` id wins.** It names an entity Wikidata resolved rather than a spelling one
-       extraction chose, so a single carrier stating one settles the group.
-    2. Otherwise the ids vote, by :func:`_elect`.
+    1. **A ``wd:`` id wins, when the carriers agree on WHICH ONE.** It names an entity
+       Wikidata resolved rather than a spelling one extraction chose, so a single carrier
+       stating one settles the group. Two carriers stating DIFFERENT ones do not settle
+       anything, and :func:`_elect_qid` refuses rather than picking the alphabetically
+       smaller -- see the cost of that refusal below.
+    2. Otherwise the ``{type}:{slug(label)}`` ids vote, by :func:`_elect`.
+    3. If a refusal leaves no stated id at all -- every carrier named a contested QID and
+       nobody the slug form -- the id is composed from the elected ``(type, label)``. This
+       is the ONE case where the answer is not an id somebody stated, and it is deliberate:
+       having just decided that no stated id may be believed, keeping one anyway would be
+       the arbitrary pick all over again. The composed form is byte-identical to what
+       ``extract.canonical_hub_id`` emits for a hub whose own QID it refused, so a third
+       carrier who never saw Wikidata lands on this exact id and joins the group.
 
-    The elected id is always one a carrier actually STATED -- nothing is recomputed from the
-    label. That matters twice over: an id whose slug has drifted from its label never has its
-    node silently renamed, and because the stated ids are ``{type}:{slug(label)}``, electing
-    among them by "most common, then lexicographic" agrees by construction with the type
-    :func:`_hub_identity` elects from the same occurrences.
+    Outside rule 3 the elected id is one a carrier actually STATED -- nothing is recomputed
+    from the label. That matters twice over: an id whose slug has drifted from its label
+    never has its node silently renamed, and because the stated ids are
+    ``{type}:{slug(label)}``, electing among them by "most common, then lexicographic"
+    agrees by construction with the type :func:`_hub_identity` elects from the same
+    occurrences.
 
     Two carriers who state the SAME id under different labels land in different groups, and
     still converge: each group's only stated id is that one, so both elect it and pass 2 keys
     them to the same node.
+
+    **What refusing costs, measured here rather than assumed from upstream.** Group
+    membership is fixed by :func:`_identity_key`, i.e. by the LABEL, so the elected id never
+    decides who is inside a group -- it decides the node's NAME, and through the convergence
+    in the paragraph above, whether this group merges with a DIFFERENT-labelled one. That is
+    the whole cost, and it is also where the damage was: with a lexicographic tie-break,
+    whether "Harborline Capital" welds onto "Foundry Seed 2019" was decided by which opaque
+    QID sorts first. Reproduced on a five-person corpus -- A states one QID for
+    ``Foundry Seed 2019``, B states the other for that label AND for ``Harborline Capital``,
+    C states it for ``Harborline Capital`` alone. Renaming the two QIDs, and nothing else,
+    moved the graph from two hub nodes to one: ``Harborline Capital`` stopped existing as an
+    entity, B's two hubs collapsed into one edge whose ``evidence_fact_ids`` pooled
+    ``['b-foundry']`` into ``['b-foundry', 'b-harbor']``, and ``match`` went from
+    ``[('b', 100.0), ('c', 0.0)]`` to ``[('b', 44.0), ('c', 44.0)]``.
+
+    So refusal costs the cross-label merge, and only that: every carrier of the label still
+    shares the node, which is the join this election exists to make. A wrong QID is
+    unbounded by comparison -- it pools two entities' labels, types and
+    ``evidence_fact_ids`` and moves every score that touches either.
 
     The tradeoff, stated plainly: two genuinely different hubs that share a label ("Apple" the
     company, "Apple" the topic) are merged. Label collision is the price of joining carriers
@@ -251,15 +325,31 @@ def _canonical_hub_ids(dossiers: Sequence[Dossier]) -> dict[str, str]:
     contributes nothing to anybody.
     """
     stated: dict[str, dict[str, int]] = {}
+    qid_carriers: dict[str, dict[str, set[str]]] = {}
+    described: dict[str, list[tuple[str, str]]] = {}
     for dossier in dossiers:
+        person_id = dossier.person.person_id
         for hub in dossier.hubs:
-            counts = stated.setdefault(_identity_key(hub), {})
+            key = _identity_key(hub)
+            counts = stated.setdefault(key, {})
             counts[hub.hub_id] = counts.get(hub.hub_id, 0) + 1
+            described.setdefault(key, []).append((hub.type, hub.label))
+            if hub.hub_id.startswith(WIKIDATA_PREFIX):
+                by_qid = qid_carriers.setdefault(key, {})
+                by_qid.setdefault(hub.hub_id, set()).add(person_id)
 
     canonical: dict[str, str] = {}
     for key, counts in stated.items():
-        qids = {i: n for i, n in counts.items() if i.startswith(WIKIDATA_PREFIX)}
-        canonical[key] = _elect(qids or counts)
+        qid = _elect_qid(qid_carriers.get(key, {}))
+        if qid is not None:
+            canonical[key] = qid
+            continue
+        others = {i: n for i, n in counts.items() if not i.startswith(WIKIDATA_PREFIX)}
+        if others:
+            canonical[key] = _elect(others)
+            continue
+        hub_type, label = _hub_identity(described[key])
+        canonical[key] = f"{hub_type}:{slug(label)}"
     return canonical
 
 
