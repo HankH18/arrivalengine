@@ -30,11 +30,11 @@ Decision 4 is the rule:
    detail, a company domain derived from the detail, a GitHub profile confirmed by name
    AND company, an SEC CIK matched on name AND company, IN THAT ORDER
    (`STRONG_KEY_PRIORITY`). Failing that, at least two `yes` verdicts citing DIFFERENT
-   attributes — and the attribute is `verdict_attribute`, which reads the verdict's
-   EVIDENCE against the person's own details first and only falls back to the model's
-   free-text label. Two `yes` verdicts on the same attribute are corroboration of one
-   fact, not independence. Anything less is `unresolved`, with `accepted_doc_ids` empty —
-   no facts, no dossier, no guess.
+   attributes — and the attributes are `verdict_attributes`, which reads the verdict's
+   EVIDENCE against the person's own details and only falls back to the model's free-text
+   label when the span corroborates no detail at all. Two `yes` verdicts on the same
+   attribute are corroboration of one fact, not independence. Anything less is
+   `unresolved`, with `accepted_doc_ids` empty — no facts, no dossier, no guess.
 
    `disambiguator` is a string the model chose, so counting distinct labels lets word
    choice decide whether a person exists at all: `role` twice refuses the person, `role`
@@ -63,6 +63,16 @@ Each extractor therefore collects EVERY candidate, ranks them on evidence (how m
 person's details the document matches, then how many documents support the value), and
 `_best` refuses to mint anything when the top two candidates are different values it
 cannot separate — R2 applied to identity, not just to membership.
+
+That refusal is a LAST RESORT, and how often it fires is a property of the extractors, not
+of `_best`. Twice it was firing on input that was not ambiguous: `_company_domain` scored
+every host `1`, so evidence could not separate two hosts at all and only the document count
+could — the same remote ranking the refusal exists to distrust — and `_sec_cik` read the
+FIRST CIK on a filing, which is the issuer's as often as the reporting person's, so two
+filings about one human produced two values and neither survived. Both are repaired where
+the evidence is read rather than where the tie is broken: a key that ranks on nothing will
+tie on everything, and a tie is only honest when the extractor has already said everything
+it knows.
 """
 
 from __future__ import annotations
@@ -92,6 +102,7 @@ __all__ = [
     "resolve",
     "strong_keys_for",
     "verdict_attribute",
+    "verdict_attributes",
     "verdict_prompt",
 ]
 
@@ -271,16 +282,19 @@ async def resolve(person: PersonRef, docs: list[RawDoc], llm: LLMClient) -> Reso
         doc for doc, verdict in accepted if not conflicting_identity_claim(person, verdict)
     ]
     strong_keys = strong_keys_for(person, keyable)
-    # `verdict_attribute`, never the raw `disambiguator`: the label is a word the model
+    # `verdict_attributes`, never the raw `disambiguator`: the label is a word the model
     # chose and the evidence is a span it had to copy out of the document, so the span is
     # what gets to say which attribute was corroborated. See its docstring for the three
     # measured ways the label alone decided whether a person existed.
-    attributes = {
-        attribute
-        for _, verdict in accepted
-        if (attribute := verdict_attribute(person, verdict))
-    }
-    independent = len(attributes) >= 2
+    attributes: set[str] = set()
+    for _, verdict in accepted:
+        attributes |= verdict_attributes(person, verdict)
+    # Decision 4's second arm asks for two `yes` VERDICTS citing different attributes, and
+    # the verdict count is now stated rather than implied. It used to be a side effect of
+    # `verdict_attribute` returning exactly one attribute per verdict, which is why a span
+    # naming both the employer and the city had to be filed under one of them and the other
+    # corroboration thrown away. The requirement belongs here, where it is what it says.
+    independent = len(accepted) >= 2 and len(attributes) >= 2
     resolved = bool(strong_keys) or independent
 
     if not resolved:
@@ -521,10 +535,10 @@ def attribute_family(disambiguator: str) -> str:
     four, which is how `role` twice came to refuse a person that `role` plus `job title`
     admitted.
 
-    A label outside the table keeps its normalised spelling, because this function is also
-    what `/debug` and the tests read to name an attribute and a lossy answer there helps
-    nobody. Deciding that two unknown labels are not two attributes belongs to
-    `verdict_attribute`, which is the caller that counts.
+    A label outside the table keeps its normalised spelling, because this is the function
+    a reader asks to NAME an attribute rather than to count one, and a lossy answer there
+    helps nobody. Deciding that two unknown labels are not two attributes belongs to
+    `verdict_attributes`, which is the caller that counts.
     """
     label = normalize_ws(disambiguator)
     if not label:
@@ -535,8 +549,8 @@ def attribute_family(disambiguator: str) -> str:
     return label
 
 
-def verdict_attribute(person: PersonRef, verdict: Verdict) -> str:
-    """The identity attribute this verdict actually corroborates, or `""` for none.
+def verdict_attributes(person: PersonRef, verdict: Verdict) -> frozenset[str]:
+    """Every identity attribute this verdict's evidence corroborates. Empty for none.
 
     Decision 4's second arm is the reason a person exists in the product at all, and
     handing that decision to `verdict.disambiguator` hands it to the model's vocabulary.
@@ -546,26 +560,75 @@ def verdict_attribute(person: PersonRef, verdict: Verdict) -> str:
     `handle`. The model chooses the word. It does not choose which of the person's details
     its own verbatim span names, so that is what is asked first:
 
-    1. If the evidence corroborates the family the label claims, the two agree — take it.
-    2. Else if the evidence corroborates a detail at all, take THAT, because the span is
-       checked against the document (Decision 5) and the label is checked against nothing.
-       A span naming both details is filed under `employer`, so one document contributes
-       one attribute and two `yes` verdicts are still needed.
-    3. Else fall back to the canonical family of the label — this is the only path for
-       `role`, `handle`, `school` and `coauthor`, none of which `PersonRef.details`
-       carries anything to corroborate against.
-    4. An off-contract label at step 3 becomes `other`: one bucket for everything the
-       system prompt did not ask for, so invented words cannot add up to independence.
+    1. If the evidence corroborates any of the person's own details, those ARE the
+       attributes and the label is not consulted. The span is checked against the document
+       (Decision 5); the label is checked against nothing.
+    2. Otherwise fall back to the canonical family of the label — the only path for
+       `role`, `handle`, `school` and `coauthor`, none of which `PersonRef.details` carries
+       anything to corroborate against — and an off-contract label becomes `other`, one
+       bucket for everything the system prompt did not ask for, so invented words cannot
+       add up to independence.
+
+    **Step 1 costs real resolutions and is kept anyway; this is the trade.** The
+    disambiguating detail a model quotes is overwhelmingly the employer, so a span
+    labelled `role` or `handle` that also quotes the employer is the COMMON case, and it
+    contributes `employer` alone. Measured, documents and labels held fixed: `role` +
+    `employer` where both spans quote the employer gives `{employer}`, not
+    `{employer, role}`; so does `handle` + `employer` where the handle span reads
+    `github.com/dwhitfield - Harrowgate Systems`, even though that span really does name a
+    handle. Those two people no longer resolve on the second arm.
+
+    Weakening it is what does not work. Preferring an in-contract label whenever the
+    corroborated detail is not the one the label names restores exactly the attack T-031
+    closed: the model relabels one of two employer-quoting spans `handle`, `handle` is
+    in-contract, and one fact counted twice becomes two independent attributes again.
+    Measured on a patched copy — `{employer, handle}`, `independent=True`. The label is
+    free to the model and the span is not, so a rule that lets the label outrank the span
+    hands Decision 4's second arm back to word choice, which is the thing the arm exists to
+    take away from it. Where a span genuinely turns on another attribute it can quote that
+    attribute instead of the employer, and then it counts.
+
+    What DID change is the other half, which was pure loss with nothing bought: a span
+    naming BOTH details used to be filed under `employer` only, so a GitHub or Wikidata
+    profile quoting the employer and the city corroborated one attribute instead of two.
+    That collapse was standing in for "one document must not resolve a person by itself" —
+    a requirement `resolve` now states directly by demanding two accepted verdicts, where
+    it is checkable, instead of paying for it by discarding evidence here.
     """
-    family = attribute_family(verdict.disambiguator)
     corroborated = _corroborated_details(verdict.evidence, person)
-    if family and family in corroborated:
-        return family
     if corroborated:
-        return corroborated[0]
+        return frozenset(corroborated)
+    family = attribute_family(verdict.disambiguator)
     if not family:
+        return frozenset()
+    return frozenset({family if family in _KNOWN_FAMILIES else _UNRECOGNISED_FAMILY})
+
+
+def verdict_attribute(person: PersonRef, verdict: Verdict) -> str:
+    """The single attribute that best names what this verdict turned on, or `""`.
+
+    `verdict_attributes` is what `resolve` counts; this is the one-word summary of the same
+    rule. It agrees with the label when the evidence bears the label out, and otherwise
+    names the most contradiction-bearing detail the span corroborates — `employer` before
+    `city`, the order `_CORROBORABLE` is written in.
+
+    It has no product caller today, and that is a gap in a file this module does not own
+    rather than a spare part: `web/templates/debug.html` renders `verdict.disambiguator`
+    raw, so the one surface that exists to explain a verdict shows the model's own word
+    instead of the attribute the evidence actually bore out — the same word this module
+    spent T-031 refusing to let decide anything. Rendering this function there is the
+    one-line change that closes it.
+    """
+    attributes = verdict_attributes(person, verdict)
+    if not attributes:
         return ""
-    return family if family in _KNOWN_FAMILIES else _UNRECOGNISED_FAMILY
+    family = attribute_family(verdict.disambiguator)
+    if family in attributes:
+        return family
+    for corroborable in _CORROBORABLE:
+        if corroborable in attributes:
+            return corroborable
+    return next(iter(attributes))
 
 
 def _corroborated_details(evidence: str, person: PersonRef) -> tuple[str, ...]:
@@ -706,10 +769,47 @@ def _sec_cik(person: PersonRef, docs: list[RawDoc]) -> str:
         # employer, which is exactly the case Decision 4 excludes.
         if not _mentions(haystack, employer):
             continue
-        found = _CIK.search(haystack)
-        if found:
-            candidates.append((found.group(1), _details_matched(haystack, person)))
+        details = _details_matched(haystack, person)
+        for cik in _person_ciks(haystack, person):
+            candidates.append((cik, details))
     return _best(candidates)
+
+
+def _person_ciks(haystack: str, person: PersonRef) -> tuple[str, ...]:
+    """The CIKs this filing gives THIS person, in text order; the leading one as fallback.
+
+    An ownership filing names at least two entities and gives each its own CIK — the
+    reporting owner and the issuer — and `connectors.edgar` renders EDGAR's `display_names`
+    verbatim into both the title and the body, so the page carries both numbers. Taking
+    `_CIK.search(haystack)`, the FIRST number on the page, therefore read whichever entity
+    EDGAR happened to list first: the person on one filing and her employer on the next.
+    Two filings about one human then produced two different values with identical evidence,
+    `_best` could not separate them, and the CIK it refused was one the corpus had stated
+    twice. `research._by_display_priority` makes that arrive more often — keeping the
+    edgar-stamped copy of a page `search` also indexed is its whole purpose, and it is
+    right to — but the wrong number was always being read; the merge only stopped hiding it
+    behind a `search` stamp that `_sec_cik` skipped.
+
+    So the number is chosen by the name standing next to it. Each `,`/newline-separated
+    entry of the rendered filing is one named entity, and the CIK that counts is the one in
+    an entry naming the person — `Quennebeck Marisol (CIK 0001742119)` and
+    `CIK of reporting person: 0009000701` are both that shape, and
+    `Thornfield Loom Inc. (CIK 0009876543)` is not. Two DIFFERENT CIKs both attributed to
+    the person are a contradiction, not a choice, so both are returned and `_best` refuses
+    them; the fallback for a rendering that co-locates nothing is the old leading match,
+    which keeps a page this rule cannot read no worse off than it already was.
+    """
+    named: list[str] = []
+    for entry in re.split(r"[\n,;]", haystack):
+        found = _CIK.search(entry)
+        if not found or not _name_matches(entry, person.name):
+            continue
+        if found.group(1) not in named:
+            named.append(found.group(1))
+    if named:
+        return tuple(named)
+    leading = _CIK.search(haystack)
+    return (leading.group(1),) if leading else ()
 
 
 def _company_domain(person: PersonRef, docs: list[RawDoc]) -> str:
@@ -724,6 +824,18 @@ def _company_domain(person: PersonRef, docs: list[RawDoc]) -> str:
     company instead of two that trade places with the arrival order. Everything left of
     the company's own label is a subdomain, and a subdomain names a section of a site, not
     a different employer.
+
+    Each candidate is scored on what its document SAYS, exactly as the other three
+    extractors are, and that is not a refinement — it is the difference between this
+    extractor ranking on evidence and it ranking on nothing. Scoring every host `1` left
+    `_best` with a single usable signal, the number of documents each host happened to
+    get, which is chosen by the same remote APIs whose ranking `_best` exists to stop
+    trusting; and on the ordinary shape — one `.com`, one `.io` or `.co.uk` or
+    GitHub-Pages docs site, one document each — the counts tied and the key was refused on
+    input that is not ambiguous at all. A page that names the person, the employer and the
+    city is a better claim that this host is the employer's own domain than a bare docs
+    host that merely spells the company's name, so it is ranked as one. The refusal stays
+    for hosts that really are inseparable; it is no longer the common path.
     """
     employer = _employer(person)
     if not employer:
@@ -739,7 +851,15 @@ def _company_domain(person: PersonRef, docs: list[RawDoc]) -> str:
         labels = host.split(".")
         for index, label in enumerate(labels[:-1]):  # everything but the TLD
             if label in {joined, hyphenated}:
-                candidates.append((".".join(labels[index:]), 1))
+                haystack = f"{doc.title}\n{doc.text}"
+                # 0..3: the two identifying details, plus the person's own name. The name
+                # is scored rather than required — a company's own domain is still the
+                # company's domain on a page that never names this employee — but a page
+                # that DOES name them is the stronger claim about whose employer it is.
+                evidence = _details_matched(haystack, person) + int(
+                    _name_matches(haystack, person.name)
+                )
+                candidates.append((".".join(labels[index:]), evidence))
                 break
     return _best(candidates)
 
@@ -840,8 +960,3 @@ def _details_matched(text: str, person: PersonRef) -> int:
     whoever arrived first.
     """
     return int(_mentions(text, _employer(person))) + int(_mentions(text, _city(person)))
-
-
-def _any_detail_matches(text: str, person: PersonRef) -> bool:
-    """True when the text matches the employer detail or the city detail (not just the name)."""
-    return _details_matched(text, person) > 0
