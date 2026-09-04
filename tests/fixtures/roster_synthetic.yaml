@@ -1,0 +1,21 @@
+# SPEC S1's two-person synthetic roster. Used by T-6's tests and by
+# `python -m arrival build --roster tests/fixtures/roster_synthetic.yaml` in the README.
+#
+# BOTH PEOPLE ARE INVENTED, and so is Quarrystone Labs. The ten real stand-ins live in
+# `data/roster.yaml` and are researched only by T-9's build run — SPEC C6 keeps them out
+# of every fixture, so a test can never accidentally send a real person's name at a real
+# source.
+#
+# The shape is DESIGN §Data models': `people: [{name, details: [..]}]`. There is no
+# `person_id` key on purpose — `person_id == slug(name)` is the product contract (SPEC Q1)
+# and this file is where that contract is exercised, so writing the ids down here would
+# test the file instead of the code.
+people:
+  - name: Marisol Trevino
+    details:
+      - platform lead, Quarrystone Labs
+      - Austin
+  - name: Anselm Kettleby
+    details:
+      - co-founder, Quarrystone Labs
+      - Austin
