@@ -871,6 +871,66 @@
       "defect": "OPENER_TEMPLATE = 'Ask about {text}' interpolates a fact verbatim, so a fact whose sentence begins with a verb produces an ungrammatical spoken line. Found by a LIVE uvicorn boot, not by any test: with ANTHROPIC_API_KEY unset, the Say-out-loud line on the frozen corpus rendered as 'Ask about Argues that developer-tools pricing should be published in full on a public page.' (hook fact runa-okonkwo-f03). R14 wants an invitation a host reads ALOUD and R18 exists to stop the host stumbling, but is_speakable only checks urls, citation markers, parentheses, scores and word count, so the template passes validation. THE REASON THIS MATTERS MORE THAN IT LOOKS: this is the fallback path, taken on EVERY timeout, every transport error, every rejected model line \u2014 and on any deploy without an API key, which is the demo's DEFAULT path. Fix direction: the template must produce a grammatical invitation from an arbitrary fact sentence (lowercase-and-embed, or select a noun-phrase, or template per FactCategory), and is_speakable should grade the property that failed here rather than only the five it already checks.",
       "finding_id": "55f8d969e1687213e9bd5ca2fd6120c5084af67fd4e64f69137a58f45fa527eb",
       "reproduction": "DOSSIER_DIR=<frozen corpus> DEBUG_VIEWS=1 and ANTHROPIC_API_KEY UNSET, then uvicorn arrival.web.app:app and open a digest for runa-okonkwo. The Say-out-loud line reads 'Ask about Argues that...'. No test catches it: the frozen t7 suite asserts the fallback starts with Ask/Curious and is speakable by the five existing checks, all of which this line satisfies."
+    },
+    {
+      "id": "T-030",
+      "title": "THE TASTE CLASSIFIER TRUSTS THE MODEL'S ECHO OF fact_id, AND AN R11 SENTENCE CAN BE DISPLAYED AS A RESULT. It joins the model's returned fact_id straight into a dict key \u2014 `rulings[ruling.fact_id] = ruling.verdict` \u2014 with no check that the id was one it sent and no id_map. `rulings` accumulates ACROSS batches, so a stray id from batch 2 overwrites batch 1, and two rulings sharing an id resolve last-wins by model output order. Failure mode: a `health` verdict lands on the wrong fact, the genuinely sensitive fact is marked keep, and R11 material is displayed on a host-facing page. This is the one stage that does neither of the two defences its siblings use: resolve.py:311 says in as many words 'the doc_id is OURS, never the model's echo of it', and extract.py routes claimed ids through an id_map. Taste is the product's scored differentiator and this is its highest-severity sibling defect.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/taste.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "HIGH",
+      "location": "src/arrival/taste.py:585",
+      "defect": "THE TASTE CLASSIFIER TRUSTS THE MODEL'S ECHO OF fact_id, AND AN R11 SENTENCE CAN BE DISPLAYED AS A RESULT. It joins the model's returned fact_id straight into a dict key \u2014 `rulings[ruling.fact_id] = ruling.verdict` \u2014 with no check that the id was one it sent and no id_map. `rulings` accumulates ACROSS batches, so a stray id from batch 2 overwrites batch 1, and two rulings sharing an id resolve last-wins by model output order. Failure mode: a `health` verdict lands on the wrong fact, the genuinely sensitive fact is marked keep, and R11 material is displayed on a host-facing page. This is the one stage that does neither of the two defences its siblings use: resolve.py:311 says in as many words 'the doc_id is OURS, never the model's echo of it', and extract.py routes claimed ids through an id_map. Taste is the product's scored differentiator and this is its highest-severity sibling defect.",
+      "finding_id": "96391ff298fa26b4c46d19cc0c75e5e73027b96197d4fb03b7ca1a5afe1258b1",
+      "reproduction": "Read taste.py:585-586 and its consumer at :614. Script the LLM double to return, for batch 2, a ruling whose fact_id is a fact from batch 1 with verdict keep, and observe the batch-1 exclusion overwritten. Compare against resolve.py:311 and extract.py's id_map for the two shapes that do it correctly."
+    },
+    {
+      "id": "T-031",
+      "title": "All four strong keys are 'the first accepted document that matches', in _interleave order, so the DURABLE identifier for a person depends on document arrival order rather than on evidence. _company_domain does not even filter by source_kind, so blog.quarrystonelabs.com or quarrystonelabs.com becomes the key depending which arrives first. _wikidata_qid has the same shape, and that QID is the canonical hub_id prefix for the entire graph. Related, resolve.py:211-216: 'two independent attributes' counts distinct verdict.disambiguator strings, which are free text the model chose, and attribute_family canonicalises only employer- and city-family spellings \u2014 so 'role' twice yields unresolved and no dossier at all, while 'role' + 'job title' resolves. The model's word choice decides whether a person exists in the product.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/resolve.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/resolve.py:495",
+      "defect": "All four strong keys are 'the first accepted document that matches', in _interleave order, so the DURABLE identifier for a person depends on document arrival order rather than on evidence. _company_domain does not even filter by source_kind, so blog.quarrystonelabs.com or quarrystonelabs.com becomes the key depending which arrives first. _wikidata_qid has the same shape, and that QID is the canonical hub_id prefix for the entire graph. Related, resolve.py:211-216: 'two independent attributes' counts distinct verdict.disambiguator strings, which are free text the model chose, and attribute_family canonicalises only employer- and city-family spellings \u2014 so 'role' twice yields unresolved and no dossier at all, while 'role' + 'job title' resolves. The model's word choice decides whether a person exists in the product.",
+      "finding_id": "332cd0d12e7bce940e40fd891e4f76a419343fa93c259027124a0b49fab5fa94",
+      "reproduction": "Read resolve.py:495-506, 515-531, 539-552, 569-575 for the first-match keys, and 211-216 with attribute_family for the disambiguator counting."
+    },
+    {
+      "id": "T-032",
+      "title": "_interleave dedupes on doc_id (= sha1(url)), so two connectors returning the SAME url collapse first-wins and the survivor's source_kind is decided by each remote API's ranking rather than by CONNECTOR_CLASSES order, whose docstring claims it is display priority. Concretely: a sec.gov index page arriving from `search` before `edgar` is stamped `search`; resolve._sec_cik then skips it (`if doc.source_kind != 'edgar': continue`) so the strong key is never earned, and digest.pick_non_obvious drops it from the 'Not on the first page' slot. A remote ranking silently decides both a strong key and a displayed section.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/research.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/research.py:338",
+      "defect": "_interleave dedupes on doc_id (= sha1(url)), so two connectors returning the SAME url collapse first-wins and the survivor's source_kind is decided by each remote API's ranking rather than by CONNECTOR_CLASSES order, whose docstring claims it is display priority. Concretely: a sec.gov index page arriving from `search` before `edgar` is stamped `search`; resolve._sec_cik then skips it (`if doc.source_kind != 'edgar': continue`) so the strong key is never earned, and digest.pick_non_obvious drops it from the 'Not on the first page' slot. A remote ranking silently decides both a strong key and a displayed section.",
+      "finding_id": "8ee37fac82131c1161393468e4c55aa19c06ea3833b0f9908c70305f8942123e",
+      "reproduction": "Read research.py:338-345 against CONNECTOR_CLASSES' docstring, then resolve._sec_cik's source_kind guard."
+    },
+    {
+      "id": "T-033",
+      "title": "_sources dedupes Provenance by doc_id, but Provenance is per-FACT and carries `quote` and `confidence` \u2014 so the citation shown for a document is whichever SECTION reached it first, not the one belonging to the fact being read. Related, digest.py:432-441: _capped_meet sorts on Match.score with no tiebreaker, and score is round(100*raw/ref) so ties are the normal case; its own docstring promises matches arrive 'in any order'. Currently safe only because the sole caller is graph.match, whose sort is total \u2014 so T-8 has inherited a silent dependency on another module's list order.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "src/arrival/digest.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "src/arrival/digest.py:487",
+      "defect": "_sources dedupes Provenance by doc_id, but Provenance is per-FACT and carries `quote` and `confidence` \u2014 so the citation shown for a document is whichever SECTION reached it first, not the one belonging to the fact being read. Related, digest.py:432-441: _capped_meet sorts on Match.score with no tiebreaker, and score is round(100*raw/ref) so ties are the normal case; its own docstring promises matches arrive 'in any order'. Currently safe only because the sole caller is graph.match, whose sort is total \u2014 so T-8 has inherited a silent dependency on another module's list order.",
+      "finding_id": "bba9c76da66ede27425a4892b9119c13c303fb96ea9e0f960fe53c96c481f8a6",
+      "reproduction": "Read digest.py:487-494 and 432-441 with the docstring above each."
     }
   ],
   "cut_list": [
