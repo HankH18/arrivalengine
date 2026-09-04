@@ -27,7 +27,13 @@ from typing import Literal, Union, get_args, get_origin
 
 import pytest
 
-pytestmark = pytest.mark.t3
+# Two markers, deliberately. `t3` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t3`), and every scored metric
+# selects on it. `ticket("T-3")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t3, pytest.mark.ticket("T-3")]
 
 # Frozen documents used as source text. Both are committed RawDoc dumps.
 _ABOUT_DOC = "35b4e2600c8a6ea6.json"  # self_page — Runa Okonkwo's own about page

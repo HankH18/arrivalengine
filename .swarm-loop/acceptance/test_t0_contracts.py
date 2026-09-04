@@ -27,7 +27,13 @@ import typing
 
 import pytest
 
-pytestmark = pytest.mark.t0
+# Two markers, deliberately. `t0` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t0`), and every scored metric
+# selects on it. `ticket("T-0")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t0, pytest.mark.ticket("T-0")]
 
 
 # --------------------------------------------------------------------------------------

@@ -30,7 +30,13 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.t9
+# Two markers, deliberately. `t9` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t9`), and every scored metric
+# selects on it. `ticket("T-9")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t9, pytest.mark.ticket("T-9")]
 
 
 VALIDATOR_PATH = Path("tests") / "test_t9_committed_dossiers.py"

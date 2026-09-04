@@ -21,7 +21,13 @@ import math
 
 import pytest
 
-pytestmark = pytest.mark.t5
+# Two markers, deliberately. `t5` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t5`), and every scored metric
+# selects on it. `ticket("T-5")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t5, pytest.mark.ticket("T-5")]
 
 
 # --------------------------------------------------------------------------- constants

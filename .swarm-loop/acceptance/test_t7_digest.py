@@ -27,7 +27,13 @@ import typing
 
 import pytest
 
-pytestmark = pytest.mark.t7
+# Two markers, deliberately. `t7` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t7`), and every scored metric
+# selects on it. `ticket("T-7")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t7, pytest.mark.ticket("T-7")]
 
 try:  # 3.10+ writes `X | None` as types.UnionType, 3.9 as typing.Union
     from types import UnionType as _UnionType

@@ -28,9 +28,14 @@ import re
 import typing
 
 import pytest
-import yaml
 
-pytestmark = pytest.mark.t6
+# Two markers, deliberately. `t6` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t6`), and every scored metric
+# selects on it. `ticket("T-6")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t6, pytest.mark.ticket("T-6")]
 
 try:  # 3.10+ writes `X | None` as types.UnionType, 3.9 as typing.Union
     from types import UnionType as _UnionType
@@ -137,6 +142,7 @@ def _corpus(people, kinds, per_kind):
 
 
 def _write_roster(tmp_path, people):
+    import yaml  # lazy: module-scope third-party imports make a missing wheel a COLLECTION error, which reports numbers instead of dying
     path = tmp_path / "roster_synthetic.yaml"
     path.write_text(
         yaml.safe_dump(

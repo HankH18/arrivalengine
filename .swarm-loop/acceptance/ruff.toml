@@ -14,6 +14,14 @@
 line-length = 100
 target-version = "py312"
 
+# MUST match the project's own [tool.ruff] `src`. Without it ruff's isort classifies
+# the product package as THIRD-PARTY, so a correctly-sorted import block is reported
+# I001. Measured on T-0's clean scaffold: `ruff check src tests` passed under the
+# project config and reported 4 x I001 under this one -- i.e. the header note two
+# paragraphs down ("a divergence means a lane can go green on its own gate while the
+# scored number disagrees") describing the exact defect this file had.
+src = ["src", "tests"]
+
 # No `exclude` and no `extend-exclude`: the metric passes explicit `src tests` paths, so
 # there is nothing to exclude, and an exclude list here would be the same hole this file
 # exists to close.

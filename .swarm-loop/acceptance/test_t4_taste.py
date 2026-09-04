@@ -25,9 +25,14 @@ import typing
 from datetime import datetime
 
 import pytest
-import yaml
 
-pytestmark = pytest.mark.t4
+# Two markers, deliberately. `t4` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t4`), and every scored metric
+# selects on it. `ticket("T-4")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t4, pytest.mark.ticket("T-4")]
 
 
 # --------------------------------------------------------------------------- constants
@@ -84,6 +89,7 @@ _FIXED_RETRIEVED_AT = datetime.fromisoformat("2026-02-21T08:30:00+00:00")
 
 
 def _load_cases(frozen_fixtures) -> list[dict]:
+    import yaml  # lazy: module-scope third-party imports make a missing wheel a COLLECTION error, which reports numbers instead of dying
     """Read the orchestrator-owned taste corpus."""
     path = frozen_fixtures / "taste_cases_frozen.yaml"
     doc = yaml.safe_load(path.read_text(encoding="utf-8"))

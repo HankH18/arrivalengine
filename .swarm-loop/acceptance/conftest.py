@@ -30,6 +30,12 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "guard: contract guard - green at baseline by design, excluded from scored counts"
     )
+    # The ARGUMENT form, carried alongside the tN names. Scored selection never uses it;
+    # the freeze-time coverage gate and the read-edge closure gate parse it out of the
+    # AST, and without it both see a fully-marked suite as entirely unattributed.
+    config.addinivalue_line(
+        "markers", "ticket(id): the ticket this frozen acceptance criterion grades"
+    )
 
 
 @pytest.fixture(scope="session")

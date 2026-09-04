@@ -22,7 +22,13 @@ from typing import Literal, Union, get_args, get_origin
 
 import pytest
 
-pytestmark = pytest.mark.t2
+# Two markers, deliberately. `t2` is the marker NAME this suite's own
+# conftest mandates for selection (`pytest -m t2`), and every scored metric
+# selects on it. `ticket("T-2")` is the ARGUMENT form the freeze-time coverage
+# and read-edge gates parse out of the AST; without it those gates see a suite
+# with zero attributed tests and freeze refuses every ticket. Additive on
+# purpose: neither dialect replaces the other.
+pytestmark = [pytest.mark.t2, pytest.mark.ticket("T-2")]
 
 _ACCEPTANCE_DIR = Path(__file__).resolve().parent
 _RESOLVE_CASE_DIR = _ACCEPTANCE_DIR / "fixtures" / "resolve_cases"

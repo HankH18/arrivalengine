@@ -47,6 +47,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import os
 import shutil
@@ -83,6 +84,32 @@ def _die(metric_id: str, message: str, detail: str = "") -> None:
     raise SystemExit(3)
 
 
+def _hermetic_env() -> dict[str, str]:
+    """The ONE environment every subprocess in this runner uses.
+
+    Two jobs, and both were previously done wrong in different places.
+
+    1. PYTHONPATH is SET, not inherited and not stripped.  Stripping it made every
+       metric depend entirely on the editable install, and on macOS `uv venv` sets
+       UF_HIDDEN on the .venv tree while CPython >= 3.12.6's site.addpackage silently
+       SKIPS hidden .pth files -- so a clean `uv sync` that exits 0 leaves a correct
+       editable install completely inert and every metric _die()s.  Setting it pins
+       the value (hermetic) AND survives an inert install (robust).
+    2. It is applied at EVERY call site.  `_assert_product_importable` used to inherit
+       the ambient env while `_run_pytest` stripped it, so the precondition could pass
+       while the measurement it guards failed.
+
+    PYTHONDONTWRITEBYTECODE is set here rather than at one call site: three of the four
+    subprocesses used to omit it and wrote .pyc files into the frozen, hash-protected
+    acceptance directory, so merely MEASURING mutated the manifest.
+    """
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(REPO_ROOT / "src")
+    env.pop("VIRTUAL_ENV", None)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    return env
+
+
 def _assert_product_importable(metric_id: str) -> None:
     """A mis-rooted runner must never be reportable as a product failure."""
     proc = subprocess.run(
@@ -90,6 +117,7 @@ def _assert_product_importable(metric_id: str) -> None:
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        env=_hermetic_env(),
     )
     if proc.returncode != 0:
         _die(
@@ -116,6 +144,8 @@ def _pytest_argv(extra: list[str]) -> list[str]:
         "--tb=no",
         "-o",
         "addopts=",
+        "-c",
+        str(ACC_DIR / "pytest.ini"),
         "-p",
         "no:cacheprovider",
         "--confcutdir",
@@ -135,10 +165,7 @@ def _run_pytest(metric_id: str, extra: list[str]) -> tuple[dict, str]:
     """
     tmp = tempfile.mkdtemp(prefix="swarm-acc-")
     xml_path = Path(tmp) / "report.xml"
-    env = dict(os.environ)
-    # Neutralise anything inherited that could point the runner at another tree.
-    env.pop("PYTHONPATH", None)
-    env.pop("VIRTUAL_ENV", None)
+    env = _hermetic_env()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     try:
         proc = subprocess.run(
@@ -171,15 +198,28 @@ def _run_pytest(metric_id: str, extra: list[str]) -> tuple[dict, str]:
             "skipped": skipped,
             "exit": proc.returncode,
         }
+        # A COLLECTION error is a broken measuring stick, not a low score. Measured: with
+        # one third-party module-scope import shadowed, pytest reported "Interrupted: 2
+        # errors during collection", junit said tests=2 errors=2, and --pass-rate printed
+        # 0.0 with exit 0 -- a silently DEFLATED denominator wearing a real number. Two
+        # frozen modules still import yaml at module scope, so this is reachable today.
+        if errors:
+            _die(
+                metric_id,
+                f"{errors} COLLECTION/SETUP error(s): the suite could not be assembled, "
+                "so this number is about the harness, not the product",
+                raw,
+            )
+        # exit 2 = INTERNALERROR / usage error / interrupted. Never a score.
+        if proc.returncode == 2:
+            _die(metric_id, "pytest exited 2 (internal error, usage error, or interrupted)", raw)
         return counts, raw
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _collected(metric_id: str, extra: list[str]) -> tuple[int, str]:
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
-    env.pop("VIRTUAL_ENV", None)
+    env = _hermetic_env()
     # NOTE: exactly ONE -q, supplied by _pytest_argv. A second -q makes pytest -qq, which
     # switches collect-only from node ids to a compact "<file>: <count>" summary with no
     # "::" in it at all — the node-id counter below then reads 0 and _die()s on a healthy
@@ -270,10 +310,23 @@ def _build() -> int:
         "from arrival.__main__ import main;"
         "rc = main(['definitely-not-a-command']);"
         "assert rc == 2, f'unknown command returned {rc}, expected 2';"
+        # POSITIVE CONTROL. Without it `def main(argv): return 2` satisfies this whole
+        # metric: the negative probe alone cannot tell a working CLI from a stub that
+        # returns 2 for everything. --help is the one command every argparse CLI has.
+        "rc0 = main(['--help']) if False else None;"
+        "import contextlib, io;"
+        "buf = io.StringIO();"
+        "ok0 = None;"
+        "\ntry:\n"
+        "    with contextlib.redirect_stdout(buf):\n"
+        "        ok0 = main(['--help'])\n"
+        "except SystemExit as e:\n"
+        "    ok0 = e.code if e.code is not None else 0\n"
+        "assert ok0 == 0, f'--help returned {ok0}, expected 0 (a CLI that returns the "
+        "same code for every command is a stub, not a build)'\n"
         "print('ok')"
     )
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
+    env = _hermetic_env()
     proc = subprocess.run(
         [sys.executable, "-c", probe], cwd=REPO_ROOT, capture_output=True, text=True, env=env
     )
@@ -322,12 +375,26 @@ def _lint() -> int:
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
+        env=_hermetic_env(),
     )
     raw = f"exit={proc.returncode}\n--- stdout ---\n{proc.stdout}\n--- stderr ---\n{proc.stderr}"
     # ruff exits 0 with no findings, 1 with findings, 2 on a usage/config error. A usage
     # error must never read as a clean zero.
     if proc.returncode not in (0, 1):
         _die("lint_errors", f"ruff failed to run (exit {proc.returncode})", raw)
+    # ...and neither must a MISSING linter. `python -m ruff` with ruff absent exits 1
+    # with ZERO bytes of stdout, which is inside the window above, and json.loads("[]")
+    # then prints a perfect 0. Measured: a venv without ruff returns exactly that.
+    # ruff ALWAYS emits a JSON document under --output-format json when it actually
+    # ran, so empty stdout means it did not run, at any exit code.
+    if not proc.stdout.strip():
+        _die(
+            "lint_errors",
+            "ruff produced NO output - it did not run (is it installed in "
+            f"{sys.executable}?). An uninstalled linter reporting zero errors is the "
+            "exact false green this check exists to refuse.",
+            raw,
+        )
     try:
         diagnostics = json.loads(proc.stdout or "[]")
     except json.JSONDecodeError:
@@ -345,28 +412,88 @@ def _selfcheck() -> int:
     frozen conftest imports nothing from the product.
     """
     problems: list[str] = []
+    # Imports that are ALWAYS safe at module scope: the standard library plus pytest
+    # itself, which the runner cannot function without anyway. Everything else -- the
+    # product AND any third-party wheel -- must be imported inside a function body.
+    _STDLIB_OK = set(sys.stdlib_module_names) | {"pytest", "__future__"}
     for path in sorted(ACC_DIR.glob("test_*.py")) + [ACC_DIR / "conftest.py"]:
         if not path.exists():
             continue
-        for i, line in enumerate(path.read_text().splitlines(), 1):
-            stripped = line.strip()
-            if not (stripped.startswith("import ") or stripped.startswith("from ")):
+        text = path.read_text()
+        # AST, not line prefixes: a docstring sentence beginning "from ..." is prose,
+        # and a line-based scan reported two of them as module-scope imports.
+        tree = ast.parse(text)
+        for node in tree.body:
+            if not isinstance(node, (ast.Import, ast.ImportFrom)):
                 continue
-            if PRODUCT_NAMESPACE not in stripped:
-                continue
-            indent = len(line) - len(line.lstrip())
-            if indent == 0:
-                problems.append(
-                    f"{path.name}:{i}: MODULE-SCOPE product import turns an unbuilt "
-                    f"feature into a collection error, which is indistinguishable "
-                    f"from a broken measuring stick -> {stripped}"
-                )
+            if isinstance(node, ast.ImportFrom):
+                if node.level:
+                    continue  # relative: resolves inside the acceptance package
+                roots = [(node.module or "").split(".")[0]]
+            else:
+                roots = [a.name.split(".")[0] for a in node.names]
+            for root in roots:
+                if not root or root in _STDLIB_OK:
+                    continue
+                src = ast.get_source_segment(text, node) or root
+                if root == PRODUCT_NAMESPACE:
+                    problems.append(
+                        f"{path.name}:{node.lineno}: MODULE-SCOPE product import turns an "
+                        f"unbuilt feature into a collection error, which is "
+                        f"indistinguishable from a broken measuring stick -> {src}"
+                    )
+                else:
+                    # Measured: with one such wheel absent, pytest reported "2 errors
+                    # during collection", junit said tests=2 errors=2, and --pass-rate
+                    # printed 0.0 at exit 0 -- a silently DEFLATED denominator wearing a
+                    # real number. This check was blind to it because it only ever
+                    # looked for the product namespace.
+                    problems.append(
+                        f"{path.name}:{node.lineno}: MODULE-SCOPE THIRD-PARTY import "
+                        f"({root}) -- a missing wheel aborts collection of this module "
+                        f"while the others still collect, so every metric silently loses "
+                        f"this module's tests from its denominator -> {src}"
+                    )
     marked = 0
+    # T-0 is the ONLY module allowed to be entirely `guard`. Its tests are contract
+    # regressions that are green at baseline by design, so it carries no criteria_t0
+    # metric and a scored selector would legitimately match zero. Every other ticket
+    # is graded by `-m "tN and not guard"`, and a module that is all-guard makes that
+    # selector match nothing -- which _die()s the metric rather than scoring it. Three
+    # separate review lenses each had to find that by hand; it is three lines here.
+    ALL_GUARD_OK = {"test_t0_contracts.py"}
     for path in sorted(ACC_DIR.glob("test_t*.py")):
-        if "pytestmark" not in path.read_text():
+        text = path.read_text()
+        if "pytestmark" not in text:
             problems.append(f"{path.name}: no pytestmark -> its tests belong to no ticket metric")
         else:
             marked += 1
+        if path.name in ALL_GUARD_OK:
+            continue
+        tree = ast.parse(text)
+        scored = 0
+        for node in ast.walk(tree):
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if not node.name.startswith("test_"):
+                continue
+            # node.decorator_list, NOT get_source_segment: a FunctionDef's lineno
+            # points at the `def`, so the source segment EXCLUDES its decorators and
+            # a guard-mark scan over it can never match. Caught by a positive control
+            # that failed to fire on a deliberately all-guard module.
+            is_guard = False
+            for dec in node.decorator_list:
+                fn = dec.func if isinstance(dec, ast.Call) else dec
+                if isinstance(fn, ast.Attribute) and fn.attr == GUARD_MARK:
+                    is_guard = True
+            if not is_guard:
+                scored += 1
+        if scored == 0:
+            problems.append(
+                f"{path.name}: EVERY test is @pytest.mark.{GUARD_MARK}, so the scored "
+                f"selector -m '<ticket> and not {GUARD_MARK}' matches nothing and the "
+                f"metric _die()s instead of returning a number"
+            )
     if problems:
         print("SELFCHECK FAILED", file=sys.stderr)
         for p in problems:
