@@ -143,3 +143,11 @@ anything under the project's `tests/` is forbidden, because it looks helpful.
   mid-sabotage, restored the file, confirmed git diff --stat was empty, and still measured the
   sabotaged failures — so a verification step can report a number belonging to code that is no
   longer in the tree, in either direction.
+
+- (cycle 2) **Record a dispatch in the ledger in the SAME tool call that spawns the agent,
+  never afterwards; an agent you meant to record and did not is invisible to resume and to the
+  wave check.** — Twice in one run the orchestrator provisioned worktrees and spawned lanes
+  without a matching dispatch record, so 'dispatch --list' reported nothing in flight while
+  two lanes were building. A resumed session reads that as no work outstanding and
+  re-dispatches onto the same files, and the wave check cannot intersect ownership it cannot
+  see.
