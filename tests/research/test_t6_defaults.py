@@ -61,3 +61,11 @@ def test_the_default_client_reads_settings_at_call_time_not_import_time(monkeypa
         assert_conforms(_default_llm(), LLMClient)
     finally:
         get_settings.cache_clear()
+
+
+def test_the_smart_schema_set_is_read_from_the_resolver_not_written_as_a_string():
+    """A rename inside `arrival.resolve` must not silently demote resolution to the cheap
+    model. Reading the name off the class is what makes that impossible."""
+    from arrival.resolve import DocVerdict
+
+    assert _TieredClient.SMART_SCHEMAS == frozenset({DocVerdict.__name__})

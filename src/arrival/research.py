@@ -63,7 +63,7 @@ from arrival.contracts import (
     SourceKind,
 )
 from arrival.extract import ExtractionStats, extract
-from arrival.resolve import resolve
+from arrival.resolve import DocVerdict, resolve
 from arrival.taste import apply_taste
 from arrival.util import slug
 
@@ -174,8 +174,15 @@ class _TieredClient:
 
     #: Response schemas that get the smart model. `DocVerdict` is `arrival.resolve`'s
     #: internal judgement schema — the identity decision every later stage inherits, and
-    #: the one place in the pipeline where being cheap is expensive.
-    SMART_SCHEMAS = frozenset({"DocVerdict"})
+    #: the one place in the pipeline where being cheap is expensive. Every other schema in
+    #: the pipeline (`ExtractionResult`, `TasteRulings`) is fast-model work by DESIGN
+    #: Decision 9.
+    #:
+    #: Taken from the CLASS rather than written as the string "DocVerdict": that schema is
+    #: internal to `arrival.resolve` and pinned by nothing, so a rename there would
+    #: otherwise route resolution to the cheap model silently and forever. Read this way a
+    #: rename follows automatically and a deletion is an ImportError.
+    SMART_SCHEMAS = frozenset({DocVerdict.__name__})
 
     def __init__(self, smart: LLMClient, fast: LLMClient) -> None:
         self._smart = smart
