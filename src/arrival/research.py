@@ -323,6 +323,66 @@ async def _search_one(
     return docs
 
 
+def _display_rank(kind: str) -> int:
+    """Where `kind` sits in `connectors.DISPLAY_PRIORITY`; unranked kinds sort last.
+
+    Imported lazily and not cached here: `arrival.connectors` pulls in httpx and all ten
+    source modules, and `import arrival.research` is deliberately free of both (see
+    `_default_connectors`). After the first call it is a `sys.modules` lookup.
+
+    A `SourceKind` with no connector — `uspto`, `podcast`, or the two SPEC Q4 withholds —
+    is a legal value of the field and must not become a `ValueError` from `.index()`. It
+    simply has no claim to display priority, so it loses to every kind that does.
+    """
+    from arrival.connectors import DISPLAY_PRIORITY
+
+    try:
+        return DISPLAY_PRIORITY.index(kind)  # type: ignore[arg-type]
+    except ValueError:
+        return len(DISPLAY_PRIORITY)
+
+
+def _by_display_priority(batches: Sequence[list[RawDoc]]) -> dict[str, RawDoc]:
+    """For each `doc_id`, the copy from the highest-priority source that returned it.
+
+    `doc_id` is `sha1(url)[:16]`, so two connectors that surface the same page hand this
+    module two `RawDoc`s with ONE identity, and exactly one of them can survive. Which one
+    is not cosmetic: `source_kind` is read as a claim about provenance downstream, by
+    `resolve._sec_cik` (`if doc.source_kind != "edgar": continue`, so the `sec_cik` strong
+    key is only ever earned from an edgar-stamped document) and by
+    `digest.NON_OBVIOUS_KINDS` (which excludes `search`, so a `search` stamp costs the
+    document R7's "Not on the first page" slot). Deciding it first-wins would let two
+    remote APIs' relative latency and ranking pick a durable identifier and a displayed
+    section — the same input scoring differently on two runs.
+
+    `CONNECTOR_CLASSES` already declares the order a reader should meet sources in, and
+    `DISPLAY_PRIORITY` is that order as a tuple. This is where the declaration becomes
+    true. Ties — including two documents of the same kind, the ordinary duplicate — keep
+    the first arrival, so the merge stays deterministic for inputs priority cannot separate.
+
+    The whole document survives, not just its kind: a search engine's snippet restamped
+    `edgar` would pass every downstream kind check while still not containing the CIK that
+    makes the check worth passing. The stamp and the evidence move together or neither does.
+    """
+    winners: dict[str, RawDoc] = {}
+    ranks: dict[str, int] = {}
+    for batch in batches:
+        for doc in batch:
+            rank = _display_rank(doc.source_kind)
+            if doc.doc_id in winners and rank >= ranks[doc.doc_id]:
+                continue
+            if doc.doc_id in winners:
+                log.debug(
+                    "same url from two sources: %s outranks %s for %s",
+                    doc.source_kind,
+                    winners[doc.doc_id].source_kind,
+                    doc.url,
+                )
+            winners[doc.doc_id] = doc
+            ranks[doc.doc_id] = rank
+    return winners
+
+
 def _interleave(batches: Sequence[list[RawDoc]], max_total: int) -> list[RawDoc]:
     """Documents taken round-robin across sources, deduplicated, capped at `max_total`.
 
@@ -330,17 +390,24 @@ def _interleave(batches: Sequence[list[RawDoc]], max_total: int) -> list[RawDoc]
     connectors return together, and taking the first N in connector order would spend the
     whole allowance on `self_page` and never read a word from `search`. Going wide is the
     entire retrieval strategy, so the cap has to be applied in a way that keeps it wide.
+
+    Two decisions, kept separate on purpose. WHERE a document sits is the round-robin's
+    call — the position of its FIRST appearance across the columns, so a duplicate costs
+    one slot and never a source's place in the spread. WHAT is emitted there is
+    `_by_display_priority`'s call, so a page several sources indexed arrives stamped with
+    the source the project ranks highest rather than the one that answered first.
     """
     ordered: list[RawDoc] = []
     seen: set[str] = set()
     if max_total <= 0:
         return ordered
+    winners = _by_display_priority(batches)
     for column in zip_longest(*batches):
         for doc in column:
             if doc is None or doc.doc_id in seen:
                 continue
             seen.add(doc.doc_id)
-            ordered.append(doc)
+            ordered.append(winners[doc.doc_id])
             if len(ordered) >= max_total:
                 return ordered
     return ordered
