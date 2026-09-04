@@ -15,7 +15,16 @@ Decision 4 is the rule:
    however confident any other verdict is. Confidences are never pooled or averaged: in
    the frozen decoy corpus the decoy's verdicts (0.96 / 0.94 / 0.91) are *more* confident
    than the target's (0.74 / 0.69), so any implementation that averages lands on the
-   dead marine archaeologist.
+   dead marine archaeologist. The veto has two halves, and they are judged by two
+   different questions because they carry two different costs. Whether a document is
+   ACCEPTED is decided by the verdict's polarity (`negative_evidence_veto`): the model
+   already said `no` on employer or city grounds, so "the evidence does not corroborate
+   our detail" is a safe reading of it. Whether a document may anchor a STRONG KEY is
+   decided by the evidence alone (`conflicting_identity_claim`), polarity-free and
+   strict: a key is a durable claim about which human being this is, so a document that
+   names somebody ELSE's employer or work location must not anchor one even when its
+   verdict is `yes` — while a `yes` that merely omits the employer string is a normal,
+   keyable document and must not be punished for it.
 4. **Resolution needs a strong key OR two independent attributes.** A strong key is a
    durable identifier matched on more than the name: a Wikidata QID matched on name AND a
    detail, a company domain derived from the detail, a GitHub profile confirmed by name
@@ -34,7 +43,8 @@ name and nothing else, a GitHub profile can confirm a name with its company fiel
 and an EDGAR filing can match name and city while naming an entirely different issuer.
 Each of those documents is a genuine `yes` and IS accepted — refusing the key is not the
 same as refusing the document. So the key checks read the document, not its `source_kind`,
-and only documents that were accepted may carry a key at all.
+and only documents that were accepted — and that do not themselves assert somebody else's
+employer or work location — may carry a key at all.
 """
 
 from __future__ import annotations
@@ -58,6 +68,7 @@ __all__ = [
     "DocVerdict",
     "attribute_family",
     "cites_document",
+    "conflicting_identity_claim",
     "negative_evidence_veto",
     "resolve",
     "strong_keys_for",
@@ -86,6 +97,35 @@ _ORG_SUFFIXES = frozenset(
 # Disambiguator spellings that name an identity attribute a document can CONTRADICT.
 _EMPLOYER_WORDS = ("employer", "company", "organisation", "organization", "workplace", "firm")
 _CITY_WORDS = ("city", "location", "town", "where they live", "residence")
+
+# Structured `Label: value` claims an identity document makes about employer and city.
+# `conflicting_identity_claim` reads these; a document that makes none of them asserts no
+# conflict, whatever else it says.
+_IDENTITY_FIELDS = (
+    ("employer", ("employer", "company", "workplace")),
+    ("city", ("work location", "location", "city")),
+)
+
+# Every field label a run-together profile might use, so a captured value can be cut at
+# the next one. Not only the identity fields: `Name:` and `Occupation:` sit between them.
+_LABEL_ALTERNATION = "|".join(
+    re.escape(label)
+    for label in (
+        "employer",
+        "company",
+        "workplace",
+        "work location",
+        "location",
+        "city",
+        "name",
+        "occupation",
+        "instance of",
+        "country of citizenship",
+        "title",
+        "relationship",
+        "issuer",
+    )
+)
 
 _QID = re.compile(r"\bQ\d{1,12}\b")
 _CIK = re.compile(r"\bCIK(?:\s+of\s+[a-z ]+)?\s*[:#]?\s*(\d{6,12})\b", re.IGNORECASE)
@@ -147,12 +187,27 @@ async def resolve(person: PersonRef, docs: list[RawDoc], llm: LLMClient) -> Reso
     accepted: list[tuple[RawDoc, Verdict]] = []
     unaccepted: list[Verdict] = []
     for doc, verdict in zip(unique, verdicts, strict=True):
-        if verdict.match == "yes" and not negative_evidence_veto(person, verdict):
+        # The veto is asked FIRST, of every verdict, and its answer decides the document's
+        # fate on its own. Asking it only about verdicts that had already passed
+        # `match == "yes"` made its positive branch unreachable from here — the caller and
+        # the callee tested disjoint conditions, so the pipeline never once consulted
+        # DESIGN Decision 4's hard reject however the model answered.
+        if negative_evidence_veto(person, verdict):
+            unaccepted.append(verdict)
+            continue
+        if verdict.match == "yes":
             accepted.append((doc, verdict))
         else:
             unaccepted.append(verdict)
 
-    strong_keys = strong_keys_for(person, [doc for doc, _ in accepted])
+    # Acceptance is not enough to anchor a strong key. An accepted document whose own
+    # evidence names another employer or another work location identifies a DIFFERENT
+    # human being with the same name, and a key taken from it is durable and wrong — the
+    # exact SPEC S4 failure, arriving through a `yes` instead of through a `no`.
+    keyable = [
+        doc for doc, verdict in accepted if not conflicting_identity_claim(person, verdict)
+    ]
+    strong_keys = strong_keys_for(person, keyable)
     attributes = {
         attribute_family(verdict.disambiguator)
         for _, verdict in accepted
@@ -299,6 +354,15 @@ def negative_evidence_veto(person: PersonRef, verdict: Verdict) -> bool:
 
     An uncited `no` never reaches here: `_verdict_from` has already demoted it to `unsure`,
     so hallucinated negative evidence cannot veto anything either.
+
+    The polarity guard below is load-bearing and is NOT the thing to relax. `resolve` calls
+    this on every verdict, so the guard is what confines the veto to verdicts the model has
+    already decided against — and that is deliberate, because the test this applies to the
+    evidence ("it does not mention our employer") reads absence of corroboration as
+    conflict. On a `no` that is a sound reading of an answer the model has already given.
+    On a `yes` it is not: a genuine `yes` routinely cites a span that never spells the
+    employer out. The evidence-only question an accepted document has to answer instead is
+    `conflicting_identity_claim`.
     """
     if verdict.match != "no":
         return False
@@ -313,6 +377,60 @@ def negative_evidence_veto(person: PersonRef, verdict: Verdict) -> bool:
     # If the negative evidence quotes the person's OWN employer/city it is not asserting a
     # conflicting one, whatever else it says, so it rejects without vetoing.
     return not _mentions(verdict.evidence, detail)
+
+
+def conflicting_identity_claim(person: PersonRef, verdict: Verdict) -> bool:
+    """True when this verdict's evidence NAMES an employer or city that is not the person's.
+
+    Polarity-free on purpose, and deliberately a different question from
+    `negative_evidence_veto`. That one reads a `no` the model has already committed to and
+    can afford to treat "the evidence does not mention our employer" as a conflict. This
+    one runs over documents that were ACCEPTED, where the same reading would be a
+    disaster: `strong-key-sec-cik`'s winning verdict cites *"Relationship of reporting
+    person to issuer: Officer. Title: Chief Financial Officer."*, which never spells the
+    employer out, and treating that silence as a contradiction throws away a CIK that
+    Decision 4 says is earned.
+
+    So this asks for a POSITIVE assertion instead: a structured `Employer:` / `Company:` /
+    `Work location:` / `Location:` / `City:` claim whose value is set and is not the
+    person's. That is the shape identity documents actually use — a Wikidata item mirror,
+    a GitHub profile — and it is the shape that makes a strong key look earned when it is
+    not. Evidence that simply says nothing about the attribute is not a conflict.
+
+    Only a strong key turns on this. Whether the document is accepted is decided by the
+    verdict (see `resolve`), because a `yes` on a document that also names another
+    employer is a judgement the model made with the whole text in front of it, and the
+    frozen suite pins that reading.
+    """
+    for attribute, labels in _IDENTITY_FIELDS:
+        detail = _employer(person) if attribute == "employer" else _city(person)
+        if not detail:
+            # Nothing of ours to conflict WITH. Unlike a `no`, an accepted document gets
+            # the benefit of the doubt: we cannot call a claim wrong without a claim of
+            # our own to weigh it against.
+            continue
+        for label in labels:
+            value = _claimed_field(verdict.evidence, label)
+            if not value or _is_unset(value):
+                continue
+            if not _mentions(value, detail):
+                return True
+    return False
+
+
+def _claimed_field(text: str, label: str) -> str:
+    """The value a `Label: value` claim asserts, or `""` when the claim is not made."""
+    found = re.search(rf"\b{re.escape(label)}\s*:\s*([^\n.]*)", text, re.IGNORECASE)
+    if not found:
+        return ""
+    value = found.group(1)
+    # A run-together profile — `Name: X Company: not set Location: Y` — puts the NEXT
+    # field inside this one's capture, which would read an unset company as the string
+    # "not set Location: Y" and call it a conflicting employer. Cut at the next label.
+    boundary = re.search(rf"\s+\b(?:{_LABEL_ALTERNATION})\s*:", value, re.IGNORECASE)
+    if boundary:
+        value = value[: boundary.start()]
+    return value.strip()
 
 
 def _contradicted_attribute(disambiguator: str) -> str | None:
