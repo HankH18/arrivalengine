@@ -221,19 +221,46 @@ def test_prose_with_accents_and_emoji_is_not_mistaken_for_binary(monkeypatch, tm
     assert "Zoë Fernández-Ruíz" in doc.text and "🎉" in doc.text
 
 
+#: Real French prose, not an ASCII transliteration. See the docstring below for why the
+#: distinction is the whole point of this test.
+_FRENCH_PROSE = (
+    "Le Métier Fernández a été fondé à Marfa par une équipe de tisserands venus "
+    "d'Aubusson. "
+    + (
+        "La maison privilégie les fibres françaises, teintes à la main dans l'atelier de "
+        "la rue Saint-Étienne, et refuse catégoriquement les métiers automatisés. " * 6
+    )
+    + "Coût d'un métrage : 4 euros."
+)
+
+
 def test_a_legacy_encoded_page_is_still_text_even_though_it_is_not_utf8(
     monkeypatch, tmp_path
 ):
-    """A latin-1 page with no declared charset decodes with replacement characters. That
-    is a lossy read of a TEXT document, not a binary body, and dropping it would lose a
-    page the old code at least returned."""
-    prose = (
-        "<html><body><p>Le Metier Fernandez a ete fonde a Marfa. "
-        + ("Une maison de tissage independante. " * 30)
-        + "Cout: 4 euros.</p></body></html>"
-    )
-    body = prose.encode("latin-1").replace(b"ete", b"\xe9t\xe9").replace(b"Cout", b"Co\xfbt")
-    _serve(monkeypatch, 200, {"content-type": "text/html"}, body)
+    """A latin-1 page with no declared charset is a TEXT document and must survive INTACT.
+
+    DELIBERATE STRENGTHENING (T-045), recorded here because this replaces an existing
+    assertion's specimen. The question the ritual asks first -- "would this test still fail
+    if I reverted my change?" -- is answered YES, twice over, and that is the reason for
+    the edit: the version that shipped could not fail at all.
+
+    Its specimen was ASCII-transliterated French ("a ete fonde", "Cout") with three accented
+    bytes patched back in afterwards, which measures **3 U+FFFD in 1168 characters =
+    0.257%** against a 10% threshold -- it would have needed 117 replacement characters to
+    fail and had three. So it certified "a legacy-encoded page is still text" while
+    exercising a body that was 99.7% ASCII, and T-044 shipped green underneath it: real
+    prose in Czech (12.01%), Turkish (10.92%), Japanese (62.29%) and Chinese (77.29%) was
+    being discarded as binary and negatively cached for 900 seconds.
+
+    The body below is the same page written the way a French page is actually written.
+    Nothing here was weakened: the old `doc is not None` assertion is kept verbatim, and
+    the two additions below it are what the old specimen could not check -- that the text
+    came back CORRECT rather than merely non-empty. Measured against the pre-T-044 code
+    this specimen is 4.78% U+FFFD, so `doc is not None` still passed while every accented
+    character in the document had been destroyed; the accent assertion is what fails there.
+    """
+    page = f"<html><body><p>{_FRENCH_PROSE}</p></body></html>"
+    _serve(monkeypatch, 200, {"content-type": "text/html"}, page.encode("latin-1"))
 
     doc = asyncio.run(fetch_text(_URL, settings=settings_for(tmp_path)))
 
@@ -241,7 +268,20 @@ def test_a_legacy_encoded_page_is_still_text_even_though_it_is_not_utf8(
         "a latin-1 page is a text document read imperfectly; it must not be discarded "
         "as binary"
     )
-    assert "Une maison de tissage independante." in doc.text
+    assert "a été fondé à Marfa" in doc.text, (
+        "the page survived but its accents did not: an origin that declares no charset is "
+        "not an origin that publishes ASCII, and decoding it as UTF-8 replaces every "
+        f"accented byte. Got: {doc.text[:120]!r}"
+    )
+    assert "�" not in doc.text, (
+        "a document a host may be asked to read out loud must not contain replacement "
+        f"characters; {doc.text.count(chr(0xFFFD))} of them are in this one"
+    )
+    assert _FRENCH_PROSE in doc.text, (
+        "every sentence of the page must survive extraction, not merely the accented one "
+        "the assertions above happen to name. This subsumes the removed assertion that "
+        "checked one ASCII sentence of the transliterated specimen"
+    )
 
 
 def test_a_json_api_answering_with_an_empty_list_is_still_a_document(monkeypatch, tmp_path):

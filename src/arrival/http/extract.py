@@ -13,16 +13,21 @@ allowed in this ticket and is not worth it for one page shape.
 
 from __future__ import annotations
 
+import codecs
 import json
 import re
 from html.parser import HTMLParser
 
 __all__ = [
     "MAX_CONTROL_RATIO",
+    "MAX_LATIN_HIGH_BYTE_RATIO",
     "MAX_TEXT_CHARS",
     "MAX_UNDECODABLE_RATIO",
+    "SNIFF_BYTES",
     "SNIFF_CHARS",
     "clip",
+    "decode_body",
+    "detect_encoding",
     "html_title",
     "html_to_text",
     "is_binary_type",
@@ -110,6 +115,8 @@ class _TextExtractor(HTMLParser):
         self._stack: list[str] = []
         self._suppress_at: int | None = None
         self._in_title = False
+        # T-039: only the FIRST <title> is the document's own title. See `handle_data`.
+        self._title_taken = False
 
     @property
     def _suppressed(self) -> bool:
@@ -117,7 +124,7 @@ class _TextExtractor(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         tag = tag.lower()
-        if tag == "title":
+        if tag == "title" and not self._title_taken and not self._suppressed:
             self._in_title = True
         if tag not in _VOID:
             self._stack.append(tag)
@@ -134,8 +141,9 @@ class _TextExtractor(HTMLParser):
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()
-        if tag == "title":
+        if tag == "title" and self._in_title:
             self._in_title = False
+            self._title_taken = True
         if tag in self._stack:
             # Unwind to the matching open tag, discarding anything left unclosed inside it.
             while self._stack:
@@ -154,6 +162,14 @@ class _TextExtractor(HTMLParser):
             self.title += data
             # A <title> is chrome, not body copy: it is returned separately and is not
             # repeated into the text, so a quote can never be "cited" to the tab label.
+            #
+            # T-039: only the FIRST one. An HTML document has exactly one <title> and its
+            # behaviour here is unchanged; an XML FEED has one per entry plus one for the
+            # channel, and routing all of them to `RawDoc.title` extracted an Atom document
+            # whose entries carry only headlines to the EMPTY STRING -- `fetch_text` then
+            # returned None for a document that was entirely readable. The first <title> is
+            # still the document's own (the channel's), so nothing may be cited to a tab
+            # label; every later one is body copy of a separate item and belongs in the text.
             return
         self.parts.append(data)
 
@@ -255,10 +271,24 @@ _TEXTUAL_SUFFIXES = ("+json", "+xml", "+yaml", "+text")
 #: character by character to find that out is a cost with no payer.
 SNIFF_CHARS = 4096
 
-#: Fraction of the sample that may be U+FFFD before the body is called binary. Measured:
-#: bytes that are not text decode to 40-60% replacement characters, while a latin-1 page
-#: read as UTF-8 (a lossy read of a REAL text document, which must survive) sits at a few
-#: percent. Ten percent separates them with room on both sides.
+#: Fraction of the sample that may be U+FFFD before the body is called binary.
+#:
+#: THIS IS A SAFETY NET, NOT THE ENCODING POLICY -- and it was load-bearing until T-044,
+#: which is how it came to be wrong. The comment that stood here read: "a latin-1 page read
+#: as UTF-8 sits at a few percent. Ten percent separates them with room on both sides."
+#: That is true only of the Western European languages it was tested against. Measured on
+#: natural prose read as UTF-8 after the origin declined to name a charset:
+#:
+#:     French 4.79%   Spanish 2.55%   German 2.39%   Portuguese 2.86%   -- survived
+#:     Turkish iso-8859-9 10.92%      Czech iso-8859-2 12.01%           -- DROPPED
+#:     Japanese Shift-JIS 62.29%      Chinese GBK 77.29%                -- DROPPED
+#:     Russian cp1251 84.96%          Greek iso-8859-7 85.62%           -- DROPPED
+#:
+#: Eight of twelve real pages were discarded as binary and negatively cached for 900s.
+#: No threshold fixes that, because the ratio was measuring the wrong thing: a decode
+#: already known to have used the wrong codec. `decode_body` now reads the document's own
+#: declaration first, so a body still full of U+FFFD by the time it reaches here is one
+#: nothing could decode -- and that is what this ratio is for.
 MAX_UNDECODABLE_RATIO = 0.10
 
 #: Fraction of the sample that may be C0/C1 control characters. Real prose has none
@@ -266,6 +296,9 @@ MAX_UNDECODABLE_RATIO = 0.10
 MAX_CONTROL_RATIO = 0.02
 
 _TEXT_WHITESPACE = frozenset("\t\n\r\f\v")
+
+#: The same set as bytes, for the checks that run BEFORE anything has been decoded.
+_WHITESPACE_BYTES = frozenset(b"\t\n\r\f\v")
 
 
 def is_binary_type(content_type: str) -> bool:
@@ -304,6 +337,166 @@ def looks_binary(body: str) -> bool:
         if (character < " " and character not in _TEXT_WHITESPACE) or character == "\x7f"
     )
     return control > len(sample) * MAX_CONTROL_RATIO
+
+
+# --- what codec are these bytes in? (T-044) ------------------------------------------
+#
+# THE DEFECT.  `httpx` decodes a response whose header names no charset with
+# `default_encoding="utf-8"` and `errors="replace"`.  It never reads `<meta charset>`, so a
+# perfectly ordinary page in a legacy encoding arrived as a wall of U+FFFD and `looks_binary`
+# rejected it -- and `client._remember_non_text` then DISCARDED THE BODY and wrote a 900s
+# negative entry, so the caller lost the bytes too.  See `MAX_UNDECODABLE_RATIO` for the
+# measured table; eight of twelve real pages were lost, and the four that survived (French,
+# Spanish, German, Portuguese) survived CORRUPTED -- 2-5% of their characters replaced.
+#
+# THE FIX is to stop guessing from a decode and read what the document says about itself,
+# in the order a browser does: a byte-order mark is decisive, then the document's own
+# declaration, and only then a fallback.  Everything here is stdlib; no dependency is added.
+
+#: How many bytes to scan for a declaration and to sample for the fallback heuristics.
+#: HTML5 requires `<meta charset>` inside the first 1024 bytes; this is generous about
+#: badly-ordered `<head>` blocks without reading a whole 10MB body twice.
+SNIFF_BYTES = 4096
+
+#: BOMs, longest first: `FF FE 00 00` (UTF-32 LE) starts with `FF FE` (UTF-16 LE), so
+#: testing the shorter one first would decode a UTF-32 document as UTF-16 and produce
+#: exactly the mojibake this function exists to prevent.
+_BOM_ENCODINGS: tuple[tuple[bytes, str], ...] = (
+    (codecs.BOM_UTF32_LE, "utf-32"),
+    (codecs.BOM_UTF32_BE, "utf-32"),
+    (codecs.BOM_UTF8, "utf-8-sig"),
+    (codecs.BOM_UTF16_LE, "utf-16"),
+    (codecs.BOM_UTF16_BE, "utf-16"),
+)
+
+#: The two ways a document names its own codec, in one pass over the head of the body:
+#: an XML declaration's `encoding=`, and HTML's `<meta charset=>` -- which also catches the
+#: older `<meta http-equiv="Content-Type" content="text/html; charset=Shift_JIS">`, because
+#: `[^>]*?` crosses into the `content` attribute's value and stops at its quote.
+_CHARSET_IN_MARKUP = re.compile(
+    rb"""(?:
+          <\?xml[^>]{0,400}?encoding\s*=\s*["']([A-Za-z0-9_.:+-]{1,40})["']
+        | <meta[^>]{0,400}?charset\s*=\s*["']?\s*([A-Za-z0-9_.:+-]{1,40})
+    )""",
+    re.IGNORECASE | re.VERBOSE,
+)
+
+#: Fraction of a sample's bytes that may be >= 0x80 for it to be read as SINGLE-BYTE latin
+#: text when nothing declared a codec. Measured on the same prose as `MAX_UNDECODABLE_RATIO`:
+#:
+#:     latin-1 French 4.79%  Spanish 2.55%  German 2.39%  Portuguese 2.86%
+#:     iso-8859-9 Turkish 10.92%   iso-8859-2 Czech 12.44%      <- the top of the class
+#:     Shift-JIS 86.96%  EUC-JP 100%  GBK 100%  cp1251 85.04%  iso-8859-7 85.62%
+#:     PDF 20.83%  ZIP 34.94%  PNG 47.60%  WOFF 49.88%  gzip 55.66%
+#:
+#: Twenty percent sits above every single-byte page measured and below every other class.
+#: It is a statement about the BYTES, not a guess at a codec, and it fails safe: a body
+#: over it keeps the old behaviour exactly (decoded as UTF-8, judged by `looks_binary`).
+MAX_LATIN_HIGH_BYTE_RATIO = 0.20
+
+#: WHATWG's fallback for unlabelled content, and a strict superset of latin-1 over the
+#: 0xA0-0xFF range every Western European page actually uses -- so a latin-1 page with no
+#: declaration round-trips EXACTLY (verified on French, Spanish, German and Portuguese
+#: prose). An iso-8859-2 or -9 page read this way gets the wrong accent on some letters,
+#: which is what a browser does with it too, and is a document rather than a deletion.
+_LATIN_FALLBACK = "cp1252"
+
+
+def _known_encoding(name: str | None) -> str | None:
+    """`name` when Python has a codec for it, else None. Never raises."""
+    if not name:
+        return None
+    try:
+        codecs.lookup(name)
+    except (LookupError, TypeError, ValueError):
+        return None
+    return name
+
+
+def _decodes_strictly(content: bytes, encoding: str) -> bool:
+    """True when every byte of `content` is legal in `encoding`.
+
+    A declaration that cannot decode its own document is worth no more than no declaration:
+    `<meta charset="utf-8">` on a cp1252 page is one of the commonest misconfigurations on
+    the web, and believing it produces exactly the U+FFFD wall T-044 is about.
+    """
+    try:
+        content.decode(encoding)
+    except (UnicodeDecodeError, LookupError, ValueError):
+        return False
+    return True
+
+
+def detect_encoding(content: bytes) -> str:
+    """The codec these bytes are most likely in, for a response that named none.
+
+    Deliberately shaped to be usable as `httpx.AsyncClient(default_encoding=...)`, which
+    takes a `Callable[[bytes], str]`, so any read of `Response.text` gets this policy too.
+
+    The order is the one that loses the least when it is wrong:
+
+    1. **A BOM** is not a guess, it is the document saying so in its first bytes.
+    2. **Valid UTF-8** wins over any declaration. Real non-UTF-8 prose is essentially never
+       valid UTF-8, while a UTF-8 page that still declares `iso-8859-1` in a stale `<meta>`
+       is common -- so trusting the bytes here fixes that case and costs nothing.
+    3. **The document's own declaration**, if Python knows the codec AND it decodes the
+       whole body without error.
+    4. **Single-byte latin**, but only for a body whose bytes look like it: no NUL, few
+       control bytes, few high bytes (`MAX_LATIN_HIGH_BYTE_RATIO`).
+    5. **UTF-8 otherwise** -- i.e. replacement characters and the old behaviour, which is
+       the right answer for a body no codec can explain. `looks_binary` still judges it.
+    """
+    if not content:
+        return "utf-8"
+
+    for bom, encoding in _BOM_ENCODINGS:
+        if content.startswith(bom):
+            return encoding
+
+    if _decodes_strictly(content, "utf-8"):
+        return "utf-8"
+
+    match = _CHARSET_IN_MARKUP.search(content[:SNIFF_BYTES])
+    if match is not None:
+        declared = (match.group(1) or match.group(2) or b"").decode("ascii", "ignore")
+        known = _known_encoding(declared)
+        if known is not None and _decodes_strictly(content, known):
+            return known
+
+    sample = content[:SNIFF_BYTES]
+    if b"\x00" in sample:
+        # Binary, and `looks_binary` is the function that gets to say so. Reading it as
+        # latin text would hide the NUL behind a printable character.
+        return "utf-8"
+    controls = sum(
+        1 for byte in sample if (byte < 0x20 and byte not in _WHITESPACE_BYTES) or byte == 0x7F
+    )
+    if controls > len(sample) * MAX_CONTROL_RATIO:
+        return "utf-8"
+    high = sum(1 for byte in sample if byte >= 0x80)
+    if high <= len(sample) * MAX_LATIN_HIGH_BYTE_RATIO:
+        return _LATIN_FALLBACK
+    return "utf-8"
+
+
+def decode_body(content: bytes, declared_charset: str | None = None) -> str:
+    """`content` as text, believing the response's own `charset=` when it fits the bytes.
+
+    `declared_charset` is the `charset` parameter of the `Content-Type` header -- a fact the
+    origin stated, so it wins whenever it can actually decode the document. When it cannot
+    (a header claiming UTF-8 over a Shift-JIS body is the case that reaches here) it is
+    discarded in favour of `detect_encoding`, because a stated charset that does not fit its
+    own bytes is a misconfiguration and not evidence.
+
+    `errors="replace"` remains the last resort, so this function never raises and a body
+    nothing can decode still arrives as the U+FFFD wall `looks_binary` is there to reject.
+    """
+    if not content:
+        return ""
+    named = _known_encoding(declared_charset)
+    if named is not None and _decodes_strictly(content, named):
+        return content.decode(named, errors="replace")
+    return content.decode(detect_encoding(content), errors="replace")
 
 
 def sniff_content_type(body: str, declared: str) -> str:
