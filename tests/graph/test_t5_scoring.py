@@ -146,6 +146,29 @@ def test_score_is_capped_at_100_even_when_raw_beats_the_reference():
     assert m.score == 100
 
 
+def test_score_stays_in_range_when_a_hub_carries_an_out_of_range_recency():
+    """``Hub.recency`` is documented 0..1 but the contract does not validate it.
+
+    A bad extractor must not be able to push a score outside 0..100, in either direction.
+    """
+    for bad in (-2.0, 5.0):
+        a = make_dossier("a", "A", [make_hub("company:x", "X", "company", recency=bad)])
+        b = make_dossier("b", "B", [make_hub("company:x", "X", "company")])
+        m = match(build_graph([a, b, *filler(3)]), "a", ["b"])[0]
+        assert 0 <= m.score <= 100, f"recency {bad} produced score {m.score}"
+
+
+def test_a_population_too_small_for_the_reference_does_not_divide_by_zero():
+    """``REF = ln(N/3)*1.5`` is 0 at N=3 and negative below it."""
+    for n_extra in range(0, 2):
+        a = make_dossier("a", "A", [make_hub("company:x", "X", "company")])
+        b = make_dossier("b", "B", [make_hub("company:x", "X", "company")])
+        graph = build_graph([a, b, *filler(n_extra)])
+        assert graph.graph["ref"] == 0.0
+        m = match(graph, "a", ["b"])[0]
+        assert 0 <= m.score <= 100
+
+
 # --- acceptance 5: who comes back -----------------------------------------
 
 

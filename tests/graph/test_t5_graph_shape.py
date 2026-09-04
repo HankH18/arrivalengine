@@ -190,3 +190,50 @@ def test_build_graph_accepts_any_iterable(dossiers):
     graph = build_graph(d for d in dossiers)
     assert graph.graph["n_people"] == 4
     assert graph.number_of_edges() == sum(len(d.hubs) for d in dossiers)
+
+
+def test_the_graph_does_not_depend_on_the_order_the_dossiers_arrive_in(dossiers):
+    """A caller loading a directory gets whatever order the filesystem hands back."""
+    forward = build_graph(dossiers)
+    backward = build_graph(list(reversed(dossiers)))
+    for node in forward.nodes():
+        for key in ("idf", "type_boost", "label", "type", "n_carriers"):
+            if key in forward.nodes[node]:
+                assert forward.nodes[node][key] == backward.nodes[node][key], (node, key)
+    assert set(forward.edges()) == set(backward.edges())
+
+
+def test_two_carriers_disagreeing_about_a_hub_type_do_not_decide_it_by_order():
+    """Only reachable for a ``wd:`` id -- ``{type}:{slug(label)}`` encodes the type in the id.
+
+    Before this was handled, the second carrier's ``add_node`` was skipped because the node
+    already existed, so a glob order chose the type boost and moved the score from 33 to 100.
+    """
+    from arrival.graph import match
+
+    a = make_dossier("a", "A", [make_hub("wd:Q1", "Thing", "company")])
+    b = make_dossier("b", "B", [make_hub("wd:Q1", "Thing", "city")])
+    filler = [make_dossier(f"f{i}", f"F{i}", []) for i in range(3)]
+
+    forward = build_graph([a, b, *filler])
+    backward = build_graph([b, a, *filler])
+    assert forward.nodes[hub_node("wd:Q1")] == backward.nodes[hub_node("wd:Q1")]
+    assert match(forward, "a", ["b"])[0].score == match(backward, "a", ["b"])[0].score
+
+
+def test_a_hub_listed_twice_in_one_dossier_keeps_its_freshest_recency():
+    """``add_edge`` overwrites, so "last one written wins" was deciding this by list order."""
+    twice = make_dossier(
+        "twice",
+        "Twice",
+        [
+            make_hub("company:x", "X", "company", recency=1.0),
+            make_hub("company:x", "X", "company", recency=0.1),
+        ],
+    )
+    once = make_dossier("once", "Once", [make_hub("company:x", "X", "company")])
+    filler = [make_dossier(f"f{i}", f"F{i}", []) for i in range(3)]
+
+    graph = build_graph([twice, once, *filler])
+    assert graph.edges[person_node("twice"), hub_node("company:x")]["recency"] == 1.0
+    assert graph.number_of_edges() == 2, "a repeated hub is one edge, not two"

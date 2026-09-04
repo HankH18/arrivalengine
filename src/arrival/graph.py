@@ -153,6 +153,24 @@ def reference_score(n_people: int) -> float:
 # ------------------------------------------------------------------------- building
 
 
+def _hub_identity(descriptions: Sequence[tuple[str, str]]) -> tuple[str, str]:
+    """Pick one ``(type, label)`` for a hub its carriers describe inconsistently.
+
+    Most common wins, ties broken lexicographically, so the answer is the same however the
+    dossiers were ordered. Order independence is the point: an ``add_node`` that skipped
+    when the node already existed let a filesystem glob order decide a hub's type boost --
+    measured, one pair scored 100 or 33 depending only on which dossier was read first.
+    """
+    types: dict[str, int] = {}
+    labels: dict[str, int] = {}
+    for hub_type, label in descriptions:
+        types[hub_type] = types.get(hub_type, 0) + 1
+        labels[label] = labels.get(label, 0) + 1
+    best_type = min(types.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+    best_label = min(labels.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+    return best_type, best_label
+
+
 def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     """Build the bipartite person/hub graph.
 
@@ -166,17 +184,31 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     Every dossier handed in becomes a person node; nothing is filtered here. Callers decide
     who belongs in the population (an unresolved dossier must be left out by the caller, or
     it perturbs N for everyone).
+
+    The result does not depend on the ORDER the dossiers arrive in. That matters because a
+    caller loading a directory gets whatever order the filesystem hands back: two people
+    disagreeing about one hub's type -- only possible for a ``wd:`` id, since the
+    ``{type}:{slug(label)}`` form encodes the type in the id -- would otherwise decide the
+    type boost by glob order and move the score. See :func:`_hub_identity`.
     """
     dossiers = list(dossiers)
     graph = nx.Graph()
 
-    # Pass 1: who carries what. IDF needs the whole population before any edge weight is
-    # meaningful, so nothing can be written until every dossier has been seen.
+    # Pass 1: who carries what, and how each hub describes itself. IDF needs the whole
+    # population before any edge weight is meaningful, so nothing can be written until every
+    # dossier has been seen.
     carriers: dict[str, set[str]] = {}
+    described: dict[str, list[tuple[str, str]]] = {}
+    recencies: dict[tuple[str, str], float] = {}
     for dossier in dossiers:
         person_id = dossier.person.person_id
         for hub in dossier.hubs:
             carriers.setdefault(hub.hub_id, set()).add(person_id)
+            described.setdefault(hub.hub_id, []).append((hub.type, hub.label))
+            # A dossier that lists one hub twice keeps its FRESHEST recency, rather than
+            # whichever entry happened to be written last.
+            key = (person_id, hub.hub_id)
+            recencies[key] = max(recencies.get(key, hub.recency), hub.recency)
 
     for dossier in dossiers:
         person = dossier.person
@@ -194,10 +226,12 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
 
     # Pass 2: hub nodes and the edges, now that N is known.
     for dossier in dossiers:
-        source = person_node(dossier.person.person_id)
+        person_id = dossier.person.person_id
+        source = person_node(person_id)
         for hub in dossier.hubs:
+            hub_type, label = _hub_identity(described[hub.hub_id])
             idf = hub_idf(n_people, len(carriers[hub.hub_id]))
-            boost = TYPE_BOOST.get(hub.type, DEFAULT_TYPE_BOOST)
+            boost = TYPE_BOOST.get(hub_type, DEFAULT_TYPE_BOOST)
             target = hub_node(hub.hub_id)
             if target not in graph:
                 graph.add_node(
@@ -205,13 +239,19 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
                     bipartite=1,
                     kind="hub",
                     hub_id=hub.hub_id,
-                    label=hub.label,
-                    type=hub.type,
+                    label=label,
+                    type=hub_type,
                     idf=idf,
                     type_boost=boost,
                     n_carriers=len(carriers[hub.hub_id]),
                 )
-            graph.add_edge(source, target, recency=hub.recency, cost=1.0 / (1.0 + idf), hub=hub)
+            graph.add_edge(
+                source,
+                target,
+                recency=recencies[(person_id, hub.hub_id)],
+                cost=1.0 / (1.0 + idf),
+                hub=hub,
+            )
 
     graph.graph["n_people"] = n_people
     graph.graph["ref"] = reference_score(n_people)
