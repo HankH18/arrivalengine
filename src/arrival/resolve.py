@@ -28,13 +28,21 @@ Decision 4 is the rule:
 4. **Resolution needs a strong key OR two independent attributes.** A strong key is a
    durable identifier matched on more than the name: a Wikidata QID matched on name AND a
    detail, a company domain derived from the detail, a GitHub profile confirmed by name
-   AND company, an SEC CIK matched on name AND company. Failing that, at least two `yes`
-   verdicts citing DIFFERENT disambiguators — compared as ATTRIBUTES rather than as
-   strings (`attribute_family`), because a model that writes `employer` on one document
-   and `company` on the next has named one attribute twice, not two. Two `yes` verdicts on
-   the same attribute are corroboration of one fact, not independence. Anything less is
-   `unresolved`, with
-   `accepted_doc_ids` empty — no facts, no dossier, no guess.
+   AND company, an SEC CIK matched on name AND company, IN THAT ORDER
+   (`STRONG_KEY_PRIORITY`). Failing that, at least two `yes` verdicts citing DIFFERENT
+   attributes — and the attribute is `verdict_attribute`, which reads the verdict's
+   EVIDENCE against the person's own details first and only falls back to the model's
+   free-text label. Two `yes` verdicts on the same attribute are corroboration of one
+   fact, not independence. Anything less is `unresolved`, with `accepted_doc_ids` empty —
+   no facts, no dossier, no guess.
+
+   `disambiguator` is a string the model chose, so counting distinct labels lets word
+   choice decide whether a person exists at all: `role` twice refuses the person, `role`
+   plus `job title` admits them, and two spans that both quote the employer look
+   independent the moment one of them is labelled `handle`. Measured on this module before
+   the repair, all three. What the model does NOT choose is which of the person's own
+   identifying details a verbatim span actually names, so that is what is counted, with
+   `attribute_family` left to canonicalise the leftovers.
 
 The strong-key arm is the part that invites a shortcut, and the shortcut
 ("the document is a wikidata/github/edgar page and the verdict is `yes`, so take the key")
@@ -45,6 +53,16 @@ Each of those documents is a genuine `yes` and IS accepted — refusing the key 
 same as refusing the document. So the key checks read the document, not its `source_kind`,
 and only documents that were accepted — and that do not themselves assert somebody else's
 employer or work location — may carry a key at all.
+
+A strong key is also a DURABLE claim, so it may not be decided by which document happened
+to arrive first. `research._interleave` orders documents by how many results each remote
+API returned and in what ranking, and every key here used to be "the first accepted
+document that matches", which made the identifier a function of the internet's mood:
+`blog.example-co.com` or `example-co.com`, this QID or that one, depending on the batch.
+Each extractor therefore collects EVERY candidate, ranks them on evidence (how many of the
+person's details the document matches, then how many documents support the value), and
+`_best` refuses to mint anything when the top two candidates are different values it
+cannot separate — R2 applied to identity, not just to membership.
 """
 
 from __future__ import annotations
@@ -65,6 +83,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 __all__ = [
     "MATCH_VALUES",
     "RESOLVE_SYSTEM",
+    "STRONG_KEY_PRIORITY",
     "DocVerdict",
     "attribute_family",
     "cites_document",
@@ -72,10 +91,17 @@ __all__ = [
     "negative_evidence_veto",
     "resolve",
     "strong_keys_for",
+    "verdict_attribute",
     "verdict_prompt",
 ]
 
 MATCH_VALUES = ("yes", "no", "unsure")
+
+#: The order T-2's acceptance criterion names the strong keys in, and the order
+#: `strong_keys_for` returns them in. A durable identifier is worth more when it is
+#: matched on more than a name, and this is that ranking made explicit rather than left to
+#: the order four statements happen to sit in.
+STRONG_KEY_PRIORITY = ("wikidata_qid", "company_domain", "github", "sec_cik")
 
 #: One verdict is a few dozen tokens of JSON; the cap is a guard, not a budget.
 _VERDICT_MAX_TOKENS = 600
@@ -94,9 +120,46 @@ _ORG_SUFFIXES = frozenset(
     {"co", "inc", "corp", "corporation", "ltd", "llc", "plc", "gmbh", "ab", "as", "the"}
 )
 
-# Disambiguator spellings that name an identity attribute a document can CONTRADICT.
-_EMPLOYER_WORDS = ("employer", "company", "organisation", "organization", "workplace", "firm")
-_CITY_WORDS = ("city", "location", "town", "where they live", "residence")
+# The six attributes RESOLVE_SYSTEM enumerates ("employer, city, role, handle, school, or
+# coauthor"), each with the spellings a model reaches for instead. Matched as substrings of
+# the lower-cased label, first family wins, so the order of the rows is the tie-break:
+# `employer` and `city` come first because they are the two the veto can CONTRADICT.
+#
+# Only `employer` and `city` used to be canonicalised, which meant `role` and `job title`
+# were two attributes and resolved a person that `role` twice refused. The vocabulary is
+# closed because our OWN system prompt closes it — a label outside this table is
+# off-contract, and `verdict_attribute` folds every such label into one bucket rather than
+# letting invented words manufacture independence.
+_FAMILY_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "employer",
+        ("employer", "company", "organisation", "organization", "workplace", "firm",
+         "employment", "employed"),
+    ),
+    (
+        "city",
+        ("city", "location", "town", "where they live", "lives in", "based in",
+         "residence", "hometown", "home town"),
+    ),
+    ("role", ("role", "title", "occupation", "position", "profession", "job", "post")),
+    ("handle", ("handle", "username", "user name", "screen name", "nickname", "alias",
+                "login", "profile")),
+    ("school", ("school", "university", "college", "alma mater", "education", "degree",
+                "alumni")),
+    ("coauthor", ("coauthor", "co-author", "co author", "collaborator", "coauthorship")),
+)
+
+_KNOWN_FAMILIES = frozenset(family for family, _ in _FAMILY_WORDS)
+
+# The bucket every off-contract label lands in. One bucket, not one per spelling: two
+# labels this module cannot name are not two attributes, they are two unknowns.
+_UNRECOGNISED_FAMILY = "other"
+
+# The two families a document can positively CORROBORATE, because they are the only two the
+# person carries in `PersonRef.details`. Ordered: an evidence span naming both is filed
+# under the first, so one document contributes exactly one attribute and can never resolve
+# a person by itself.
+_CORROBORABLE = ("employer", "city")
 
 # Structured `Label: value` claims an identity document makes about employer and city.
 # `conflicting_identity_claim` reads these; a document that makes none of them asserts no
@@ -208,10 +271,14 @@ async def resolve(person: PersonRef, docs: list[RawDoc], llm: LLMClient) -> Reso
         doc for doc, verdict in accepted if not conflicting_identity_claim(person, verdict)
     ]
     strong_keys = strong_keys_for(person, keyable)
+    # `verdict_attribute`, never the raw `disambiguator`: the label is a word the model
+    # chose and the evidence is a span it had to copy out of the document, so the span is
+    # what gets to say which attribute was corroborated. See its docstring for the three
+    # measured ways the label alone decided whether a person existed.
     attributes = {
-        attribute_family(verdict.disambiguator)
+        attribute
         for _, verdict in accepted
-        if attribute_family(verdict.disambiguator)
+        if (attribute := verdict_attribute(person, verdict))
     }
     independent = len(attributes) >= 2
     resolved = bool(strong_keys) or independent
@@ -434,12 +501,9 @@ def _claimed_field(text: str, label: str) -> str:
 
 
 def _contradicted_attribute(disambiguator: str) -> str | None:
-    label = normalize_ws(disambiguator)
-    if any(word in label for word in _EMPLOYER_WORDS):
-        return "employer"
-    if any(word in label for word in _CITY_WORDS):
-        return "city"
-    return None
+    """The family a `no` can CONTRADICT — only the two the person carries as details."""
+    family = attribute_family(disambiguator)
+    return family if family in _CORROBORABLE else None
 
 
 def attribute_family(disambiguator: str) -> str:
@@ -451,14 +515,66 @@ def attribute_family(disambiguator: str) -> str:
     attributes and resolve a person on ONE fact corroborated twice — the precise failure
     the rule exists to prevent, arriving through spelling rather than through logic.
 
-    A label this module has no rule for keeps its normalised spelling, so two unrelated
-    labels still count as two. That is the only direction in which this can be generous,
-    and it is the same generosity the un-canonicalised version had everywhere.
+    The table covers all six attributes `RESOLVE_SYSTEM` asks the model for, not just the
+    two the veto needed: canonicalising `employer`/`company` while leaving `role` and
+    `job title` apart fixed the failure in one family and left it standing in the other
+    four, which is how `role` twice came to refuse a person that `role` plus `job title`
+    admitted.
+
+    A label outside the table keeps its normalised spelling, because this function is also
+    what `/debug` and the tests read to name an attribute and a lossy answer there helps
+    nobody. Deciding that two unknown labels are not two attributes belongs to
+    `verdict_attribute`, which is the caller that counts.
     """
     label = normalize_ws(disambiguator)
     if not label:
         return ""
-    return _contradicted_attribute(label) or label
+    for family, words in _FAMILY_WORDS:
+        if any(word in label for word in words):
+            return family
+    return label
+
+
+def verdict_attribute(person: PersonRef, verdict: Verdict) -> str:
+    """The identity attribute this verdict actually corroborates, or `""` for none.
+
+    Decision 4's second arm is the reason a person exists in the product at all, and
+    handing that decision to `verdict.disambiguator` hands it to the model's vocabulary.
+    Three failures were measured on the label-only version, all with the documents held
+    fixed: `role` twice refused a person that `role` + `job title` admitted; and two spans
+    that both quote the employer resolved a person as soon as one of them was labelled
+    `handle`. The model chooses the word. It does not choose which of the person's details
+    its own verbatim span names, so that is what is asked first:
+
+    1. If the evidence corroborates the family the label claims, the two agree — take it.
+    2. Else if the evidence corroborates a detail at all, take THAT, because the span is
+       checked against the document (Decision 5) and the label is checked against nothing.
+       A span naming both details is filed under `employer`, so one document contributes
+       one attribute and two `yes` verdicts are still needed.
+    3. Else fall back to the canonical family of the label — this is the only path for
+       `role`, `handle`, `school` and `coauthor`, none of which `PersonRef.details`
+       carries anything to corroborate against.
+    4. An off-contract label at step 3 becomes `other`: one bucket for everything the
+       system prompt did not ask for, so invented words cannot add up to independence.
+    """
+    family = attribute_family(verdict.disambiguator)
+    corroborated = _corroborated_details(verdict.evidence, person)
+    if family and family in corroborated:
+        return family
+    if corroborated:
+        return corroborated[0]
+    if not family:
+        return ""
+    return family if family in _KNOWN_FAMILIES else _UNRECOGNISED_FAMILY
+
+
+def _corroborated_details(evidence: str, person: PersonRef) -> tuple[str, ...]:
+    """Which of `_CORROBORABLE` this evidence span actually names, in that order."""
+    return tuple(
+        family
+        for family in _CORROBORABLE
+        if _mentions(evidence, _employer(person) if family == "employer" else _city(person))
+    )
 
 
 # --------------------------------------------------------------------------
@@ -467,44 +583,83 @@ def attribute_family(disambiguator: str) -> str:
 
 
 def strong_keys_for(person: PersonRef, docs: list[RawDoc]) -> dict[str, str]:
-    """Every strong key earnable from ACCEPTED documents, in priority order.
+    """Every strong key earnable from ACCEPTED documents, in `STRONG_KEY_PRIORITY` order.
 
     Only accepted documents are offered here. That is not an optimisation: the frozen decoy
     corpus's only Wikidata item belongs to the decoy and mentions the target's city (his
     papers are archived in Austin), so a QID check run over every document would match on
     name and city and take a key that identifies the wrong human being.
+
+    Invariant, and the one worth testing: the result is a function of the SET of documents,
+    never of their order. Each extractor below ranks candidates on evidence and refuses a
+    tie, so permuting `docs` cannot move a single key.
     """
+    extractors = {
+        "wikidata_qid": _wikidata_qid,
+        "company_domain": _company_domain,
+        "github": _github_handle,
+        "sec_cik": _sec_cik,
+    }
     keys: dict[str, str] = {}
-    qid = _wikidata_qid(person, docs)
-    if qid:
-        keys["wikidata_qid"] = qid
-    domain = _company_domain(person, docs)
-    if domain:
-        keys["company_domain"] = domain
-    handle = _github_handle(person, docs)
-    if handle:
-        keys["github"] = handle
-    cik = _sec_cik(person, docs)
-    if cik:
-        keys["sec_cik"] = cik
+    for name in STRONG_KEY_PRIORITY:
+        value = extractors[name](person, docs)
+        if value:
+            keys[name] = value
     return keys
 
 
+def _best(candidates: list[tuple[str, int]]) -> str:
+    """The best-evidenced value among `(value, details_matched)` candidates, or `""`.
+
+    Two properties, and both are the point of this function existing at all:
+
+    * **Order-independence.** Candidates are folded into a mapping keyed by VALUE and
+      ranked on `(details matched, documents supporting it)`, so the answer depends on the
+      set of documents and not on which one `research._interleave` put first. Every strong
+      key used to be `for doc in docs: ... return`, which made a durable identifier a
+      function of how many results each remote API happened to return.
+    * **Refusal on a tie.** When the top two candidates are DIFFERENT values with identical
+      evidence, this returns `""`. Picking either one would be arrival order wearing the
+      costume of evidence, and a strong key is a claim about which human being this is —
+      R2's "refuse to guess" applies to identity at least as hard as it applies to
+      membership. The person can still resolve through another key or through the second
+      arm; what they cannot do is carry an identifier nobody earned.
+    """
+    if not candidates:
+        return ""
+    strength: dict[str, tuple[int, int]] = {}
+    for value, details in candidates:
+        best_details, supporting = strength.get(value, (0, 0))
+        strength[value] = (max(best_details, details), supporting + 1)
+    ranked = sorted(strength.items(), key=lambda item: item[1], reverse=True)
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        return ""
+    return ranked[0][0]
+
+
 def _wikidata_qid(person: PersonRef, docs: list[RawDoc]) -> str:
-    """A QID matched on name AND a detail. A name-only match is what Decision 4 rejects."""
+    """A QID matched on name AND a detail. A name-only match is what Decision 4 rejects.
+
+    An item matching the name and BOTH details outranks one matching the name and one, so
+    the QID — which is the identifier the rest of the graph spells hubs with — follows the
+    evidence rather than the batch.
+    """
+    candidates: list[tuple[str, int]] = []
     for doc in docs:
         if doc.source_kind != "wikidata":
             continue
         haystack = f"{doc.title}\n{doc.text}"
         if not _name_matches(haystack, person.name):
             continue
-        if not _any_detail_matches(haystack, person):
+        details = _details_matched(haystack, person)
+        if not details:
             continue
         for candidate in (doc.url, doc.title, doc.text):
             found = _QID.search(candidate)
             if found:
-                return found.group(0)
-    return ""
+                candidates.append((found.group(0), details))
+                break
+    return _best(candidates)
 
 
 def _github_handle(person: PersonRef, docs: list[RawDoc]) -> str:
@@ -512,6 +667,7 @@ def _github_handle(person: PersonRef, docs: list[RawDoc]) -> str:
     employer = _employer(person)
     if not employer:
         return ""
+    candidates: list[tuple[str, int]] = []
     for doc in docs:
         if doc.source_kind != "github":
             continue
@@ -527,8 +683,11 @@ def _github_handle(person: PersonRef, docs: list[RawDoc]) -> str:
             continue
         handle = _github_handle_of(doc)
         if handle:
-            return handle
-    return ""
+            # The company is already confirmed; a Location field naming the person's city
+            # is the extra evidence that separates two otherwise identical profiles.
+            located = _mentions(_profile_field(doc.text, "location"), _city(person))
+            candidates.append((handle, 1 + int(located)))
+    return _best(candidates)
 
 
 def _sec_cik(person: PersonRef, docs: list[RawDoc]) -> str:
@@ -536,6 +695,7 @@ def _sec_cik(person: PersonRef, docs: list[RawDoc]) -> str:
     employer = _employer(person)
     if not employer:
         return ""
+    candidates: list[tuple[str, int]] = []
     for doc in docs:
         if doc.source_kind != "edgar":
             continue
@@ -548,16 +708,22 @@ def _sec_cik(person: PersonRef, docs: list[RawDoc]) -> str:
             continue
         found = _CIK.search(haystack)
         if found:
-            return found.group(1)
-    return ""
+            candidates.append((found.group(1), _details_matched(haystack, person)))
+    return _best(candidates)
 
 
 def _company_domain(person: PersonRef, docs: list[RawDoc]) -> str:
-    """The employer's own domain, when a document actually sits on it.
+    """The employer's own registrable domain, when a document actually sits on it.
 
     Matched against the HOST only. `https://example.com/harrowgate-systems/research/team`
     is a page about Harrowgate Systems on somebody else's domain; treating its path as a
     domain match would hand out a strong key for every third-party profile page.
+
+    The host is then cut back to the matching label and everything right of it, so
+    `blog.harrowgatesystems.com` and `harrowgatesystems.com` are ONE identifier for one
+    company instead of two that trade places with the arrival order. Everything left of
+    the company's own label is a subdomain, and a subdomain names a section of a site, not
+    a different employer.
     """
     employer = _employer(person)
     if not employer:
@@ -566,13 +732,16 @@ def _company_domain(person: PersonRef, docs: list[RawDoc]) -> str:
     hyphenated = "-".join(employer)
     if len(joined) < 4:
         return ""
+    candidates: list[tuple[str, int]] = []
     for doc in docs:
         host = urlsplit(doc.url).hostname or ""
         host = host.lower().removeprefix("www.")
-        labels = host.split(".")[:-1]  # everything but the TLD
-        if any(label in {joined, hyphenated} for label in labels):
-            return host
-    return ""
+        labels = host.split(".")
+        for index, label in enumerate(labels[:-1]):  # everything but the TLD
+            if label in {joined, hyphenated}:
+                candidates.append((".".join(labels[index:]), 1))
+                break
+    return _best(candidates)
 
 
 def _github_handle_of(doc: RawDoc) -> str:
@@ -662,6 +831,17 @@ def _name_matches(text: str, name: str) -> bool:
     return _mentions(text, parts)
 
 
+def _details_matched(text: str, person: PersonRef) -> int:
+    """How many of the person's identifying details this text matches: 0, 1 or 2.
+
+    The count, not the boolean, because it is the evidence score every strong key is ranked
+    on: an item matching name + employer + city is a better claim about which human this is
+    than one matching name + city, and "better" has to be measurable or the tie goes to
+    whoever arrived first.
+    """
+    return int(_mentions(text, _employer(person))) + int(_mentions(text, _city(person)))
+
+
 def _any_detail_matches(text: str, person: PersonRef) -> bool:
     """True when the text matches the employer detail or the city detail (not just the name)."""
-    return _mentions(text, _employer(person)) or _mentions(text, _city(person))
+    return _details_matched(text, person) > 0
