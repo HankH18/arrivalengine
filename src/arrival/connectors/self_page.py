@@ -16,6 +16,29 @@ Same-host links on a fetched page are followed while budget remains, so `/about`
 `/team/{name}` are reachable from a bare domain.  Off-host links are not followed at all —
 crawling outward from a personal site is how a "research the member" tool quietly becomes a
 "crawl the internet" tool.
+
+AND THE FEED, WHICH IS THE THIRD DOCUMENTED SOURCE (T-021).  Acceptance 2 ends "plus
+`/feed` RSS if present", and the module used to do the exact opposite: `/feed` and `/rss`
+sat on the skip list, so the one address on the member's own site that carries DATED prose
+was the one address deliberately never read.  That mattered more than it sounds.
+`fetch_text` cannot date a page — there is nothing in HTML that reliably says when it was
+written — so before this, every `self_page` document arrived with `published_at=None` and
+a digest could say what the member writes but never when.  A feed entry carries its date as
+a field.
+
+The skip list survives, with its job made explicit: a feed is never emitted AS A PAGE (a
+reader does not want the XML), it is handed to the feed reader instead.  Feeds are found
+three ways, cheapest first — the `<link rel="alternate">` the site already advertises, an
+anchor whose path says "feed", and finally the single conventional guess at `{origin}/feed`
+that acceptance 2 names.
+
+WEB SPACE, NOT HOST, FOR EVERYTHING FOLLOWED.  On a domain the member owns, one host check
+is the whole story.  On a shared platform it is not, and this connector reaches one: a
+roster line reading `linkedin.com/in/marisol-quennebeck` makes `linkedin.com/in/anybody`
+a same-host link and `linkedin.com/feed` the platform's own timeline, and both would be
+stamped `self_page` — the highest-trust `SourceKind` in the system.  So a link on a
+`SHARED_HOSTS` host is followed only under the path the roster actually named, and the
+conventional feed guess is not made on one at all.
 """
 
 from __future__ import annotations
@@ -24,10 +47,22 @@ from html.parser import HTMLParser
 from typing import Any
 from urllib.parse import urljoin, urlsplit
 
-from arrival.connectors.base import BaseConnector, urls_in
-from arrival.connectors.identity import carries_name, choose_one, corroborates
+from arrival.connectors.base import BaseConnector, text_block, urls_in
+from arrival.connectors.feed import (
+    advertised_feeds,
+    conventional_feed,
+    is_feed_url,
+    parse_feed,
+)
+from arrival.connectors.identity import (
+    carries_name,
+    choose_one,
+    corroborates,
+    is_shared_host,
+)
 from arrival.contracts import PersonRef, RawDoc
 from arrival.http.client import fetch_record
+from arrival.http.extract import html_to_text
 
 __all__ = ["SelfPageConnector"]
 
@@ -47,7 +82,14 @@ HUMAN = "Q5"
 CANDIDATES = 5
 
 #: Paths that are never a person's own prose, so following them wastes the budget.
-_SKIP_SEGMENTS = ("/login", "/signup", "/cart", "/privacy", "/terms", "/rss", "/feed")
+#: `feed.FEED_NAMES` are excluded from PAGE following for a different reason and handled
+#: separately: a feed is not prose, it is a list of prose, and it is read as one.
+_SKIP_SEGMENTS = ("/login", "/signup", "/cart", "/privacy", "/terms")
+
+#: A feed entry shorter than this is a headline with no body — a link list, a podcast
+#: stub, a "new post" ping. It is not evidence of anything, so the page behind it is
+#: fetched instead of cited from the feed.
+MIN_ENTRY_CHARS = 40
 
 
 class _Links(HTMLParser):
@@ -65,29 +107,86 @@ class _Links(HTMLParser):
             self.hrefs.append(href)
 
 
-def _same_host_links(base_url: str, markup: str) -> list[str]:
+def in_web_space(url: str, base_url: str, seed: str) -> bool:
+    """Is `url` inside the web space the roster's `seed` vouches for?
+
+    The same rule `identity.on_own_host` applies to a roster URL, applied here to a SEED —
+    which may have come from Wikidata's P856 rather than from `details`, and so is not in
+    `person.details` for `on_own_host` to find. The host is compared against `base_url`,
+    the address the seed actually RESOLVED to, so a site that redirects to its `www.` form
+    still has its own links followed; the shared-platform path check is anchored on the
+    seed, because that is the part the roster named.
+    """
+    target = urlsplit(url)
+    host = (target.hostname or "").lower()
+    if target.scheme not in ("http", "https") or not host:
+        return False
+    if host != (urlsplit(base_url).hostname or "").lower():
+        return False
+    if not is_shared_host(host):
+        return True
+    prefix = urlsplit(seed).path.rstrip("/")
+    if not prefix:
+        # The roster named a platform's ROOT. That names nobody, so it vouches for nobody.
+        return False
+    return target.path == prefix or target.path.startswith(prefix + "/")
+
+
+def _hrefs(base_url: str, markup: str) -> list[str]:
     parser = _Links()
     try:
         parser.feed(markup)
         parser.close()
     except Exception:  # noqa: BLE001 - a page we cannot parse simply has no links
         return []
-
-    base_host = (urlsplit(base_url).hostname or "").lower()
     found: list[str] = []
     for href in parser.hrefs:
-        absolute = urljoin(base_url, href.strip())
-        parts = urlsplit(absolute)
-        if parts.scheme not in ("http", "https"):
-            continue
-        if (parts.hostname or "").lower() != base_host:
-            continue
-        if any(segment in parts.path.lower() for segment in _SKIP_SEGMENTS):
-            continue
-        clean = absolute.split("#", 1)[0]
-        if clean and clean not in found:
-            found.append(clean)
+        absolute = urljoin(base_url, href.strip()).split("#", 1)[0]
+        if absolute and absolute not in found:
+            found.append(absolute)
     return found
+
+
+def _page_links(base_url: str, seed: str, markup: str) -> list[str]:
+    """Same-web-space links worth following as prose, in document order."""
+    return [
+        url
+        for url in _hrefs(base_url, markup)
+        if in_web_space(url, base_url, seed)
+        and not is_feed_url(url)
+        and not any(segment in urlsplit(url).path.lower() for segment in _SKIP_SEGMENTS)
+    ]
+
+
+def _feed_urls(base_url: str, seed: str, markup: str) -> list[str]:
+    """Feeds this page offers, cheapest discovery first, then the one guess.
+
+    The conventional `{origin}/feed` is skipped on a shared host: `linkedin.com/feed` is
+    the platform's timeline and belongs to nobody, and `medium.com/feed` is Medium's.
+    """
+    found: list[str] = []
+    for url in advertised_feeds(base_url, markup):
+        if in_web_space(url, base_url, seed) and url not in found:
+            found.append(url)
+    for url in _hrefs(base_url, markup):
+        if is_feed_url(url) and in_web_space(url, base_url, seed) and url not in found:
+            found.append(url)
+    host = (urlsplit(base_url).hostname or "").lower()
+    if not is_shared_host(host):
+        guess = conventional_feed(base_url)
+        if guess and guess not in found:
+            found.append(guess)
+    return found
+
+
+def _entry_text(title: str, summary: str) -> str:
+    """The entry's own prose, with any markup its summary carried removed.
+
+    Atom permits `type="html"` content, so a `<summary>` routinely arrives as escaped
+    markup; leaving it in would put `<p>` into `RawDoc.text`, which T-3 quotes verbatim.
+    """
+    body = html_to_text(summary) if "<" in summary else summary
+    return text_block(title, body)
 
 
 class SelfPageConnector(BaseConnector):
@@ -106,6 +205,7 @@ class SelfPageConnector(BaseConnector):
 
         docs: list[RawDoc] = []
         followed: list[str] = []
+        feeds: list[tuple[str, str]] = []
         visited: set[str] = set()
 
         for url in seeds:
@@ -115,14 +215,72 @@ class SelfPageConnector(BaseConnector):
             if doc is None:
                 continue
             docs.append(doc)
-            for link in _same_host_links(doc.url, markup or ""):
+            markup = markup or ""
+            for link in _page_links(doc.url, url, markup):
                 if link not in followed:
                     followed.append(link)
+            for candidate in _feed_urls(doc.url, url, markup):
+                if (candidate, url) not in feeds:
+                    feeds.append((candidate, url))
+
+        # Feeds before the remaining page links: a feed entry is the only `self_page`
+        # document that arrives with a date on it, and an undated extraction of the same
+        # page is the thing a digest can do least with.
+        for feed_url, seed in feeds:
+            if len(docs) >= budget:
+                break
+            docs.extend(await self._feed(feed_url, seed, visited, budget - len(docs)))
 
         for url in followed:
             if len(docs) >= budget:
                 break
             doc, _ = await self._page(url, visited)
+            if doc is not None:
+                docs.append(doc)
+        return docs
+
+    async def _feed(
+        self, feed_url: str, seed: str, visited: set[str], limit: int
+    ) -> list[RawDoc]:
+        """Up to `limit` documents from one RSS/Atom feed. `[]` when there is not one.
+
+        An address that 404s, a body that is not a feed and a feed with no entries are all
+        the same answer here, which is what "if present" means: the guess at `{origin}/feed`
+        costs one request on a site that has none and nothing else.
+        """
+        if limit <= 0 or feed_url in visited:
+            return []
+        visited.add(feed_url)
+        record = await fetch_record(feed_url, settings=self.settings)
+        if record is None:
+            return []
+        visited.add(record.url)
+
+        docs: list[RawDoc] = []
+        for entry in parse_feed(record.body, record.url):
+            if len(docs) >= limit:
+                break
+            if entry.url in visited:
+                continue
+            # A feed may syndicate somebody else's writing. An entry pointing off the
+            # member's own web space is exactly the outward crawl this module refuses.
+            if not in_web_space(entry.url, record.url, seed):
+                continue
+            body = _entry_text(entry.title, entry.summary)
+            if len(body.strip()) >= MIN_ENTRY_CHARS:
+                visited.add(entry.url)
+                doc = self.doc(
+                    entry.url,
+                    title=entry.title,
+                    text=body,
+                    published_at=entry.published_at,
+                )
+            else:
+                # A headline with no body: fetch the page it points at instead. The date
+                # from the feed is still the best one anybody has for it.
+                doc, _ = await self._page(entry.url, visited)
+                if doc is not None and entry.published_at is not None:
+                    doc = doc.model_copy(update={"published_at": entry.published_at})
             if doc is not None:
                 docs.append(doc)
         return docs
