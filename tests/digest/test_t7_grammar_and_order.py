@@ -137,14 +137,27 @@ def test_is_speakable_rejects_a_clause_spliced_into_a_noun_phrase_slot(line):
     assert not is_speakable(line), f"a host cannot read this aloud as written: {line!r}"
 
 
-#: Lines that must keep passing. Several are verbatim output of this project's own code —
-#: `graph._why` emits the "Developer-tools go-to-market" line, and a rule that reads its
-#: capitalised hub label as a verb blanks a Meet row's exposed reasoning (R10).
+#: Lines that must keep passing. Several are verbatim output of this project's own code, and
+#: a rule that reads a capitalised hub label as a verb blanks a Meet row's exposed reasoning
+#: (R10).
+#:
+#: T-052 correction, no assertion removed. The comment here used to say `graph._why` emits
+#: "Both deep in Developer-tools go-to-market."; T-041 lower-cases a CATEGORY hub's label, so
+#: what that function emits for the corpus pair is now the lower-cased line. The capitalised
+#: string is KEPT because it is the stricter input and the mitigation it exercises is still
+#: load-bearing — every hub type but topic/technology/cause keeps the label's stored
+#: capitalisation, so a company called "Meridian-Ops Systems" still arrives capitalised,
+#: hyphenated and ending in "-s" directly after a bare "to". Both of those, and the real
+#: current corpus line, are now listed.
 SPEAKABLE_LINES = [
     "Ask about this: Argues that developer-tools pricing should be published on a public page.",
     "Ask about the nine months of rubric work before the first line of code.",
     "Ask about Quarrystone Labs and the public status page it shipped in 2017.",
     "Both deep in Developer-tools go-to-market.",
+    "Both deep in developer-tools go-to-market.",
+    "Both connected to Meridian-Ops Systems.",
+    "Both connected to Databricks.",
+    "Both building on Kubernetes.",
     "Both backed by Foundry Seed 2019.",
     "Runa Okonkwo. Co-founded Quarrystone Labs in 2016 and runs its platform team.",
     "Lives in Austin and leads an operations team that has worked remotely since 2020.",
