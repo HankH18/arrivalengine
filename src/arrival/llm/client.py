@@ -19,7 +19,9 @@ Design points, each of which is load-bearing:
   prompt caching is a prefix match, so one varying byte in the system prompt throws the
   cache away silently.
 * **One retry, then `LLMError`.** A response that is not valid JSON, or that is valid JSON
-  the schema rejects, is retried EXACTLY once and then raised as `LLMError`. Transport and
+  the schema rejects, is retried EXACTLY once and then raised as `LLMError`. A REFUSAL is
+  not retried — it is a decision about the request, and the identical request earns the
+  identical refusal at twice the price. Transport and
   API failures are not retried here (the SDK already retries 429/5xx) and are re-raised as
   `LLMError` so that a pipeline written against the double behaves the same way against
   the real client.
@@ -188,7 +190,13 @@ class AnthropicClient:
                 ) from exc
             try:
                 return _parse(response, schema)
-            except (LLMError, ValueError, ValidationError) as exc:
+            except LLMError:
+                # A refusal is a DECISION, not a malformed answer. The retry exists to
+                # give the model a second chance at valid JSON; re-sending a request the
+                # model has already declined buys a second identical refusal and bills
+                # for it. Raise it on the first response.
+                raise
+            except (ValueError, ValidationError) as exc:
                 problem = exc
         raise LLMError(
             f"the model did not return valid {schema.__name__} JSON after one retry: {problem}"

@@ -13,6 +13,7 @@ import pytest
 from arrival.contracts import LLMClient, LLMError, PersonRef, RawDoc, Verdict
 from arrival.resolve import (
     DocVerdict,
+    attribute_family,
     cites_document,
     negative_evidence_veto,
     resolve,
@@ -124,6 +125,75 @@ async def test_two_yes_verdicts_on_the_same_disambiguator_do_not_resolve():
     assert resolution.status == "unresolved"
     assert resolution.accepted_doc_ids == []
     assert resolution.confidence == 0.0
+
+
+def test_one_attribute_spelled_two_ways_is_still_one_attribute():
+    """`disambiguator` is free text the model chose, so the rule compares ATTRIBUTES."""
+    assert attribute_family("employer") == attribute_family("Company") == "employer"
+    assert attribute_family("current employer") == "employer"
+    assert attribute_family("workplace") == attribute_family("firm") == "employer"
+    assert attribute_family("city") == attribute_family("Location") == "city"
+    assert attribute_family("employer") != attribute_family("city")
+    # A label with no rule keeps its own spelling, so two unrelated labels stay two.
+    assert attribute_family("handle") == "handle"
+    assert attribute_family("coauthor") != attribute_family("school")
+    assert attribute_family("  ") == "", "an empty disambiguator names no attribute at all"
+
+
+async def test_two_yes_verdicts_spelling_one_attribute_two_ways_do_not_resolve():
+    """The same rule as above, through `resolve`: `employer` + `company` is ONE attribute.
+
+    Counting the raw strings would make this pair look independent and resolve a person on
+    one fact corroborated twice — DESIGN Decision 4's failure mode arriving by spelling
+    rather than by logic. A real model does exactly this across two documents.
+    """
+    other = doc(
+        "search",
+        "https://survey-notes.example/2024/crews",
+        "Brannoc Uleyfield, head of survey at Tenterhook Geodesy, ran the 2024 crew.",
+    )
+    llm = scripted(
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.9,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
+        (
+            other,
+            verdict(
+                other, "yes", 0.88,
+                "head of survey at Tenterhook Geodesy", "company",
+            ),
+        ),
+    )
+    resolution = await run([EMPLOYER_DOC, other], llm)
+    assert resolution.status == "unresolved"
+    assert resolution.accepted_doc_ids == []
+
+    # Sabotage companion: the identical documents and confidences, with the second verdict
+    # naming a genuinely different attribute. Without this half, a resolver that never
+    # resolves anything passes the assertion above.
+    independent = scripted(
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.9,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
+        (
+            other,
+            verdict(
+                other, "yes", 0.88,
+                "Brannoc Uleyfield, head of survey", "role",
+            ),
+        ),
+    )
+    control = await run([EMPLOYER_DOC, other], independent)
+    assert control.status == "resolved"
+    assert control.accepted_doc_ids == [EMPLOYER_DOC.doc_id, other.doc_id]
 
 
 async def test_one_yes_verdict_without_a_strong_key_does_not_resolve():

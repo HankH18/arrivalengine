@@ -20,8 +20,11 @@ Decision 4 is the rule:
    durable identifier matched on more than the name: a Wikidata QID matched on name AND a
    detail, a company domain derived from the detail, a GitHub profile confirmed by name
    AND company, an SEC CIK matched on name AND company. Failing that, at least two `yes`
-   verdicts citing DIFFERENT disambiguators. Two `yes` verdicts on the same attribute are
-   corroboration of one fact, not independence. Anything less is `unresolved`, with
+   verdicts citing DIFFERENT disambiguators — compared as ATTRIBUTES rather than as
+   strings (`attribute_family`), because a model that writes `employer` on one document
+   and `company` on the next has named one attribute twice, not two. Two `yes` verdicts on
+   the same attribute are corroboration of one fact, not independence. Anything less is
+   `unresolved`, with
    `accepted_doc_ids` empty — no facts, no dossier, no guess.
 
 The strong-key arm is the part that invites a shortcut, and the shortcut
@@ -53,6 +56,7 @@ __all__ = [
     "MATCH_VALUES",
     "RESOLVE_SYSTEM",
     "DocVerdict",
+    "attribute_family",
     "cites_document",
     "negative_evidence_veto",
     "resolve",
@@ -149,12 +153,12 @@ async def resolve(person: PersonRef, docs: list[RawDoc], llm: LLMClient) -> Reso
             unaccepted.append(verdict)
 
     strong_keys = strong_keys_for(person, [doc for doc, _ in accepted])
-    disambiguators = {
-        normalize_ws(verdict.disambiguator)
+    attributes = {
+        attribute_family(verdict.disambiguator)
         for _, verdict in accepted
-        if normalize_ws(verdict.disambiguator)
+        if attribute_family(verdict.disambiguator)
     }
-    independent = len(disambiguators) >= 2
+    independent = len(attributes) >= 2
     resolved = bool(strong_keys) or independent
 
     if not resolved:
@@ -318,6 +322,25 @@ def _contradicted_attribute(disambiguator: str) -> str | None:
     if any(word in label for word in _CITY_WORDS):
         return "city"
     return None
+
+
+def attribute_family(disambiguator: str) -> str:
+    """The identity ATTRIBUTE a disambiguator names, independent of how it is spelled.
+
+    Decision 4's second arm asks for two INDEPENDENT attributes, and the raw label is a
+    free-text string the model chose: it will call one attribute `employer` on one
+    document and `company` on the next. Counting raw strings would read that as two
+    attributes and resolve a person on ONE fact corroborated twice — the precise failure
+    the rule exists to prevent, arriving through spelling rather than through logic.
+
+    A label this module has no rule for keeps its normalised spelling, so two unrelated
+    labels still count as two. That is the only direction in which this can be generous,
+    and it is the same generosity the un-canonicalised version had everywhere.
+    """
+    label = normalize_ws(disambiguator)
+    if not label:
+        return ""
+    return _contradicted_attribute(label) or label
 
 
 # --------------------------------------------------------------------------

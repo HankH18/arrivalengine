@@ -217,9 +217,13 @@ async def test_a_fenced_json_block_is_still_valid_json():
 
 
 async def test_a_refusal_is_an_llm_error():
-    llm, _sdk = client(_Response("", stop_reason="refusal"))
+    llm, sdk = client(_Response("", stop_reason="refusal"))
     with pytest.raises(LLMError):
         await llm.structured(system="s", user="u", schema=Answer)
+    assert len(sdk.messages.requests) == 1, (
+        "a refusal is a decision about the request, not a malformed answer: re-sending "
+        "the identical request buys an identical refusal and bills for it"
+    )
 
 
 async def test_a_transport_failure_becomes_an_llm_error_and_is_not_retried():
