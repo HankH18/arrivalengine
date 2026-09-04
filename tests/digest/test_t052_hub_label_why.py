@@ -1,8 +1,10 @@
 """T-052: a hub label is a noun, so naming one must not blank a Meet row's reasoning.
 
 **The defect.** ``graph._why`` builds a Meet row's ``why`` by interpolating a hub LABEL into
-a phrase template, and nine of the ten templates end on a bare preposition -- "both connected
-to {label}", "both building on {label}", "both rooted in {label}". That is exactly where
+a phrase template, and eight of its ten templates -- plus its fallback -- end on a bare token
+of ``digest.NOUN_PHRASE_OPENERS``: "both connected to {label}", "both building on {label}",
+"both rooted in {label}". (The other two end on "behind", a preposition that list does not
+carry, and on the verb "know", so those two hub types never had the defect.) That is where
 ``digest._splices_a_clause`` looks for a sentence spliced into a noun slot, and its verb
 detector reads any capitalised, un-hyphenated, non-ALL-CAPS word of four or more characters
 ending in "s", "ed" or "ing" as a verb. So::

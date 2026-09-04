@@ -748,8 +748,10 @@ def _speakable_match(match: Match) -> Match:
 
     **The why declares its own nouns, and this is the only place in the codebase that
     does.** ``graph._why`` builds the sentence by interpolating a hub LABEL into a phrase
-    template, and nine of the ten templates end on a bare preposition — "both connected to
-    {label}", "both building on {label}". So the label lands exactly where
+    template, and eight of its ten templates — plus its fallback — end on a bare token of
+    :data:`NOUN_PHRASE_OPENERS`: "both connected to {label}", "both building on {label}",
+    "both rooted in {label}". (The other two end on "behind", a preposition this module's
+    list does not carry, and on the verb "know".) So the label lands exactly where
     :func:`_splices_a_clause` looks for a spliced verb, and a label like "Databricks",
     "Reuters" or "Kubernetes" is capitalised, un-hyphenated and ends in "-s": the
     morphology reads it as a verb and the row's whole reasoning is replaced by
