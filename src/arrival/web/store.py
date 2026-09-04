@@ -97,7 +97,19 @@ class DossierStore:
     def _read_one(path: Path) -> Dossier:
         try:
             raw = path.read_text(encoding="utf-8")
-        except OSError as exc:  # unreadable file, bad encoding, a directory named *.json
+        # BOTH arms are load-bearing, and the second one is the one an earlier version of
+        # this comment claimed the first covered. `OSError` is the I/O failure -- an
+        # unreadable file, a directory named `*.json`, a dangling symlink. A file that reads
+        # fine but is not UTF-8 raises `UnicodeDecodeError`, which subclasses `ValueError`
+        # and NOT `OSError`, so `except OSError` let it escape `DossierLoadError` entirely.
+        # That is not a cosmetic escape: `arrival.web.app` ends with `app = create_app()`,
+        # so the corpus loads at IMPORT. One latin-1 dossier in `data/dossiers/` therefore
+        # turned `import arrival.web.app` into a raw traceback -- measured as
+        # `Interrupted: 1 error during collection`, pytest exit 2, ZERO of the project's
+        # 1329 tests run -- and a Render boot into a stack trace instead of the diagnosis
+        # this exception exists to give. `research.py:_existing_row` already had the right
+        # shape (`except (OSError, ValidationError, ValueError)`); this matches it.
+        except (OSError, ValueError) as exc:
             raise DossierLoadError(f"{path}: could not be read ({exc})") from exc
         try:
             payload = json.loads(raw)

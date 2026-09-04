@@ -645,7 +645,13 @@ def load_roster(roster_path: str | Path) -> list[PersonRef]:
     path = Path(roster_path)
     try:
         raw = path.read_text(encoding="utf-8")
-    except OSError as exc:
+    # `ValueError` is here for `UnicodeDecodeError`, which subclasses it rather than
+    # `OSError`. A roster is hand-written, so a file saved as latin-1 or cp1252 is an
+    # ordinary operator mistake -- and with only `except OSError` it escaped `RosterError`
+    # and fell through to `_main`'s catch-all, which logs a traceback and returns 1 instead
+    # of the diagnosis and exit 2 a roster problem is supposed to get. Same shape as
+    # `_existing_row` below, which already caught `ValueError` alongside the OS errors.
+    except (OSError, ValueError) as exc:
         raise RosterError(f"cannot read roster {path}: {exc}") from exc
     try:
         data = yaml.safe_load(raw)
@@ -1033,7 +1039,23 @@ def build_command(
     except SystemExit as exc:  # --help exits 0; a usage error exits 2
         return int(exc.code or 0)
 
-    settings = get_settings()  # read at CALL time, never at import
+    try:
+        settings = get_settings()  # read at CALL time, never at import
+    except ValueError as exc:
+        # The same escape as the roster read above, one layer further out. `Settings` is
+        # configured with `env_file=".env"` (config.py), which python-dotenv opens in text
+        # mode with a STRICT utf-8 codec -- so a `.env` saved as latin-1 raises
+        # `UnicodeDecodeError`, a `ValueError` and not an `OSError`. This line sits between
+        # the argparse `try` and the budget `try`, so nothing caught it: `python -m arrival
+        # build` printed a raw dotenv traceback and exited 1. A configuration the CLI cannot
+        # read is bad input, which is exit 2 with a sentence an operator can act on.
+        #
+        # The path is worth printing because `env_file=".env"` is RELATIVE: unlike
+        # `dossier_dir`, which config.py anchors on `__file__`, this resolves against the
+        # process CWD, so the offending file is not necessarily the one in the repo.
+        print(f"arrival: cannot read configuration from {Path.cwd() / '.env'}: {exc}",
+              file=sys.stderr)
+        return 2
     roster = Path(opts.roster) if opts.roster else Path("data/roster.yaml")
     out_dir = Path(opts.out) if opts.out else Path(settings.dossier_dir)
 
