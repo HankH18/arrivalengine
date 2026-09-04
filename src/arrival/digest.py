@@ -318,8 +318,13 @@ IRREGULAR_VERB_FORMS: frozenset[str] = frozenset(
 )
 
 
+#: The punctuation :func:`_bare` strips, named so :func:`_closes_its_phrase` can ask the
+#: same question about the other end of a token.
+_BARE_PUNCTUATION = ".,;:!?'\""
+
+
 def _bare(word: str) -> str:
-    return word.strip(".,;:!?'\"")
+    return word.strip(_BARE_PUNCTUATION)
 
 
 def _reads_as_a_verb(word: str) -> bool:
@@ -330,15 +335,23 @@ def _reads_as_a_verb(word: str) -> bool:
     project's own corpus rather than guessed:
 
     * A capitalised HYPHENATED compound is a product or a hub label far more often than a
-      verb. ``graph._why`` emits "Both deep in Developer-tools go-to-market." — a real
-      ``Match.why`` in the grading corpus — and a bare "ends in -s" rule reads
-      "Developer-tools" as a verb and blanks the Meet row's reasoning. So a hyphenated word
-      only counts in its participial form, which still catches "Co-founded…" and
-      "Co-authored…", the two hyphenated sentence-openers the corpus actually has.
+      verb. A bare "ends in -s" rule reads "Developer-tools" as a verb and blanks the Meet
+      row's reasoning, so a hyphenated word only counts in its participial form — which
+      still catches "Co-founded…" and "Co-authored…", the two hyphenated sentence-openers
+      the corpus actually has. The example this rule was calibrated on, ``graph._why``
+      emitting "Both deep in Developer-tools go-to-market.", is no longer what that function
+      emits: T-041 lower-cases a CATEGORY hub's label, so the corpus line now reads "Both
+      deep in developer-tools go-to-market." The mitigation is not dead with it — every
+      other hub type keeps the label's stored capitalisation, so a company called
+      "Meridian-Ops Systems" still arrives capitalised, hyphenated and ending in "-s"
+      directly after a bare "to".
     * An ALL-CAPS token is an acronym ("AI", "CEO"), never an inflected verb.
 
-    Across all 35 facts in the frozen corpus this flags 21 of 21 subject-elided predicates
-    and none of the six sentences that open with a real subject.
+    Measured on the 35 facts of the frozen corpus (``.swarm-loop/acceptance/fixtures/
+    dossiers``): this flags 28 of 28 subject-elided predicates and none of the 7 sentences
+    that open with a real subject. T-029's own docstring recorded "21 of 21" and "six";
+    those numbers do not reproduce on that corpus, which has not changed since — 28 and 7
+    are what the loop above and the frozen JSON actually yield.
     """
     lowered = word.casefold()
     if lowered in IRREGULAR_VERB_FORMS:
@@ -348,7 +361,41 @@ def _reads_as_a_verb(word: str) -> bool:
     return len(lowered) >= 4 and lowered.endswith(("s", "ed", "ing"))
 
 
-def _splices_a_clause(words: Sequence[str]) -> bool:
+def _closes_its_phrase(words: Sequence[str], index: int) -> bool:
+    """Does the token at ``index`` end the phrase it sits in?
+
+    True when it is the last token of the line, or when it carries its own trailing
+    punctuation — which closes the noun-phrase slot the same way punctuation BEFORE a token
+    opens a new clause. The punctuation set is :func:`_bare`'s, so the two tests agree.
+    """
+    if index == len(words) - 1:
+        return True
+    word = words[index]
+    return word.rstrip(_BARE_PUNCTUATION) != word
+
+
+def _noun_phrase_spans(words: Sequence[str], phrases: Iterable[str]) -> frozenset[int]:
+    """Token indexes covered by a verbatim occurrence of one of ``phrases`` in ``words``.
+
+    Comparison is on the BARE, case-folded token, so it survives the sentence's own
+    punctuation ("2019." matches "2019") and ``graph._spoken_label``'s lower-casing of a
+    category label's leading character. A phrase only covers tokens where its whole word
+    sequence appears in order, so a single shared word never exempts anything.
+    """
+    covered: set[int] = set()
+    for phrase in phrases:
+        parts = [bare for word in phrase.split() if (bare := _bare(word).casefold())]
+        if not parts:
+            continue
+        for start in range(len(words) - len(parts) + 1):
+            if all(_bare(words[start + n]).casefold() == part for n, part in enumerate(parts)):
+                covered.update(range(start, start + len(parts)))
+    return frozenset(covered)
+
+
+def _splices_a_clause(
+    words: Sequence[str], noun_spans: frozenset[int] = frozenset()
+) -> bool:
     """R18: was a sentence pasted into a slot that wanted a noun phrase?
 
     This is the property that "Ask about Argues that developer-tools pricing should be
@@ -362,10 +409,31 @@ def _splices_a_clause(words: Sequence[str]) -> bool:
     as a verb. That is why :data:`OPENER_TEMPLATE`'s "this:" is accepted while the old
     template is not: the preposition has its object, and the colon introduces the rest.
 
-    It errs toward rejection: a one-word company name ending in -s directly after a
-    preposition ("…at Reuters on the data team") is refused. That direction is the safe one
-    here and matches what the rest of this module already does — an unspeakable candidate is
-    SKIPPED, never rewritten, so the cost is the next fact instead of a stumble.
+    **Two exemptions, and the difference between them is the difference between a name and
+    a sentence.** The morphology cannot tell "Reuters" from "Argues" — both are capitalised
+    and both end in "-s" — so neither exemption tries to. They ask something else:
+
+    1. *A clause is longer than one word.* A verb-looking token that CLOSES its phrase
+       (:func:`_closes_its_phrase` — the last token, or one carrying its own punctuation)
+       has nothing after it to be the rest of a clause, so it is the noun the slot wanted.
+       "Both connected to Databricks." is exempt; "Ask about Argues that developer-tools
+       pricing…" is not, because "Argues" is followed by the clause it governs. This
+       exemption cannot admit a spliced sentence: a sentence has a predicate, and a token
+       at the close of the phrase has none.
+    2. *A hub label is a noun by construction.* ``noun_spans`` names the tokens covered by
+       a phrase the CALLER declared to be a noun phrase, and only
+       :func:`_speakable_match` declares any — from ``Match.contributions``, where the
+       matcher has already said "these words are a hub's label". That reaches the labels
+       exemption 1 cannot, the multi-word ones whose head reads as a verb ("Reuters Media
+       Group", "Building Futures Fund"). It is provenance, not grammar: nothing the caller
+       did not declare is exempt, and the opener path declares nothing, so
+       "Ask about Argues that…" is refused there exactly as before.
+
+    What remains refused, deliberately: a capitalised verb-looking word MID-phrase that no
+    caller declared — "…at Reuters on the data team" in a fact. An unspeakable fact is
+    SKIPPED and the next candidate tried, so rejection costs a fact. That is not true of a
+    why, whose only fallback is :data:`WHY_OF_LAST_RESORT`, an admitted blank — which is
+    why the why path is the one that declares its nouns.
     """
     for index in range(1, len(words)):
         previous = words[index - 1]
@@ -376,6 +444,10 @@ def _splices_a_clause(words: Sequence[str]) -> bool:
         word = _bare(words[index])
         if not word or not word[0].isupper() or word.isupper():
             continue
+        if index in noun_spans:
+            continue  # the caller declared these tokens a noun phrase
+        if _closes_its_phrase(words, index):
+            continue  # nothing follows it, so there is no clause to have been spliced
         if _reads_as_a_verb(word):
             return True
     return False
@@ -402,7 +474,7 @@ def _score_positions(words: Sequence[str]) -> set[int]:
     return found
 
 
-def is_speakable(text: str) -> bool:
+def is_speakable(text: str, *, noun_phrases: Iterable[str] = ()) -> bool:
     """R18: can a host read this line aloud, as written, without stumbling?
 
     No URLs, no ``[n]`` citation markers, no parentheses, no numbers-as-scores, at most
@@ -414,6 +486,11 @@ def is_speakable(text: str) -> bool:
     that…" on the path every failure mode takes. A rule that lives only in the template
     regresses the moment someone edits the template; a rule that lives here fails the line
     instead, and the caller falls through to the next candidate.
+
+    ``noun_phrases`` is how a caller that KNOWS part of this line is a name says so — a
+    ``Match``'s hub labels, and nothing else in this codebase. Default empty, so every
+    existing call site judges exactly what it judged before; see :func:`_splices_a_clause`
+    for why the declaration belongs to the caller and not to the morphology.
     """
     if not text.strip():
         return False
@@ -426,7 +503,7 @@ def is_speakable(text: str) -> bool:
     words = text.split()
     if len(words) > SPOKEN_WORD_CAP:
         return False
-    if _splices_a_clause(words):
+    if _splices_a_clause(words, _noun_phrase_spans(words, noun_phrases)):
         return False
     return not _score_positions(words)
 
@@ -668,12 +745,45 @@ def _speakable_match(match: Match) -> Match:
     one that keeps the matcher's exposed reasoning (R10) intact. Only a why that would put
     a URL, a citation marker, a parenthetical or a raw score into the host's mouth is
     rewritten, and the rewrite is a copy: the incoming ``Match`` is never mutated.
+
+    **The why declares its own nouns, and this is the only place in the codebase that
+    does.** ``graph._why`` builds the sentence by interpolating a hub LABEL into a phrase
+    template, and nine of the ten templates end on a bare preposition — "both connected to
+    {label}", "both building on {label}". So the label lands exactly where
+    :func:`_splices_a_clause` looks for a spliced verb, and a label like "Databricks",
+    "Reuters" or "Kubernetes" is capitalised, un-hyphenated and ends in "-s": the
+    morphology reads it as a verb and the row's whole reasoning is replaced by
+    :data:`WHY_OF_LAST_RESORT`.
+
+    Rejection is only the safe direction when there is something to fall back TO. For a
+    fact there is — the next candidate. For a why there is not: the fallback is an admitted
+    blank, so refusing a good line costs R10's exposed reasoning outright. What this
+    function has that no morphology does is ``match.contributions``, in which the matcher
+    has already said which words are a hub's label. Passing those labels as
+    ``noun_phrases`` tells the verb detector what it cannot infer, and nothing else in the
+    line is exempted — a clause spliced anywhere the labels do not cover is refused here
+    exactly as it is on the opener path.
+
+    Every contribution's label is passed, not only the ones ``graph._why`` chose to name,
+    so this does not have to restate that function's selection rule. It is not a widening:
+    the only free text in a why IS a named label, so an unnamed label's words can only
+    match tokens a named label already covers.
+
+    Each label is declared TWICE — as stored, and as :func:`speakable` renders it — because
+    the second judgement below reads the REPAIRED line, in which the stored label no longer
+    occurs. A label like "Reuters (Media) Group" loses its parenthetical on the way through
+    the repair, so the stored spelling covers nothing and the row blanks with the
+    parenthesis gone and the name intact: the same defect, in the version a reader would
+    never think to look for. Repairing the declaration the same way the line is repaired is
+    what keeps the two in step.
     """
+    stored = [c.hub.label for c in match.contributions]
+    labels = stored + [phrase for label in stored if (phrase := speakable(label))]
     why = match.why.strip()
-    if is_speakable(why):
+    if is_speakable(why, noun_phrases=labels):
         return match if why == match.why else match.model_copy(update={"why": why})
     repaired = speakable(why)
-    if not repaired or not is_speakable(repaired):
+    if not repaired or not is_speakable(repaired, noun_phrases=labels):
         # Nothing survived the repair, or what survived still cannot be read aloud (a
         # spliced clause is a grammar fault, and `speakable` repairs only the mechanical
         # five). Either way there is no shared thing left to name that a host can say. R7
