@@ -204,8 +204,11 @@ is the seam T-1's tests use. Opt out with `@pytest.mark.network`; no frozen test
    `investor:foundry-seed-2019`, the rare hub the whole scoring design rests on.
 6. **`cache_dir` is CWD-relative; `dossier_dir` is not.** A CLI started from a subdirectory
    silently uses a different cache root. Do not copy `cache_dir`'s shape for anything new.
-7. **`data/` does not exist yet.** `Settings().dossier_dir.exists()` is `False`. T-9 creates
-   it. T-8 must boot sanely against a missing/empty directory.
+7. **`data/` does not exist, and the SWARM MUST NOT CREATE IT.**
+    `Settings().dossier_dir.exists()` is `False`. Under ESC-001 the swarm builds T-9's code
+    artifacts only — `data/roster.yaml`, `data/dossiers/` and `data/docs/` come from the
+    human-gated live build and its fact-by-fact review at source URLs. Do not read this as
+    licence to fabricate a corpus. T-8 boots sanely against a missing/empty directory.
 8. **The frozen suite gets NO `get_settings` cache reset** — that autouse fixture lives in
    `tests/harness.py`, which `--confcutdir` excludes. **Read `get_settings()` at call or
    factory time, never at module import time**, or 12 of T-8's 14 criteria are unobservable.
