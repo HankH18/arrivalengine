@@ -1,0 +1,57 @@
+{
+  "case_id": "strong-key-sec-cik",
+  "person": {
+    "person_id": "marguerite-oyelaran-stroud",
+    "name": "Marguerite Oyelaran-Stroud",
+    "details": [
+      "CFO at Kilnbrook Distilling",
+      "Louisville"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "b013f4934f363bb8",
+      "source_kind": "edgar",
+      "url": "https://filings.example/ownership/0009000812",
+      "title": "Form 4 - OYELARAN-STROUD MARGUERITE (CIK 0009000812)",
+      "text": "Form 4 - statement of changes in beneficial ownership\n\nReporting person: OYELARAN-STROUD MARGUERITE. CIK of reporting person: 0009000812.\nAddress of reporting person: 41 Sedgeby Lane, Louisville, Kentucky.\n\nIssuer: Kilnbrook Distilling Company. CIK of issuer: 0009000813.\nRelationship of reporting person to issuer: Officer. Title: Chief Financial Officer.\n\nTransaction: disposition of 900 shares to cover withholding on a vested award.\n\nThe filing names the reporting person as an officer of the issuer and records no other employer.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "24ec0734e880592f",
+      "source_kind": "hn",
+      "url": "https://forum.example/threads/barrel-accounting",
+      "title": "forum thread: barrel accounting",
+      "text": "forum thread: barrel accounting\n\nSomebody at a distillery explained the barrel-ageing accounting to me once and I have never recovered. I did not write down who it was.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "b013f4934f363bb8",
+      "match": "yes",
+      "confidence": 0.92,
+      "evidence": "Relationship of reporting person to issuer: Officer. Title: Chief Financial Officer.",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "24ec0734e880592f",
+      "match": "unsure",
+      "confidence": 0.2,
+      "evidence": "I did not write down who it was.",
+      "disambiguator": "role"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "b013f4934f363bb8"
+    ],
+    "strong_keys_present": [
+      "sec_cik"
+    ],
+    "note": "The confirmed half of the frozen corpus's refused EDGAR case. The filing names the reporting person surname-first (OYELARAN-STROUD MARGUERITE), so the name match has to be order-free, and the issuer IS the person's own employer -- Kilnbrook Distilling -- with an officer relationship, which is the name AND company match DESIGN Decision 4 requires for an SEC CIK. The reporting person's CIK (0009000812), not the issuer's (0009000813), is the key. Both are ten-digit identifiers beginning 0009, far above the allocated range, so neither can name a real filer. One `yes` verdict carries the case because the key does not need a second attribute."
+  }
+}

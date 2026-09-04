@@ -1,0 +1,88 @@
+{
+  "case_id": "decoy-retired-namesake",
+  "person": {
+    "person_id": "solveig-marchetti-bram",
+    "name": "Solveig Marchetti-Bram",
+    "details": [
+      "Chief architect at Havenlock Ceramics",
+      "Dunedin"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "e3bbd3b522ac32de",
+      "source_kind": "self_page",
+      "url": "https://studio-directory.example/havenlock-ceramics/people",
+      "title": "Havenlock Ceramics - the studio",
+      "text": "Havenlock Ceramics - the studio\n\nWe are eleven people in a converted grain store, and we make kiln furniture for laboratories that would rather not talk about kiln furniture.\n\nSolveig Marchetti-Bram is chief architect at Havenlock Ceramics and has run the firing-schedule group since 2018. She joined from a structural practice and still draws by hand when a shape is misbehaving.\n\nThe studio publishes its glaze recipes twice a year, which the trade considers either generous or reckless depending on who is asked.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "f49f348c9ad4b578",
+      "source_kind": "search",
+      "url": "https://kilnworks-symposium.example/2025/programme/marchetti-bram",
+      "title": "Kilnworks Symposium 2025 - programme",
+      "text": "Kilnworks Symposium 2025 - programme\n\nClosing session: refractory shapes that survive a bad Tuesday.\n\nSolveig Marchetti-Bram has worked out of Dunedin since 2016 and will talk about what happens to a kiln lining when the schedule is written by someone who has never swept one out.\n\nAttendees are asked not to bring their own bricks this year.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "dc6e6c3c7f35eeb6",
+      "source_kind": "wikipedia",
+      "url": "https://encyclopedia.example/wiki/Solveig_Marchetti-Bram_puppeteer",
+      "title": "Solveig Marchetti-Bram (puppeteer)",
+      "text": "Solveig Marchetti-Bram (puppeteer)\n\nSolveig Marchetti-Bram taught marionette construction at the Orrell Conservatory in Trieste for thirty-one years and died there in March 2009.\n\nHer company toured a single production, The Salt Almanac, for two decades, rebuilding its cast three times as the original figures wore out. She wrote one book, on the mechanics of the rod hand, which is still the standard text.\n\nA retrospective of her working drawings was held in 2014.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    },
+    {
+      "doc_id": "07975e4afc2e6e54",
+      "source_kind": "wikidata",
+      "url": "https://wikidata.example/entity/Q900000731",
+      "title": "Solveig Marchetti-Bram (Q900000731) - item mirror",
+      "text": "Solveig Marchetti-Bram (Q900000731)\n\nItem mirror. Instance of: human. Occupation: puppeteer, teacher. Employer: Orrell Conservatory. Work location: Trieste. Date of death: 12 March 2009.\n\nArchives at: a theatre collection in Dunedin, which bought her working drawings in 2011 and has catalogued about half of them.\n\nDescribed by source: one obituary and one exhibition catalogue.",
+      "published_at": null,
+      "fetched_at": "2026-02-18T09:30:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "e3bbd3b522ac32de",
+      "match": "yes",
+      "confidence": 0.71,
+      "evidence": "Solveig Marchetti-Bram is chief architect at Havenlock Ceramics",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "f49f348c9ad4b578",
+      "match": "yes",
+      "confidence": 0.66,
+      "evidence": "Solveig Marchetti-Bram has worked out of Dunedin since 2016",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "dc6e6c3c7f35eeb6",
+      "match": "no",
+      "confidence": 0.95,
+      "evidence": "Solveig Marchetti-Bram taught marionette construction at the Orrell Conservatory in Trieste for thirty-one years and died there in March 2009.",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "07975e4afc2e6e54",
+      "match": "no",
+      "confidence": 0.93,
+      "evidence": "Employer: Orrell Conservatory. Work location: Trieste.",
+      "disambiguator": "city"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "e3bbd3b522ac32de",
+      "f49f348c9ad4b578"
+    ],
+    "strong_keys_present": [],
+    "note": "SPEC S4 in this ticket's own corpus. Two invented people share the name Solveig Marchetti-Bram: a living chief architect at Havenlock Ceramics in Dunedin, and a puppeteer who taught in Trieste and died in 2009. The decoy documents match the name exactly and one of them even mentions Dunedin -- her drawings are archived there -- and the decoy verdicts (0.95/0.93) are more confident than the target's (0.71/0.66), so a resolver that pools confidence lands on the dead puppeteer. The Wikidata item belongs to the DECOY and matches on name and on the city detail, so it is exactly the document a name+detail QID rule would key off; the negative-evidence veto is what keeps it out. Resolution comes from two surviving `yes` verdicts citing different disambiguators."
+  }
+}
