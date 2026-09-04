@@ -154,6 +154,22 @@ ever re-run `uv sync` and imports break, the repair is:
 and then **assert the effect** by importing the module and printing its resolved path.
 Never trust the installer's exit code.
 
+- **PREFIX EVERY TEST MODULE YOU ADD WITH YOUR TICKET'S ID — `test_t<N>_<thing>.py`.**
+  `tests/` has no `__init__.py` anywhere and pytest's default import mode is `prepend`, so
+  two test modules anywhere in the tree that share a BASENAME are a hard collection error,
+  not a warning. Measured: `tests/connectors/test_client.py` plus `tests/llm/test_client.py`
+  gives `import file mismatch`, `Interrupted: 1 error during collection`, exit 2. Each
+  ticket owns its own `tests/<area>/` subdirectory, and the design's own function table
+  names a `client.py` for BOTH T-1 (`http/client`) and T-2 (`llm/client`) — so
+  `test_client.py` is the collision that will actually happen. It is invisible to your own
+  gate and to every other lane's, and it only appears once the branches are merged, which
+  makes it the most expensive kind of defect this run can produce.
+- **Read `get_settings()` at call time or factory time, never at module import time.** The
+  project suite clears its cache around every test; the FROZEN suite does not, because that
+  autouse fixture lives in `tests/harness.py` and the frozen runner excludes it with
+  `--confcutdir`. A module that snapshots settings at import will pass
+  `pytest --ticket T-N` and fail the frozen gate, which is the direction that costs you a
+  whole cycle to diagnose.
 - **Write every command relative to the worktree root.** Never an absolute path into the
   primary checkout's `.venv/bin/python`, and never with an inherited `VIRTUAL_ENV` or
   `PYTHONPATH` pointing there.
@@ -201,10 +217,17 @@ Never trust the installer's exit code.
 
 These are settled. Do not re-litigate them; build against them.
 
-1. **`person_id == slug(person.name)`.** The frozen grading corpus satisfies this for all
-   five of its people. T-0's own unit fixtures under `tests/fixtures/dossiers/` historically
-   did NOT (they used the filename stem), which is a known trap being repaired separately.
-   **The contract is the frozen one.**
+1. **`person_id == slug(person.name)` is the PRODUCT contract — and T-0's unit fixtures
+   deliberately do not follow it.** All five dossiers in the frozen grading corpus satisfy
+   it. `tests/fixtures/dossiers/{alpha,bravo,charlie,delta}.json` do NOT, and that is
+   **intentional and pinned**, not a defect awaiting repair: seven lines of ticket text in
+   `tickets.json` and `TASKS.md` name those people by mnemonic, including T-5's
+   `match(g,'charlie',['alpha','bravo','delta'])` and T-8's `GET /debug/charlie`. The
+   rename to slugs was tried and REVERTED at integration, and
+   `tests/test_t0b_fixture_conventions.py` now fails if anyone re-does it.
+   **So: implement `slug(name)` lookup, and do NOT infer the id convention from
+   `tests/fixtures/`.** (An earlier version of this ruling called the deviation "a known
+   trap being repaired separately". That was written before the revert and was wrong.)
 2. **The stop-hub list matches hub LABELS, not type prefixes.** The list is
    `{texas, startup, founder, ai, technology, business, ceo, investor}` after lowercasing.
    `investor:foundry-seed-2019` is a legitimate hub and is the load-bearing rare hub the
