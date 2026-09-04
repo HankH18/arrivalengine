@@ -1,0 +1,30 @@
+{
+  "kind": "self_page",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "The member's own site plus the one same-host page it links to. Includes nav chrome, a cookie banner and a <script> so the extractor is graded on removing them.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://thornfieldloom.example.com/",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<!doctype html><html><head><title>Marisol Quennebeck — Thornfield Loom</title><meta charset=\"utf-8\"><style>body{font-family:serif}.banner{display:none}</style></head><body><nav><ul><li><a href=\"/team/marisol-quennebeck\">Team</a></li><li><a href=\"/feed\">Subscribe</a></li><li><a href=\"https://news.example.org/thornfield\">Press</a></li></ul></nav><div id=\"cookie-consent-banner\">We use cookies to improve your experience. Accept all cookies.</div><main><h1>Marisol Quennebeck — Thornfield Loom</h1><p>Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.</p><p>Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.</p></main><script>window.analytics=function(q){return q};</script><footer>&copy; 2024 Thornfield Loom. All rights reserved.</footer></body></html>"
+    },
+    {
+      "method": "GET",
+      "url": "https://thornfieldloom.example.com/team/marisol-quennebeck",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<!doctype html><html><head><title>Marisol Quennebeck — Team — Thornfield Loom</title><meta charset=\"utf-8\"><style>body{font-family:serif}.banner{display:none}</style></head><body><nav><ul></ul></nav><div id=\"cookie-consent-banner\">We use cookies to improve your experience. Accept all cookies.</div><main><h1>Marisol Quennebeck — Team — Thornfield Loom</h1><p>Quennebeck chaired the Narragansett Mill Archive restoration committee before Thornfield Loom existed.</p><p>Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.</p></main><script>window.analytics=function(q){return q};</script><footer>&copy; 2024 Thornfield Loom. All rights reserved.</footer></body></html>"
+    }
+  ]
+}

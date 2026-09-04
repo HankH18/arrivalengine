@@ -1,0 +1,81 @@
+{
+  "kind": "wayback",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "CDX returns a list of LISTS whose first row is the header, not a list of objects. Three captures across four years: what the site used to say is the whole point of this source, so each capture carries different prose.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://web.archive.org/cdx/search/cdx",
+      "status": 200,
+      "content_type": "application/json",
+      "json": [
+        [
+          "urlkey",
+          "timestamp",
+          "original",
+          "mimetype",
+          "statuscode",
+          "digest",
+          "length"
+        ],
+        [
+          "com,example,thornfieldloom)/",
+          "20180614101500",
+          "https://thornfieldloom.example.com/",
+          "text/html",
+          "200",
+          "QRSTUVWXYZ234567ABCDEFGH",
+          "5120"
+        ],
+        [
+          "com,example,thornfieldloom)/about",
+          "20200211084500",
+          "https://thornfieldloom.example.com/about",
+          "text/html",
+          "200",
+          "HGFEDCBA765432ZYXWVUTSRQ",
+          "6144"
+        ],
+        [
+          "com,example,thornfieldloom)/almanac",
+          "20220803153000",
+          "https://thornfieldloom.example.com/almanac",
+          "text/html",
+          "200",
+          "MNOPQRST890123UVWXYZABCD",
+          "4096"
+        ]
+      ]
+    },
+    {
+      "method": "GET",
+      "url": "https://web.archive.org/web/20180614101500/https://thornfieldloom.example.com/",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<!doctype html><html><head><title>Thornfield Loom (2018)</title><meta charset=\"utf-8\"><style>body{font-family:serif}.banner{display:none}</style></head><body><nav><ul></ul></nav><div id=\"cookie-consent-banner\">We use cookies to improve your experience. Accept all cookies.</div><main><h1>Thornfield Loom (2018)</h1><p>Thornfield Loom is two people and one borrowed jacquard loom in the Olneyville mill district.</p><p>Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms.</p></main><script>window.analytics=function(q){return q};</script><footer>&copy; 2024 Thornfield Loom. All rights reserved.</footer></body></html>"
+    },
+    {
+      "method": "GET",
+      "url": "https://web.archive.org/web/20200211084500/https://thornfieldloom.example.com/about",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<!doctype html><html><head><title>About — Thornfield Loom (2020)</title><meta charset=\"utf-8\"><style>body{font-family:serif}.banner{display:none}</style></head><body><nav><ul></ul></nav><div id=\"cookie-consent-banner\">We use cookies to improve your experience. Accept all cookies.</div><main><h1>About — Thornfield Loom (2020)</h1><p>Thornfield Loom now schedules looms for eleven mills across New England.</p><p>Quennebeck chaired the Narragansett Mill Archive restoration committee before Thornfield Loom existed.</p></main><script>window.analytics=function(q){return q};</script><footer>&copy; 2024 Thornfield Loom. All rights reserved.</footer></body></html>"
+    },
+    {
+      "method": "GET",
+      "url": "https://web.archive.org/web/20220803153000/https://thornfieldloom.example.com/almanac",
+      "status": 200,
+      "content_type": "text/html; charset=utf-8",
+      "body": "<!doctype html><html><head><title>Almanac — Thornfield Loom (2022)</title><meta charset=\"utf-8\"><style>body{font-family:serif}.banner{display:none}</style></head><body><nav><ul></ul></nav><div id=\"cookie-consent-banner\">We use cookies to improve your experience. Accept all cookies.</div><main><h1>Almanac — Thornfield Loom (2022)</h1><p>Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift.</p></main><script>window.analytics=function(q){return q};</script><footer>&copy; 2024 Thornfield Loom. All rights reserved.</footer></body></html>"
+    }
+  ]
+}

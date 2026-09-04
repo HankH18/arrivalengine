@@ -1,0 +1,70 @@
+{
+  "kind": "edgar",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "EDGAR full-text search wraps results Elasticsearch-style: hits.hits[]._source. Form 4 (ownership) and Form D (exempt offering) both NAME people, which is why the connector asks for them and not for 10-K company financials.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://efts.sec.gov/LATEST/search-index",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "took": 12,
+        "hits": {
+          "total": {
+            "value": 2,
+            "relation": "eq"
+          },
+          "hits": [
+            {
+              "_id": "0001742119-24-000012:xslF345X03/primary_doc.xml",
+              "_source": {
+                "adsh": "0001742119-24-000012",
+                "ciks": [
+                  "0001742119"
+                ],
+                "display_names": [
+                  "Quennebeck Marisol (CIK 0001742119)",
+                  "Thornfield Loom Inc. (CIK 0001742119)"
+                ],
+                "form": "4",
+                "root_forms": [
+                  "4"
+                ],
+                "file_date": "2024-04-18",
+                "file_description": "FORM 4 - statement of changes in beneficial ownership. Marisol Quennebeck co-founded Thornfield Loom in Providence in 2017 to keep small textile mills scheduling their own looms."
+              }
+            },
+            {
+              "_id": "0001742119-23-000004:primary_doc.xml",
+              "_source": {
+                "adsh": "0001742119-23-000004",
+                "ciks": [
+                  "0001742119"
+                ],
+                "display_names": [
+                  "Thornfield Loom Inc. (CIK 0001742119)"
+                ],
+                "form": "D",
+                "root_forms": [
+                  "D"
+                ],
+                "file_date": "2023-02-27",
+                "file_description": "FORM D - notice of exempt offering of securities. Thornfield Loom publishes a monthly maintenance almanac that mill-floor supervisors read before every shift."
+              }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

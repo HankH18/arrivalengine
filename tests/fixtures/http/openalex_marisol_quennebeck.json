@@ -1,0 +1,267 @@
+{
+  "kind": "openalex",
+  "subject": {
+    "person_id": "marisol-quennebeck",
+    "name": "Marisol Quennebeck",
+    "details": [
+      "co-founder, Thornfield Loom",
+      "Providence, Rhode Island",
+      "https://thornfieldloom.example.com/"
+    ]
+  },
+  "provenance": "Hand-written recording for a FICTIONAL subject (TASKS T-1 acceptance 5). The response envelopes mirror the real API's shape; every sentence of prose was written for this fixture and describes no real person, company or organisation. example.com/example.org hosts and reserved-range identifiers only.",
+  "note": "authors?search -> the author record, then works?filter=author.id. Abstracts arrive ONLY as OpenAlex's inverted index, so the connector has to de-invert them.",
+  "responses": [
+    {
+      "method": "GET",
+      "url": "https://api.openalex.org/authors",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "meta": {
+          "count": 1
+        },
+        "results": [
+          {
+            "id": "https://openalex.org/A5099184423",
+            "display_name": "Marisol Quennebeck",
+            "orcid": "https://orcid.org/0009-0004-7712-3311",
+            "works_count": 9,
+            "cited_by_count": 63,
+            "last_known_institutions": [
+              {
+                "id": "https://openalex.org/I4210099999",
+                "display_name": "Narragansett Institute of Technology"
+              }
+            ],
+            "x_concepts": [
+              {
+                "display_name": "Textile manufacturing"
+              },
+              {
+                "display_name": "Production scheduling"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://api.openalex.org/works",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "json": {
+        "meta": {
+          "count": 3
+        },
+        "results": [
+          {
+            "id": "https://openalex.org/W4390001111",
+            "display_name": "Self-scheduling on small textile floors",
+            "doi": "https://doi.org/10.5555/thornfield.2024.1",
+            "publication_year": 2024,
+            "publication_date": "2024-02-19",
+            "cited_by_count": 11,
+            "primary_location": {
+              "source": {
+                "display_name": "Narragansett Working Papers"
+              },
+              "landing_page_url": "https://example.org/nwp/2024-1"
+            },
+            "authorships": [
+              {
+                "author": {
+                  "display_name": "Marisol Quennebeck"
+                }
+              },
+              {
+                "author": {
+                  "display_name": "Teodora Ilves"
+                }
+              }
+            ],
+            "abstract_inverted_index": {
+              "Marisol": [
+                0
+              ],
+              "Quennebeck": [
+                1
+              ],
+              "co-founded": [
+                2
+              ],
+              "Thornfield": [
+                3
+              ],
+              "Loom": [
+                4
+              ],
+              "in": [
+                5,
+                7
+              ],
+              "Providence": [
+                6
+              ],
+              "2017": [
+                8
+              ],
+              "to": [
+                9
+              ],
+              "keep": [
+                10
+              ],
+              "small": [
+                11
+              ],
+              "textile": [
+                12
+              ],
+              "mills": [
+                13
+              ],
+              "scheduling": [
+                14
+              ],
+              "their": [
+                15
+              ],
+              "own": [
+                16
+              ],
+              "looms.": [
+                17
+              ]
+            }
+          },
+          {
+            "id": "https://openalex.org/W4390002222",
+            "display_name": "The maintenance almanac as a shop-floor protocol",
+            "doi": "https://doi.org/10.5555/thornfield.2023.4",
+            "publication_year": 2023,
+            "publication_date": "2023-09-07",
+            "cited_by_count": 6,
+            "primary_location": {
+              "source": {
+                "display_name": "Narragansett Working Papers"
+              },
+              "landing_page_url": "https://example.org/nwp/2023-4"
+            },
+            "authorships": [
+              {
+                "author": {
+                  "display_name": "Marisol Quennebeck"
+                }
+              }
+            ],
+            "abstract_inverted_index": {
+              "Thornfield": [
+                0
+              ],
+              "Loom": [
+                1
+              ],
+              "publishes": [
+                2
+              ],
+              "a": [
+                3
+              ],
+              "monthly": [
+                4
+              ],
+              "maintenance": [
+                5
+              ],
+              "almanac": [
+                6
+              ],
+              "that": [
+                7
+              ],
+              "mill-floor": [
+                8
+              ],
+              "supervisors": [
+                9
+              ],
+              "read": [
+                10
+              ],
+              "before": [
+                11
+              ],
+              "every": [
+                12
+              ],
+              "shift.": [
+                13
+              ]
+            }
+          },
+          {
+            "id": "https://openalex.org/W4390003333",
+            "display_name": "Cataloguing the Narragansett Mill Archive",
+            "doi": "https://doi.org/10.5555/thornfield.2021.2",
+            "publication_year": 2021,
+            "publication_date": "2021-05-30",
+            "cited_by_count": 3,
+            "primary_location": {
+              "source": {
+                "display_name": "Narragansett Working Papers"
+              },
+              "landing_page_url": "https://example.org/nwp/2021-2"
+            },
+            "authorships": [
+              {
+                "author": {
+                  "display_name": "Marisol Quennebeck"
+                }
+              }
+            ],
+            "abstract_inverted_index": {
+              "Quennebeck": [
+                0
+              ],
+              "chaired": [
+                1
+              ],
+              "the": [
+                2
+              ],
+              "Narragansett": [
+                3
+              ],
+              "Mill": [
+                4
+              ],
+              "Archive": [
+                5
+              ],
+              "restoration": [
+                6
+              ],
+              "committee": [
+                7
+              ],
+              "before": [
+                8
+              ],
+              "Thornfield": [
+                9
+              ],
+              "Loom": [
+                10
+              ],
+              "existed.": [
+                11
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
