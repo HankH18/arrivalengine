@@ -576,6 +576,83 @@ def _page_for(url: str) -> str:
     return _page(f"{MEMBER_NAME} — {HER_COMPANY}", HER_LINE)
 
 
+#: Every container key the ten JSON APIs above use, carrying the same two people in the
+#: same order. This is what an endpoint this router does not recognise gets, and it is
+#: load-bearing rather than tidy: without it a connector reaching an unanticipated
+#: endpoint receives HTML it cannot parse, returns `[]`, and PASSES the identity contract
+#: without ever having been asked the question. Measured — a deliberately naive eleventh
+#: connector was written to fail this contract and passed it, because its endpoint was
+#: answered with a page. The frozen suite makes the same provision for the same reason.
+def _generic_items() -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"decoy-{index}",
+            "title": f"{MEMBER_NAME} — {company}",
+            "name": f"{MEMBER_NAME} — {company}",
+            "display_name": MEMBER_NAME,
+            "author": MEMBER_NAME,
+            "url": url,
+            "link": url,
+            "html_url": url,
+            "text": line,
+            "content": line,
+            "snippet": line,
+            "description": line,
+            "summary": line,
+            "extract": line,
+            "abstract": line,
+            "bio": line,
+            "company": company,
+            "location": city,
+            "date": "2024-06-01",
+            "created_at": "2024-06-01T00:00:00Z",
+        }
+        for index, (company, city, url, line) in enumerate(
+            (
+                (
+                    STRANGER_COMPANY,
+                    f"{STRANGER_CITY}, {STRANGER_STATE}",
+                    STRANGER_PAGE,
+                    STRANGER_LINE,
+                ),
+                (HER_COMPANY, f"{HER_CITY}, {HER_STATE}", HER_PAGE, HER_LINE),
+            )
+        )
+    ]
+
+
+def _generic_json() -> dict[str, Any]:
+    items = _generic_items()
+    return {
+        "query": MEMBER_NAME,
+        "total": len(items),
+        "count": len(items),
+        "nbHits": len(items),
+        "total_count": len(items),
+        "total_results": len(items),
+        "success": 1,
+        "results": items,
+        "items": items,
+        "hits": items,
+        "docs": items,
+        "data": items,
+        "entries": items,
+        "records": items,
+        "search": items,
+        "organizations": items,
+        "meta": {"count": len(items), "page": 1, "per_page": 25},
+    }
+
+
+def _looks_like_an_api(host: str, path: str, query: str) -> bool:
+    return (
+        host.startswith("api.")
+        or "/api/" in path
+        or path.endswith(".json")
+        or "json" in query.lower()
+    )
+
+
 def decoy_router(request: Any) -> Any:
     """Answer any request with this two-people world. Never 404s a plausible endpoint."""
     split = urlsplit(str(request.url))
@@ -665,4 +742,6 @@ def decoy_router(request: Any) -> Any:
             return _openalex_works(json.dumps(query))
         return _openalex_authors()
 
+    if _looks_like_an_api(host, path, split.query):
+        return _generic_json()
     return _page_for(str(request.url))
