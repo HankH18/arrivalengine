@@ -38,10 +38,10 @@ organisations, then `organizations/{ein}.json` for the officer list.
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from arrival.connectors.base import BaseConnector, affiliations, text_block
+from arrival.connectors.identity import US_STATES, carries_name, is_an_address
 from arrival.contracts import PersonRef, RawDoc
 from arrival.util import normalize_ws
 
@@ -57,55 +57,26 @@ MAX_QUERIES = 3
 #: than `budget` because most candidates are about to be rejected for not naming her.
 MAX_CANDIDATES = 8
 
-_WORD = re.compile(r"[^0-9a-z]+")
-
-#: Names and postal codes of the US states, plus DC. A `detail` ending in one of these is
-#: an address, and an address searched against a charity-name index returns that town's
-#: charities — none of which the member need have any connection to.
-_US_STATES = frozenset(
-    {
-        "alabama", "alaska", "arizona", "arkansas", "california", "colorado",
-        "connecticut", "delaware", "district of columbia", "florida", "georgia",
-        "hawaii", "idaho", "illinois", "indiana", "iowa", "kansas", "kentucky",
-        "louisiana", "maine", "maryland", "massachusetts", "michigan", "minnesota",
-        "mississippi", "missouri", "montana", "nebraska", "nevada", "new hampshire",
-        "new jersey", "new mexico", "new york", "north carolina", "north dakota",
-        "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island", "south carolina",
-        "south dakota", "tennessee", "texas", "utah", "vermont", "virginia",
-        "washington", "west virginia", "wisconsin", "wyoming",
-        "al", "ak", "az", "ar", "ca", "co", "ct", "dc", "de", "fl", "ga", "hi", "ia",
-        "id", "il", "in", "ks", "ky", "la", "ma", "md", "me", "mi", "mn", "mo", "ms",
-        "mt", "nc", "nd", "ne", "nh", "nj", "nm", "nv", "ny", "oh", "ok", "or", "pa",
-        "ri", "sc", "sd", "tn", "tx", "ut", "va", "vt", "wa", "wi", "wv", "wy",
-    }
-)
-
-
-def _tokens(text: str) -> set[str]:
-    """Comparable word tokens. Single letters are dropped: a middle initial matches all."""
-    return {word for word in _WORD.split(normalize_ws(text)) if len(word) >= 2}
+#: The name predicate, the state list and the address test all now live in
+#: `identity.py`: every one of them was written here and copied, and a second spelling of
+#: any of them is a second answer to "is this her?".
+_US_STATES = US_STATES
 
 
 def _is_the_member(person_name: str, officer_name: str) -> bool:
     """Does this roster line name the member?
 
-    Word-set containment, not substring: real 990 rosters are written
-    `QUENNEBECK MARISOL A` about as often as `Marisol Quennebeck`, and a substring test
-    on the full name in roster order misses every one of them — which silently turns the
-    one fact this connector exists to state, "she chairs this", into "this exists near
-    her". Containment also means a shared surname alone is never a match.
+    `carries_name` (identity.py): word-set containment, not substring. Real 990 rosters
+    are written `QUENNEBECK MARISOL A` about as often as `Marisol Quennebeck`, and a
+    substring test on the full name in roster order misses every one of them — which
+    silently turns the one fact this connector exists to state, "she chairs this", into
+    "this exists near her". Containment also means a shared surname alone is never a
+    match.
     """
-    wanted = _tokens(person_name)
-    return bool(wanted) and wanted <= _tokens(officer_name)
+    return carries_name(officer_name, person_name)
 
 
-def _is_an_address(detail: str) -> bool:
-    """`"Providence, Rhode Island"` yes; `"co-founder, Thornfield Loom"` no."""
-    normalised = normalize_ws(detail)
-    if normalised in _US_STATES:
-        return True
-    fragments = [fragment.strip() for fragment in detail.split(",")]
-    return len(fragments) >= 2 and normalize_ws(fragments[-1]) in _US_STATES
+_is_an_address = is_an_address
 
 
 def organisation_queries(person: PersonRef) -> list[str]:
