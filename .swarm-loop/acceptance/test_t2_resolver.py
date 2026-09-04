@@ -8,6 +8,13 @@ Everything is driven from the orchestrator-owned corpus in `fixtures/resolve_cas
 no worker may write. Two tests build *variants* of a frozen case in memory — each variant
 changes exactly one dimension of the committed case so the assertion isolates one rule.
 
+Three of the frozen cases (`strong-key-refused-*`) exist to make the strong-key arm of
+Decision 4 *discriminating*: each holds a strong-key-CAPABLE document (wikidata, github,
+edgar) that carries a `yes` verdict, is accepted, and must still earn NO key, because the
+QID matches on name only, the GitHub profile's Company is unset, or the CIK is matched on
+a different company. Without them, `kind in {wikidata, github, edgar} and verdict == "yes"
+-> take the key` passes the whole corpus while implementing none of Decision 4.
+
 Product imports are deliberately inside function bodies: at cycle 0 `arrival` does not
 exist, and a module-scope import would turn an unbuilt feature into a collection error,
 which silently removes these tests from both sides of the pass-rate fraction.
@@ -16,6 +23,7 @@ which silently removes these tests from both sides of the pass-rate fraction.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 from typing import Literal, Union, get_args, get_origin
@@ -33,11 +41,71 @@ pytestmark = [pytest.mark.t2, pytest.mark.ticket("T-2")]
 _ACCEPTANCE_DIR = Path(__file__).resolve().parent
 _RESOLVE_CASE_DIR = _ACCEPTANCE_DIR / "fixtures" / "resolve_cases"
 
-# Parametrisation ids must exist at collection time, so they are read from disk here.
-# The bodies still load the case through the `frozen_fixtures` session fixture.
-_RESOLVE_CASE_IDS = sorted(p.stem for p in _RESOLVE_CASE_DIR.glob("*.json")) or [
-    "__no_frozen_resolve_cases_found__"
-]
+# --------------------------------------------------------------------------------------
+# WIKIDATA QIDs IN THIS CORPUS ARE DELIBERATELY OUT OF RANGE. Do not "fix" them back.
+#
+# The corpus attaches invented biographies to Wikidata items, and a QID is a durable
+# real-world identifier no matter how fictional the prose around it is: an item id inside
+# the allocated range names a real entity, plausibly a real person, which FROZEN-SPEC §5
+# and T-2's non-goals ("fictional people only, everywhere, with no exceptions") forbid.
+# So every QID here is nine digits in the Q9000004xx block -- roughly an order of
+# magnitude beyond Wikidata's highest allocated item -- which cannot collide with a real
+# item and is the same convention the frozen dossier corpus already uses (Q900000317).
+# They look implausibly long BECAUSE that is what makes them safe.
+#
+# The QID also sits in each such document's url, and `doc_id == sha1(url)[:16]`, so
+# renumbering one means recomputing its doc_id and every `scripted_verdicts` and
+# `expect.accepted_doc_ids` reference to it. `test_the_frozen_resolve_corpus_loaded`
+# re-checks that relation for every document in the corpus.
+# --------------------------------------------------------------------------------------
+
+# The corpus AS FROZEN. Pinned here as well as globbed off disk because the glob alone is
+# silently lossy: pytest builds the denominator of every T-2 metric out of these ids, so a
+# corpus that only half-loads -- files deleted, the directory moved or renamed, a
+# permission error that `Path.glob` swallows and reports as "no matches" -- quietly shrinks
+# the scored count while every surviving case stays green. A smaller green suite is
+# indistinguishable from a passing one unless something knows how big the suite was meant
+# to be; this set is that something.
+_FROZEN_RESOLVE_CASE_IDS = frozenset(
+    {
+        "decoy-deceased-namesake",
+        "evidence-not-in-doc",
+        "must-be-unresolved",
+        "strong-key-refused-edgar-name-not-company",
+        "strong-key-refused-github-unconfirmed",
+        "strong-key-refused-wikidata-name-only",
+        "strong-key-wikidata",
+        "two-independent-attributes",
+    }
+)
+
+# The parametrisation id that means "the corpus did not load". A sentinel rather than an
+# exception, because raising at module scope aborts COLLECTION of this module and takes
+# every T-2 criterion out of both sides of the pass-rate fraction at once -- which reads
+# as "could not measure", not as a failure. The sentinel keeps the module collectable and
+# the test body turns it into one loud, named failure instead.
+_CORPUS_DID_NOT_LOAD = "__frozen_resolve_corpus_did_not_load__"
+
+
+def _discover_resolve_case_ids() -> list[str]:
+    """Parametrisation ids, read from disk at collection time. Standard library only.
+
+    Parametrisation ids must exist at collection time, so this cannot move into a fixture;
+    the test bodies still load each case through the `frozen_fixtures` session fixture.
+
+    `Path.glob` answers "directory is empty", "directory does not exist" and (on 3.11+)
+    "directory could not be read" with the same empty iterator, so none of the three can
+    be told apart here. All of them collapse to the sentinel, and the tests below are
+    where an empty or unreadable corpus becomes a hard failure rather than a short run.
+    """
+    try:
+        found = sorted(p.stem for p in _RESOLVE_CASE_DIR.glob("*.json"))
+    except OSError:  # pragma: no cover - unreadable corpus directory
+        found = []
+    return found or [_CORPUS_DID_NOT_LOAD]
+
+
+_RESOLVE_CASE_IDS = _discover_resolve_case_ids()
 
 _DUMMY_KEY = "frozen-acceptance-dummy-key-never-used"
 
@@ -200,16 +268,31 @@ class _ScriptedVerdictLLM:
 def _load_case(frozen_fixtures: Path, case_id: str) -> dict:
     path = frozen_fixtures / "resolve_cases" / f"{case_id}.json"
     assert path.is_file(), f"frozen resolver case is missing from the corpus: {path}"
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        case = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:  # unreadable file, or not valid JSON
+        raise AssertionError(
+            f"frozen resolver case {path} exists but could not be loaded ({exc}). "
+            "A case that cannot be read is a broken measuring stick, not a passing case."
+        ) from exc
+    for key in ("person", "docs", "scripted_verdicts", "expect"):
+        assert key in case, f"frozen resolver case {path} is missing the {key!r} key"
+    return case
 
 
-def _run_resolve(case: dict, verdicts=None, doc_ids=None):
-    """Run `resolve` over a frozen case, optionally over a variant verdict set / doc subset."""
+def _run_resolve_capturing(case: dict, verdicts=None, doc_ids=None):
+    """`_run_resolve`, additionally returning the scripted LLM and the documents it saw.
+
+    The stub has to be built inside the coroutine (constructing `RawDoc` needs the product
+    import, which must stay lazy), so it is handed back out through `captured` rather than
+    created by the caller.
+    """
     scripted = case["scripted_verdicts"] if verdicts is None else verdicts
     raw = case["docs"] if doc_ids is None else [d for d in case["docs"] if d["doc_id"] in set(doc_ids)]
     assert {v["doc_id"] for v in scripted} == {d["doc_id"] for d in raw}, (
         "every document handed to the resolver must carry exactly one scripted verdict"
     )
+    captured: dict = {}
 
     async def _inner():
         from arrival.contracts import PersonRef, RawDoc
@@ -217,9 +300,33 @@ def _run_resolve(case: dict, verdicts=None, doc_ids=None):
 
         person = PersonRef.model_validate(case["person"])
         docs = [RawDoc.model_validate(d) for d in raw]
-        return await resolve(person, docs, _ScriptedVerdictLLM(docs, scripted))
+        llm = _ScriptedVerdictLLM(docs, scripted)
+        captured["llm"] = llm
+        captured["docs"] = docs
+        return await resolve(person, docs, llm)
 
-    return asyncio.run(_inner())
+    resolution = asyncio.run(_inner())
+    return resolution, captured["llm"], captured["docs"]
+
+
+def _run_resolve(case: dict, verdicts=None, doc_ids=None):
+    """Run `resolve` over a frozen case, optionally over a variant verdict set / doc subset."""
+    return _run_resolve_capturing(case, verdicts=verdicts, doc_ids=doc_ids)[0]
+
+
+def _docs_the_resolver_asked_about(llm, docs) -> set[str]:
+    """doc_ids the resolver actually put to the model, by the stub's own recognition rule.
+
+    Deliberately the SAME `_docs_named_in` the stub uses to answer, so this measures
+    exactly "could this document have received a verdict from the model", and adds no
+    failure mode the scripted stub did not already have. Works for a per-document prompt
+    loop and for one batched prompt naming every document alike.
+    """
+    seen: set[str] = set()
+    for call in llm.calls:
+        for doc in _docs_named_in(docs, call["user"]):
+            seen.add(doc.doc_id)
+    return seen
 
 
 def _quoted_verdicts(case: dict) -> list[dict]:
@@ -231,12 +338,124 @@ def _quoted_verdicts(case: dict) -> list[dict]:
 # --------------------------------------------------------------------------------------
 # tests
 # --------------------------------------------------------------------------------------
+@pytest.mark.guard
+def test_the_frozen_resolve_corpus_loaded(frozen_fixtures):
+    """Harness self-check: T-2's denominator is the whole frozen corpus, not the survivors.
+
+    `guard`, and therefore excluded from every scored count, because it exercises no
+    product code and is green at baseline by design. What it buys is that a corpus which
+    fails to load can no longer be mistaken for a corpus that passes: an empty, shrunken,
+    moved or unreadable `resolve_cases/` fails HERE, by name, instead of quietly removing
+    parametrised criteria from both sides of the pass-rate fraction.
+    """
+    directory = frozen_fixtures / "resolve_cases"
+    assert directory.is_dir(), (
+        f"the frozen resolve-case corpus directory is missing or is not a directory: "
+        f"{directory}. Every T-2 per-case criterion is parametrised out of it."
+    )
+
+    assert _CORPUS_DID_NOT_LOAD not in _RESOLVE_CASE_IDS, (
+        f"collection found ZERO cases in {_RESOLVE_CASE_DIR}, so "
+        "test_resolver_reproduces_the_frozen_case_outcome is parametrised over a "
+        "placeholder and grades nothing."
+    )
+    on_disk = sorted(p.stem for p in directory.glob("*.json"))
+    assert sorted(_RESOLVE_CASE_IDS) == on_disk, (
+        "the ids pytest parametrised at collection time disagree with the corpus on disk: "
+        f"collected {sorted(_RESOLVE_CASE_IDS)} vs on disk {on_disk}"
+    )
+    missing = sorted(_FROZEN_RESOLVE_CASE_IDS - set(on_disk))
+    assert not missing, (
+        f"frozen resolve cases have gone missing from the corpus: {missing}. Their "
+        "criteria are not failing, they have silently left the denominator."
+    )
+
+    cases = {}
+    for case_id in on_disk:
+        path = directory / f"{case_id}.json"
+        try:
+            case = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise AssertionError(f"{case_id}: corpus file could not be loaded ({exc})") from exc
+        cases[case_id] = case
+
+        for key in ("case_id", "person", "docs", "scripted_verdicts", "expect"):
+            assert key in case, f"{case_id}: corpus file is missing the {key!r} key"
+        assert case["case_id"] == case_id, f"{case_id}: case_id disagrees with its filename"
+
+        doc_ids = [d["doc_id"] for d in case["docs"]]
+        assert doc_ids, f"{case_id}: a case with no documents grades nothing"
+        assert len(set(doc_ids)) == len(doc_ids), f"{case_id}: duplicate doc_id"
+        for doc in case["docs"]:
+            expected_id = hashlib.sha1(doc["url"].encode()).hexdigest()[:16]
+            assert doc["doc_id"] == expected_id, (
+                f"{case_id}: doc_id {doc['doc_id']} != sha1({doc['url']})[:16] = {expected_id}"
+            )
+            assert doc["text"].strip(), f"{case_id}: {doc['doc_id']} has empty text"
+        assert {v["doc_id"] for v in case["scripted_verdicts"]} == set(doc_ids), (
+            f"{case_id}: scripted verdicts and documents do not correspond one-to-one"
+        )
+
+        expect = case["expect"]
+        assert expect["status"] in {"resolved", "unresolved"}, f"{case_id}: bad status"
+        assert set(expect["accepted_doc_ids"]) <= set(doc_ids), f"{case_id}: unknown accepted id"
+        if expect["status"] == "unresolved":
+            assert expect["accepted_doc_ids"] == [], f"{case_id}: unresolved stores no docs (R2)"
+        assert isinstance(expect["strong_keys_present"], list), f"{case_id}: bad strong_keys"
+        assert expect["note"].strip(), f"{case_id}: a case with no rationale cannot be reviewed"
+
+    # The corpus must keep BREAKING the strong-key shortcut. Every source kind that can
+    # carry a strong key needs at least one case where such a document has a `yes` verdict
+    # and STILL earns no key; without one of these, `kind in {wikidata, github, edgar} and
+    # verdict == "yes" -> take the key` passes the whole corpus while implementing neither
+    # priority order, nor name+detail matching, nor confirmation.
+    strong_key_kinds = {"wikidata", "github", "edgar"}
+    refused = set()
+    for case in cases.values():
+        if case["expect"]["strong_keys_present"]:
+            continue
+        verdict_by_doc = {v["doc_id"]: v for v in case["scripted_verdicts"]}
+        for doc in case["docs"]:
+            if doc["source_kind"] in strong_key_kinds:
+                if verdict_by_doc[doc["doc_id"]]["match"] == "yes":
+                    refused.add(doc["source_kind"])
+    assert refused == strong_key_kinds, (
+        "the corpus no longer refuses a strong key to every strong-key-capable source "
+        f"kind that carries a `yes` verdict: covered {sorted(refused)}, need "
+        f"{sorted(strong_key_kinds)}. A kind missing from that set is a kind an "
+        "implementation may key off document type alone and still score full marks."
+    )
+
+
 @pytest.mark.parametrize("case_id", _RESOLVE_CASE_IDS)
 def test_resolver_reproduces_the_frozen_case_outcome(frozen_fixtures, case_id):
     """R2 / S4 / T-2 acceptance 2+4: status, accepted docs and strong keys per frozen case."""
+    if case_id == _CORPUS_DID_NOT_LOAD:
+        pytest.fail(
+            f"the frozen resolve-case corpus at {_RESOLVE_CASE_DIR} yielded ZERO cases at "
+            "collection time, so this parametrisation is a placeholder and T-2 has no "
+            "per-case criteria at all. Restore the corpus before reading any T-2 number: "
+            "this is a broken measuring stick, not a product failure."
+        )
     case = _load_case(frozen_fixtures, case_id)
     expect = case["expect"]
-    resolution = _run_resolve(case)
+    resolution, llm, docs = _run_resolve_capturing(case)
+
+    # DESIGN Decision 4 is 'LLM verdict per doc', asserted FIRST and on its own. Two of the
+    # frozen cases expect `unresolved` with no accepted documents, so without this a
+    # resolver that returns exactly that, unconditionally -- reading no document, asking
+    # the model nothing -- collected those two criteria for free.
+    unasked = sorted({d.doc_id for d in docs} - _docs_the_resolver_asked_about(llm, docs))
+    assert not unasked, (
+        f"{case_id}: the resolver produced an answer over {len(docs)} document(s) having "
+        f"made {len(llm.calls)} structured call(s), and never put {unasked} to the model. "
+        "DESIGN Decision 4 decides this per document, on one LLM verdict each: a document "
+        "the model never saw was not judged, it was assumed."
+    )
+    assert resolution.person_id == case["person"]["person_id"], (
+        f"{case_id}: Resolution.person_id is {resolution.person_id!r}, expected "
+        f"{case['person']['person_id']!r}"
+    )
 
     assert resolution.status == expect["status"], (
         f"{case_id}: expected status {expect['status']!r}, got {resolution.status!r}. "

@@ -10,11 +10,11 @@
   },
   "docs": [
     {
-      "doc_id": "aa3fcbf1ae789126",
+      "doc_id": "5b6df63389109480",
       "source_kind": "wikidata",
-      "url": "https://example.org/wikidata/Q7314529",
-      "title": "Ilse Vandermolen (Q7314529) - item mirror",
-      "text": "Ilse Vandermolen (Q7314529)\n\nItem mirror. Instance of: human. Occupation: software engineer, optical physicist. Employer: Belmarch Optics. Work location: Rotterdam. Educated at: Vaarwater Polytechnic. Native language: Dutch.\n\nNotable work: Slantwise, an open-source ray-tracing library for lens design, first released in 2016 and still maintained by the same author.\n\nStatements on this item cite three sources: a 2019 interview in a trade newsletter, the programme of the 2024 Optics Forum, and the release notes of Slantwise 2.0. The item carries one alias, I. Vandermolen, and one sitelink, which points at an article about the library rather than about the person.\n\nTwo other items carry the label Ilse Vandermolen: a nineteenth-century still-life painter and a river barge. Neither is a person working in optics, and neither is linked from this item.",
+      "url": "https://example.org/wikidata/Q900000411",
+      "title": "Ilse Vandermolen (Q900000411) - item mirror",
+      "text": "Ilse Vandermolen (Q900000411)\n\nItem mirror. Instance of: human. Occupation: software engineer, optical physicist. Employer: Belmarch Optics. Work location: Rotterdam. Educated at: Vaarwater Polytechnic. Native language: Dutch.\n\nNotable work: Slantwise, an open-source ray-tracing library for lens design, first released in 2016 and still maintained by the same author.\n\nStatements on this item cite three sources: a 2019 interview in a trade newsletter, the programme of the 2024 Optics Forum, and the release notes of Slantwise 2.0. The item carries one alias, I. Vandermolen, and one sitelink, which points at an article about the library rather than about the person.\n\nTwo other items carry the label Ilse Vandermolen: a nineteenth-century still-life painter and a river barge. Neither is a person working in optics, and neither is linked from this item.",
       "published_at": null,
       "fetched_at": "2026-02-11T09:14:00+00:00"
     },
@@ -39,7 +39,7 @@
   ],
   "scripted_verdicts": [
     {
-      "doc_id": "aa3fcbf1ae789126",
+      "doc_id": "5b6df63389109480",
       "match": "yes",
       "confidence": 0.93,
       "evidence": "Employer: Belmarch Optics. Work location: Rotterdam.",
@@ -63,11 +63,11 @@
   "expect": {
     "status": "resolved",
     "accepted_doc_ids": [
-      "aa3fcbf1ae789126"
+      "5b6df63389109480"
     ],
     "strong_keys_present": [
       "wikidata_qid"
     ],
-    "note": "The Wikidata item Q7314529 matches on name AND on a detail (employer Belmarch Optics, work location Rotterdam), so it is a strong key under DESIGN Decision 4 and resolution does not need a second independent attribute. Exactly one verdict is `yes`; the other two are `unsure` and must NOT be accepted, so accepted_doc_ids holds only the Wikidata document. A resolver that requires two `yes` verdicts unconditionally fails this case, which is the point: the strong key carries it alone. strong_keys must contain the key name `wikidata_qid`; the QID value is left to the implementation to extract from the url, title or text, all three of which carry Q7314529."
+    "note": "The Wikidata item Q900000411 matches on name AND on a detail (employer Belmarch Optics, work location Rotterdam), so it is a strong key under DESIGN Decision 4 and resolution does not need a second independent attribute. Exactly one verdict is `yes`; the other two are `unsure` and must NOT be accepted, so accepted_doc_ids holds only the Wikidata document. A resolver that requires two `yes` verdicts unconditionally fails this case, which is the point: the strong key carries it alone. strong_keys must contain the key name `wikidata_qid`; the QID value is left to the implementation to extract from the url, title or text, all three of which carry Q900000411. QID convention, chosen deliberately and not to be 'corrected' back: Q900000411 is a nine-digit identifier roughly an order of magnitude beyond Wikidata's highest allocated item id, so it cannot designate a real entity. An identifier inside the allocated range is a durable real-world reference no matter how fictional the prose around it is, and FROZEN-SPEC section 5 plus T-2's non-goals require fictional people everywhere with no exceptions; the frozen dossier corpus already uses the same out-of-range convention (Q900000317). The QID sits in the url, so the document's doc_id is sha1(url)[:16] of the NEW url -- renumbering it again means recomputing doc_id and every scripted_verdicts / accepted_doc_ids reference to it."
   }
 }

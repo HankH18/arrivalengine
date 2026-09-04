@@ -1,0 +1,72 @@
+{
+  "case_id": "strong-key-refused-edgar-name-not-company",
+  "person": {
+    "person_id": "halvard-brenninkmeyer",
+    "name": "Halvard Brenninkmeyer",
+    "details": [
+      "CFO at Ambervale Grain Co.",
+      "Winnipeg"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "e91ce6347c4d0e56",
+      "source_kind": "edgar",
+      "url": "https://example.org/edgar/ownership/0009000411",
+      "title": "EDGAR - Form 4 - BRENNINKMEYER HALVARD (CIK 0009000411)",
+      "text": "EDGAR - Form 4 - statement of changes in beneficial ownership\n\nReporting person: BRENNINKMEYER HALVARD. CIK of reporting person: 0009000411.\nAddress of reporting person: 220 Kernwood Crescent, Winnipeg, Manitoba.\n\nIssuer: Kestrel Basin Mining Corp. CIK of issuer: 0009000412.\nRelationship of reporting person to issuer: Director. Not an officer. Not a ten percent owner.\n\nTransaction: acquisition of 1,400 restricted share units under the issuer's non-employee director plan, vesting in three equal instalments.\n\nThis filing records no officer relationship and names no employer for the reporting person. The only company named on it is the issuer, on whose board the reporting person sits as a non-employee director.",
+      "published_at": "2025-08-19",
+      "fetched_at": "2026-02-18T11:22:00+00:00"
+    },
+    {
+      "doc_id": "05f9e75d57867cce",
+      "source_kind": "self_page",
+      "url": "https://example.com/ambervale-grain/leadership",
+      "title": "Ambervale Grain Co. - leadership",
+      "text": "Ambervale Grain Co. - leadership\n\nWe are a co-operative grain handler with eleven country elevators and one terminal.\n\nHalvard Brenninkmeyer joined Ambervale Grain Co. as chief financial officer in 2021, after fourteen years in agricultural lending. He is responsible for the grain-cheque programme members actually notice, and for the terminal financing they mostly do not.\n\nThe leadership group meets members twice a year and publishes the minutes.",
+      "published_at": "2026-01-09",
+      "fetched_at": "2026-02-18T11:23:00+00:00"
+    },
+    {
+      "doc_id": "f9bb3f4ac6f7a87b",
+      "source_kind": "search",
+      "url": "https://example.org/prairie-agri-journal/2025/grain-terminal-financing",
+      "title": "Prairie Agri Journal - who is paying for the new terminals",
+      "text": "Prairie Agri Journal - who is paying for the new terminals\n\nFinancing for prairie grain terminals has quietly moved from bank debt to member capital, and nobody involved wants to be quoted about it.\n\nOne chief financial officer, who would speak only in general terms, said the arithmetic changed when the interest on a twenty-year facility stopped being an afterthought. The article names neither the officer, nor the co-operative, nor the province.\n\nA second source, also unnamed, disagreed about the timing.",
+      "published_at": "2025-07-04",
+      "fetched_at": "2026-02-18T11:24:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "e91ce6347c4d0e56",
+      "match": "yes",
+      "confidence": 0.8,
+      "evidence": "Address of reporting person: 220 Kernwood Crescent, Winnipeg, Manitoba.",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "05f9e75d57867cce",
+      "match": "yes",
+      "confidence": 0.91,
+      "evidence": "Halvard Brenninkmeyer joined Ambervale Grain Co. as chief financial officer in 2021",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "f9bb3f4ac6f7a87b",
+      "match": "unsure",
+      "confidence": 0.37,
+      "evidence": "One chief financial officer, who would speak only in general terms",
+      "disambiguator": "role"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "e91ce6347c4d0e56",
+      "05f9e75d57867cce"
+    ],
+    "strong_keys_present": [],
+    "note": "An EDGAR filing that is strong-key CAPABLE, carries a `yes` verdict, is ACCEPTED -- and still earns no key. DESIGN Decision 4 admits an SEC CIK as a strong key only when it is matched on name AND company. This CIK is matched on the name (BRENNINKMEYER HALVARD) and even on the city (the reporting person's address is in Winnipeg), which is why the verdict is a genuine `yes` -- but the only company on the filing is the ISSUER, Kestrel Basin Mining Corp, and the person's company is Ambervale Grain Co., which appears nowhere on it. Matched on name and not on company is precisely the case Decision 4 excludes, so strong_keys_present is empty and Resolution.strong_keys must contain nothing -- not sec_cik, and not the issuer's CIK either. Read the relationship carefully, because it decides whether this is a veto case and it is NOT one: the filing says Director, not an officer, and states in as many words that it records no officer relationship and names no employer for the reporting person. A non-executive board seat at another company does not CONTRADICT being CFO at Ambervale Grain Co.; the two are routinely true at once. So there is no conflicting employer, the verdict is `yes` rather than `no`, and the document belongs in accepted_doc_ids. Resolution comes from Decision 4's second arm: two `yes` verdicts citing different disambiguators, city and employer. The third verdict is `unsure` and must not be accepted. Both CIKs are ten digits beginning 0009, far above the allocated range, so like the corpus's Q9000004xx identifiers they cannot name a real filer."
+  }
+}

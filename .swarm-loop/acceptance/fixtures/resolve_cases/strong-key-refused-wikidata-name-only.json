@@ -1,0 +1,89 @@
+{
+  "case_id": "strong-key-refused-wikidata-name-only",
+  "person": {
+    "person_id": "marit-delacroix-hulme",
+    "name": "Marit Delacroix-Hulme",
+    "details": [
+      "Staff hydrologist at Quillon Water Board",
+      "Bergen"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "5fb6dfd90171f0c2",
+      "source_kind": "wikidata",
+      "url": "https://example.org/wikidata/Q900000413",
+      "title": "Marit Delacroix-Hulme (Q900000413) - item mirror",
+      "text": "Marit Delacroix-Hulme (Q900000413)\n\nItem mirror. Instance of: human. Occupation: hydrologist. Country of citizenship: Norway. Native language: Norwegian.\n\nThis item carries no employer statement and no work location statement. Both were present until 2021, when the single source behind them was challenged as a press release and the statements were removed; neither has been restored, and the item's talk page still lists the restoration as open.\n\nNotable work: a rating-curve correction for braided river channels, circulated as a working paper rather than published in a journal.\n\nThe item carries two aliases, M. Delacroix-Hulme and Marit Hulme, and no sitelink. Described by source: one working paper and one conference programme.",
+      "published_at": "2025-06-30",
+      "fetched_at": "2026-02-18T09:05:00+00:00"
+    },
+    {
+      "doc_id": "f4d25a6a420c39d2",
+      "source_kind": "self_page",
+      "url": "https://example.com/quillon-water-board/staff/hydrology",
+      "title": "Quillon Water Board - hydrology group",
+      "text": "Quillon Water Board - hydrology group\n\nThe hydrology group is responsible for gauging, rating curves and the flood-forecast model the board publishes every spring.\n\nMarit Delacroix-Hulme is a staff hydrologist at the Quillon Water Board and has led the rating-curve programme since 2018. She is the person to ask about gauge records older than the digital archive, which begins in 1994.\n\nThe group runs an open office on the first Wednesday of every month for anyone who would rather have a gauge record explained than emailed.",
+      "published_at": "2026-01-14",
+      "fetched_at": "2026-02-18T09:06:00+00:00"
+    },
+    {
+      "doc_id": "135ee177562ed53e",
+      "source_kind": "podcast",
+      "url": "https://example.org/deltacast/episodes/34",
+      "title": "Deltacast, episode 34 - rating curves that drift",
+      "text": "Deltacast, episode 34 - rating curves that drift\n\nTranscript excerpt.\n\nHost: My guest today is Marit Delacroix-Hulme, who has worked out of Bergen since 2015 and who has spent most of that time arguing that the rating curve you inherited is probably wrong.\n\nGuest: It is usually wrong in the same direction, which is the useful part.\n\nHost: We will come back to that. First, for anyone who has never stood in a river holding a current meter, what is a rating curve and why does it move?",
+      "published_at": "2025-11-08",
+      "fetched_at": "2026-02-18T09:07:00+00:00"
+    },
+    {
+      "doc_id": "71dcb6d1e1c8d3ee",
+      "source_kind": "hn",
+      "url": "https://example.com/forum/threads/rating-curve-drift",
+      "title": "Rating curves drift and nobody wants to talk about it",
+      "text": "Rating curves drift and nobody wants to talk about it\n\nPosted by an account with no profile text.\n\nI remember a talk about braided-channel corrections by a Delacroix-Hulme, maybe four years ago, maybe at a conference and maybe at a workshop. The correction was good. I could not tell you where they worked or where they live, and the slides are not online.\n\nReply: There are at least two people publishing under that surname in this field, and the one I am thinking of moved to industry.\n\nReply: This thread is why we cite things.",
+      "published_at": "2025-09-02",
+      "fetched_at": "2026-02-18T09:08:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "5fb6dfd90171f0c2",
+      "match": "yes",
+      "confidence": 0.71,
+      "evidence": "Instance of: human. Occupation: hydrologist. Country of citizenship: Norway.",
+      "disambiguator": "role"
+    },
+    {
+      "doc_id": "f4d25a6a420c39d2",
+      "match": "yes",
+      "confidence": 0.89,
+      "evidence": "Marit Delacroix-Hulme is a staff hydrologist at the Quillon Water Board",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "135ee177562ed53e",
+      "match": "yes",
+      "confidence": 0.82,
+      "evidence": "Marit Delacroix-Hulme, who has worked out of Bergen since 2015",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "71dcb6d1e1c8d3ee",
+      "match": "unsure",
+      "confidence": 0.41,
+      "evidence": "I could not tell you where they worked or where they live",
+      "disambiguator": "role"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "5fb6dfd90171f0c2",
+      "f4d25a6a420c39d2",
+      "135ee177562ed53e"
+    ],
+    "strong_keys_present": [],
+    "note": "A Wikidata item that is strong-key CAPABLE, carries a `yes` verdict, is ACCEPTED -- and still earns no key. DESIGN Decision 4 admits a QID as a strong key only when the item is matched on name AND detail. This item matches the name and nothing else: it asserts occupation, citizenship and language, and it says in as many words that it carries no employer statement and no work location statement, so neither of the person's two details (employer Quillon Water Board, city Bergen) is matched by it. A name-only match is exactly what Decision 4 rejects ('fuzzy name match only'), and the decoy case in this corpus is the reason why. strong_keys_present is therefore empty and Resolution.strong_keys must contain NOTHING -- not wikidata_qid, not anything else. This is the case that fails the shortcut `source_kind == 'wikidata' and verdict == 'yes' -> take the key', which passed every other case in the corpus. Note what is NOT being asked for: the document is not rejected. Its verdict is a genuine `yes` and it appears in accepted_doc_ids, so a resolver cannot pass this case by treating an unusable key as a reason to throw the document away. Resolution comes from Decision 4's second arm, which is satisfied several times over: three `yes` verdicts citing three DIFFERENT disambiguators (role, employer, city). No other strong key is available either -- there is no github or edgar document, and every url is on example.com / example.org, so no company domain is derivable from the detail 'Staff hydrologist at Quillon Water Board'. The fourth verdict is `unsure` and must not be accepted. The QID Q900000413 is nine digits and far beyond Wikidata's allocated range on purpose, so it names no real item; see the same note on strong-key-wikidata."
+  }
+}

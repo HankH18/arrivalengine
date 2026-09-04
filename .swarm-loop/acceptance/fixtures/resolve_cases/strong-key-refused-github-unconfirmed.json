@@ -1,0 +1,72 @@
+{
+  "case_id": "strong-key-refused-github-unconfirmed",
+  "person": {
+    "person_id": "teodor-wallenbrink",
+    "name": "Teodor Wallenbrink",
+    "details": [
+      "Head of reliability at Norrsken Cartage",
+      "Gothenburg"
+    ]
+  },
+  "docs": [
+    {
+      "doc_id": "6f3a09c3b21f8211",
+      "source_kind": "github",
+      "url": "https://example.com/github/users/twallenbrink",
+      "title": "GitHub - twallenbrink",
+      "text": "GitHub - twallenbrink\n\nName: Teodor Wallenbrink\nCompany: not set\nLocation: Gothenburg\nWebsite: not set\nPublic organisations: none\n\nPinned repositories\n\ndrainpipe - drain a work queue without losing the half-processed item. 41 stars.\nbrownout - degrade one dependency at a time so a service learns what it can live without. 12 stars.\ngauge-notes - notes, mostly to self, about latency histograms.\n\nThe account has been open since 2016, contributes steadily to the two pinned repositories, and has never had a bio.",
+      "published_at": "2026-01-30",
+      "fetched_at": "2026-02-18T10:11:00+00:00"
+    },
+    {
+      "doc_id": "e626d5897f63290c",
+      "source_kind": "self_page",
+      "url": "https://example.com/norrsken-cartage/company/who-we-are",
+      "title": "Norrsken Cartage - who we are",
+      "text": "Norrsken Cartage - who we are\n\nWe move freight between three ports and one inland terminal, and we run the software that decides which lane a pallet takes.\n\nTeodor Wallenbrink leads reliability at Norrsken Cartage. He joined in 2019 from a payments company, and he is the reason our incident reviews are boring, which he insists is the goal.\n\nThe engineering group is nineteen people across three teams: lane planning, terminal integrations and reliability.",
+      "published_at": "2025-12-03",
+      "fetched_at": "2026-02-18T10:12:00+00:00"
+    },
+    {
+      "doc_id": "fafdc05a36a18a9a",
+      "source_kind": "search",
+      "url": "https://example.org/nordic-ops-review/2025/queue-draining",
+      "title": "Nordic Ops Review - draining a queue without losing the middle",
+      "text": "Nordic Ops Review - draining a queue without losing the middle\n\nConference write-up, lightly edited from notes.\n\nThe best talk of the second day was about queue draining, given by a Wallenbrink whose first name I did not write down and whose employer was not on the slide. The argument was that a drain is a correctness problem wearing an operations costume.\n\nI have looked for the slides since and found only a repository with the same idea and no author page.",
+      "published_at": "2025-10-21",
+      "fetched_at": "2026-02-18T10:13:00+00:00"
+    }
+  ],
+  "scripted_verdicts": [
+    {
+      "doc_id": "6f3a09c3b21f8211",
+      "match": "yes",
+      "confidence": 0.77,
+      "evidence": "Name: Teodor Wallenbrink Company: not set Location: Gothenburg",
+      "disambiguator": "city"
+    },
+    {
+      "doc_id": "e626d5897f63290c",
+      "match": "yes",
+      "confidence": 0.9,
+      "evidence": "Teodor Wallenbrink leads reliability at Norrsken Cartage",
+      "disambiguator": "employer"
+    },
+    {
+      "doc_id": "fafdc05a36a18a9a",
+      "match": "unsure",
+      "confidence": 0.44,
+      "evidence": "given by a Wallenbrink whose first name I did not write down and whose employer was not on the slide",
+      "disambiguator": "role"
+    }
+  ],
+  "expect": {
+    "status": "resolved",
+    "accepted_doc_ids": [
+      "6f3a09c3b21f8211",
+      "e626d5897f63290c"
+    ],
+    "strong_keys_present": [],
+    "note": "A GitHub profile that is strong-key CAPABLE, carries a `yes` verdict, is ACCEPTED -- and still earns no key. DESIGN Decision 4 admits a GitHub handle as a strong key only when the profile is CONFIRMED by name AND company. Here the Name field confirms exactly ('Name: Teodor Wallenbrink') and the Company field is explicitly not set, so half of the confirmation is simply absent and the handle twallenbrink is not a strong key. strong_keys_present is empty and Resolution.strong_keys must contain nothing. This is deliberately the harder half of the pair with must-be-unresolved: there the github profile has NEITHER name nor company and its verdict is `unsure`, so a resolver that keys off the verdict alone still gets that case right. Here the verdict is `yes` and the document is accepted, so the ONLY thing standing between an implementation and a wrongly-taken key is actually checking the profile's fields. Note also what does not happen: an unset Company is not a CONFLICTING company, so this is not a negative-evidence case, the verdict is not `no`, and the document belongs in accepted_doc_ids. The profile does match the city detail (Location: Gothenburg), which is why the verdict is `yes` on the `city` disambiguator -- matching one detail is enough to accept a document and is NOT enough to confirm a handle. Resolution comes from Decision 4's second arm: two `yes` verdicts citing different disambiguators, city and employer. No other strong key exists: no wikidata or edgar document, and every url is on example.com / example.org so no company domain is derivable from 'Head of reliability at Norrsken Cartage'."
+  }
+}
