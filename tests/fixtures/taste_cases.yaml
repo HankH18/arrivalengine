@@ -19,15 +19,24 @@
 # point: an earlier draft of this file reproduced the frozen corpus almost case for case
 # (55 of 56 ids identical, two sentences verbatim), and a fixture that paraphrases the
 # answer key proves only that the answer key was copied. Run against genuinely unseen
-# sentences, this corpus found five real defects in the filter on its first pass, all
-# five now fixed in `src/arrival/taste.py`:
+# sentences, this corpus found SIX wrong rulings in the filter, all six now fixed in
+# `src/arrival/taste.py`. Five were leaks -- something R11 protects, kept:
 #
-#   * "the converted grain silo they live in"  was KEPT  (home leak)
-#   * "they married an architect in June"      was KEPT  (family leak)
-#   * "three weeks in inpatient treatment"     was KEPT  (health leak)
-#   * "the years they spent suing their former co-founder"  was KEPT  (legal leak)
-#   * "they earned a master's in materials science"  was EXCLUDED as personal wealth
-#     (a professional credential destroyed by a money regex)
+#   * "the converted grain silo they live in"               was KEPT  (home)
+#   * "they married an architect in June"                   was KEPT  (family)
+#   * "three weeks in inpatient treatment"                  was KEPT  (health)
+#   * "the years they spent suing their former co-founder"  was KEPT  (legal)
+#   * "the farmhouse they purchased"                        was KEPT  (home)
+#
+# and one was the opposite failure, a professional fact destroyed:
+#
+#   * "they earned a master's in materials science"  was EXCLUDED as personal wealth,
+#     by a bare `they earned`. See cover-wealth-bonus-figure for the money case that
+#     must still be lost, sitting beside it on purpose.
+#
+# The final block of cases, marked REGRESSION COVERAGE, was added afterwards for a
+# second measured hole: deleting an R11 marker outright broke nothing. Those cases
+# are ordinary rulings, but each is the only case standing on a named marker.
 #
 # ---------------------------------------------------------------------------
 # HOW TO READ A CASE
