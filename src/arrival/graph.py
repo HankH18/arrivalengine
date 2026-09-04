@@ -252,19 +252,27 @@ def _canonical_hub_ids(dossiers: Sequence[Dossier]) -> dict[str, str]:
     return canonical
 
 
-def _one_hub_per_person(hubs: Sequence[Hub], hub_id: str) -> Hub:
-    """Fold one person's occurrences of a single elected hub into one :class:`Hub`.
+def _one_hub_per_person(
+    hubs: Sequence[Hub], hub_id: str, hub_type: str, label: str
+) -> Hub:
+    """One person's :class:`Hub` for one elected hub: the graph's IDENTITY, their own EVIDENCE.
 
-    Reached when a dossier lists the same hub twice, or lists it under two ids that the
-    election joined. The result carries the ELECTED id -- consumers read
-    ``HubContribution.hub.hub_id`` and compare it against the graph's node name (the frozen
-    T-5 suite does, at ``path[1]``), so an edge carrying a Hub whose id is not its node's
-    would be a lie about the graph. Everything else stays the arriving person's own: the
-    freshest recency they recorded, and their own evidence facts, which resolve only in their
-    own dossier.
+    A hub has exactly one identity in the graph -- the elected ``hub_id``, ``type`` and
+    ``label`` -- and every edge into its node must agree with it, because consumers read
+    :class:`HubContribution`'s ``hub`` and the node's own numbers side by side:
+
+    * the frozen T-5 suite compares ``hub.hub_id`` with the node name, at ``path[1]``;
+    * the digest's ``data-reasoning`` block (R10) prints ``hub.label`` and ``hub.type`` in
+      the same row as ``type_boost``, which is computed from the ELECTED type. A Hub keeping
+      its carrier's own dissenting type therefore renders "city" beside a boost of 1.5.
+
+    Only what is genuinely the person's own survives: the freshest ``recency`` they recorded
+    for this hub, and their ``evidence_fact_ids``, which resolve in their dossier and nobody
+    else's.
 
     Deterministic by construction: the occurrence whose own id was elected wins, then the
-    lexicographically smallest id, then the smallest label -- never list order.
+    lexicographically smallest id, then the smallest label -- never list order. The common
+    case, where a carrier already agrees with the election, returns their Hub untouched.
     """
     ordered = sorted(hubs, key=lambda h: (h.hub_id != hub_id, h.hub_id, h.label))
     base = ordered[0]
@@ -274,10 +282,18 @@ def _one_hub_per_person(hubs: Sequence[Hub], hub_id: str) -> Hub:
             if fact_id not in evidence:
                 evidence.append(fact_id)
     recency = max(hub.recency for hub in ordered)
-    if base.hub_id == hub_id and base.recency == recency and base.evidence_fact_ids == evidence:
-        return base  # the ordinary case: nothing to reconcile, so no copy is made
+    elected = (hub_id, hub_type, label, recency)
+    if (base.hub_id, base.type, base.label, base.recency) == elected:
+        if base.evidence_fact_ids == evidence:
+            return base  # the ordinary case: nothing to reconcile, so no copy is made
     return base.model_copy(
-        update={"hub_id": hub_id, "recency": recency, "evidence_fact_ids": evidence}
+        update={
+            "hub_id": hub_id,
+            "type": hub_type,
+            "label": label,
+            "recency": recency,
+            "evidence_fact_ids": evidence,
+        }
     )
 
 
@@ -346,8 +362,8 @@ def build_graph(dossiers: Iterable[Dossier]) -> nx.Graph:
     for person_id in sorted(held):
         source = person_node(person_id)
         for hub_id in sorted(held[person_id]):
-            hub = _one_hub_per_person(held[person_id][hub_id], hub_id)
             hub_type, label = _hub_identity(described[hub_id])
+            hub = _one_hub_per_person(held[person_id][hub_id], hub_id, hub_type, label)
             idf = hub_idf(n_people, len(carriers[hub_id]))
             boost = TYPE_BOOST.get(hub_type, DEFAULT_TYPE_BOOST)
             target = hub_node(hub_id)

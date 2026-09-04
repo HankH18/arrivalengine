@@ -141,6 +141,41 @@ def test_the_arriving_persons_own_evidence_facts_survive_the_election():
     assert contribution.hub.label == LABEL
 
 
+def test_the_reported_hub_agrees_with_the_node_the_boost_came_from():
+    """R10: the digest prints `hub.label` and `hub.type` in the same row as `type_boost`.
+
+    `src/arrival/web/templates/digest.html:60-63` renders `c.hub.type` beside
+    `c.type_boost`, and the boost is computed from the ELECTED type. A contribution keeping
+    its carrier's own dissenting type therefore renders "city" beside a boost of 1.5 --
+    exposed reasoning that does not add up, in the one block whose whole job is to show the
+    working. The graph elects one identity per hub, and every edge into that node reports it.
+    """
+    graph = _pair(
+        make_hub(QID, LABEL, "city"),
+        make_hub(QID, "Foundry Seed 2019 Fund", "investor"),
+    )
+    node = graph.nodes[hub_node(QID)]
+    for arriving in ("a", "b"):
+        c = match(graph, arriving, ["b" if arriving == "a" else "a"])[0].contributions[0]
+        assert (c.hub.hub_id, c.hub.type, c.hub.label) == (
+            node["hub_id"],
+            node["type"],
+            node["label"],
+        ), f"{arriving}'s contribution reports {c.hub} but the node it scored is {node}"
+        assert c.type_boost == pytest.approx(
+            {"city": 0.5, "investor": 1.5}[node["type"]]
+        ), "the boost and the reported type must be the same type"
+
+
+def test_a_carrier_who_already_agrees_with_the_election_keeps_their_own_hub_object():
+    """The ordinary case must not pay for the rare one -- and `test_t5_graph_shape`'s
+    `edge["hub"] is hub` identity assertion depends on it."""
+    shared = make_hub(RARE_HUB_ID, LABEL, "investor")
+    graph = _pair(shared, shared)
+    assert graph.edges[person_node("a"), hub_node(RARE_HUB_ID)]["hub"] is shared
+    assert graph.edges[person_node("b"), hub_node(RARE_HUB_ID)]["hub"] is shared
+
+
 def test_hubs_with_different_labels_are_not_merged():
     """The election joins spellings of one hub; it must not join two hubs."""
     graph = _pair(
