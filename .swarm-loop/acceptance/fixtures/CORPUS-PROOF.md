@@ -12,12 +12,23 @@ scripts either confirm or contradict, and the contradictions are listed in
 | Dossier (unresolved, NOT in the graph) | 1 - `fixtures/dossiers_unresolved/vex-tarrow.json` |
 | RawDocs | 23 - `fixtures/docs/<doc_id>.json` |
 | Facts | 35 |
-| Verification scripts | 6, all exit 0 |
-| Named assertions | 68 (12 in check 1, 15 in check 4, 41 in check 6) - all PASS |
-| Exhaustive sweeps | 38 quote checks, 23 doc_id/sha1 checks, 40 real-name/entity probes - 0 failures |
+| Verification scripts | 7, all exit 0 |
+| Named assertions | 82 (12 in check 1, 15 in check 4, 41 in check 6, 14 in check 7) - all PASS |
+| Exhaustive sweeps | 38 quote checks, 23 doc_id/sha1 checks, 40 real-name/entity probes, 16 hub-id canonicalisations, 70 provenance-vs-RawDoc field comparisons - 0 failures |
 
-All six scripts live in the authoring agent's scratch space, **not** in the repo, and
+All seven scripts live in the authoring agent's scratch space, **not** in the repo, and
 are reproduced verbatim below so a reader can re-run them against the committed files.
+
+> **Revision - hub id corrected.** `topic:developer-tools-gtm` was changed to
+> `topic:developer-tools-go-to-market` in `runa-okonkwo.json` and `jem-arrowood.json`,
+> because the old id was not `{type}:{slug(label)}` and so was a hub no correct extractor
+> could emit (see *Disagreements* section 1, now resolved). **Every one of the seven checks
+> was re-run against the edited corpus, all seven exit 0, and every "Verbatim output" block
+> below is the output of that re-run.** Compared with the previous revision of this file,
+> checks 2-6 reproduced their output byte for byte and check 1 changed on exactly three
+> lines, all three of them the hub-id string, with every number identical. Check 7 is new
+> and exists to make this class of defect impossible to reintroduce silently.
+> **No graded number moved.**
 
 ---
 
@@ -28,23 +39,35 @@ directory precisely so it cannot perturb `N`).
 
 `idf(hub) = max(0, ln(N / (1 + n_people_on_hub)))`
 
+The denominator is **smoothed**: `1 + n`, not `n`. Read the `ln(5/3)` entries below as the
+reduced form of `ln(5 / (1 + 2))` for a hub carried by **two** people - not as `ln(N/n)`
+with three carriers. Two hubs here are carried by 2 people and two by 1; with the
+unsmoothed form every one of those numbers would be wrong, and `n=5` would be `ln(1)=0` by
+coincidence rather than `ln(5/6)` clamped to 0.
+
 | hub_id | label | type | n | carriers | ln(N/(1+n)) | idf | type_boost | note |
 |---|---|---|---|---|---|---|---|---|
 | `city:austin` | Austin | `city` | 5 | jem-arrowood, mira-hollowell, runa-okonkwo, sil-vantorre, theo-baptiste | `ln(5/6) = -0.182322` | **0.000000** | 0.5 | clamped to 0 |
 | `company:lantern-freight` | Lantern Freight | `company` | 1 | mira-hollowell | `ln(5/2) = 0.916291` | **0.916291** | 1.5 | - |
 | `investor:foundry-seed-2019` | Foundry Seed 2019 | `investor` | 2 | runa-okonkwo, sil-vantorre | `ln(5/3) = 0.510826` | **0.510826** | 1.5 | - |
 | `school:bellhaven-polytechnic` | Bellhaven Polytechnic | `school` | 1 | theo-baptiste | `ln(5/2) = 0.916291` | **0.916291** | 0.8 | - |
-| `topic:developer-tools-gtm` | Developer-tools go-to-market | `topic` | 2 | jem-arrowood, runa-okonkwo | `ln(5/3) = 0.510826` | **0.510826** | 1.0 | - |
+| `topic:developer-tools-go-to-market` | Developer-tools go-to-market | `topic` | 2 | jem-arrowood, runa-okonkwo | `ln(5/3) = 0.510826` | **0.510826** | 1.0 | - |
 | `topic:remote-work` | Remote work | `topic` | 5 | jem-arrowood, mira-hollowell, runa-okonkwo, sil-vantorre, theo-baptiste | `ln(5/6) = -0.182322` | **0.000000** | 1.0 | clamped to 0 |
 
 `REF = ln(N/3) * 1.5 = ln(5/3) * 1.5 = 0.766238`
+
+The `3` in `REF` is the same `1 + n` with `n = 2`: DESIGN Decision 3 normalises against
+"one rare hub shared by exactly two people, with the highest type boost and full
+recency". That is why `investor:foundry-seed-2019` scores exactly 100 - its raw score IS
+the reference - and why the topic hub, identical in membership but boosted 1.0 instead of
+1.5, scores `round(100 * 0.510826 / 0.766238) = 67`.
 
 Derived scores, all recomputed in check 1:
 
 | pair | shared hubs that contribute | raw | score |
 |---|---|---|---|
 | `runa` x `sil` | `investor:foundry-seed-2019` (0.510826 x 1.0 x 1.5) | 0.766238 | **100** |
-| `runa` x `jem` | `topic:developer-tools-gtm` (0.510826 x 1.0 x 1.0) | 0.510826 | **67** |
+| `runa` x `jem` | `topic:developer-tools-go-to-market` (0.510826 x 1.0 x 1.0) | 0.510826 | **67** |
 | `runa` x `mira` | none (both clamped hubs contribute 0) | 0.000000 | **0** |
 | `runa` x `theo` | none (both clamped hubs contribute 0) | 0.000000 | **0** |
 | `mira` x `theo` | none (both clamped hubs contribute 0) | 0.000000 | **0** |
@@ -149,7 +172,8 @@ The three non-displayable kept facts are the discriminating ones:
   `source_kind: fec`. Only the whitelist stops it. Proves the source-kind gate bites
   independently of the taste categories. It is deliberately left un-excluded: the
   fixture models defence in depth, where the taste layer did *not* catch something and
-  the whitelist is the backstop.
+  the whitelist is the backstop. **Do not "tidy" `excluded` to `true`** - see
+  *Disagreements* section 1b for the frozen test this would silently defeat.
 * `runa-okonkwo-f12` / `f13` - `search` at 0.90 / 0.88, i.e. a whitelisted kind well over
   the floor. **`excluded` is the only thing withholding them**, which is exactly what the
   T-8 grep is testing.
@@ -160,29 +184,103 @@ The three non-displayable kept facts are the discriminating ones:
 
 Nothing here was silently adjusted to make a number come out.
 
-### 1. `topic:developer-tools-gtm` violates DESIGN's hub-id canonicalisation (FOLLOWED THE SPEC ANYWAY)
+### 1. `topic:developer-tools-gtm` violated DESIGN's hub-id canonicalisation (FIXED)
+
+**Status: corrected before the freeze.** The hub is now
+`topic:developer-tools-go-to-market`. Check 7, added for this, asserts the invariant over
+the whole corpus and fails loudly if it is ever broken again.
 
 DESIGN's `Hub` contract says `hub_id` is `"{type}:{slug(label)}"` when not
-Wikidata-resolved. The frozen spec dictates hub_id `topic:developer-tools-gtm` **and**
-label `"Developer-tools go-to-market"`. Those two are inconsistent:
+Wikidata-resolved, and the frozen T-3 suite grades the extractor on exactly that
+canonicalisation (`test_wikidata_sourced_hub_is_keyed_by_its_qid` asserts
+`company:quarrystone-labs` from the label "Quarrystone Labs"). As first committed, this
+corpus carried hub_id `topic:developer-tools-gtm` against label
+`"Developer-tools go-to-market"` in `runa-okonkwo.json` and `jem-arrowood.json` - two of
+the sixteen hub entries, and the only two that broke the invariant. Check 7 run against
+the corpus **before** the fix, as a negative control:
 
 ```
-hub_id                        label                          {type}:{slug(label)}                 
-city:austin                   'Austin'                       city:austin                    OK
-company:lantern-freight       'Lantern Freight'              company:lantern-freight        OK
-investor:foundry-seed-2019    'Foundry Seed 2019'            investor:foundry-seed-2019     OK
-school:bellhaven-polytechnic  'Bellhaven Polytechnic'        school:bellhaven-polytechnic   OK
-topic:remote-work             'Remote work'                  topic:remote-work              OK
-topic:developer-tools-gtm     'Developer-tools go-to-market'  topic:developer-tools-go-to-market  MISMATCH
+hub_id                               label                          {type}:{slug(label)}                
+city:austin                          'Austin'                       city:austin                          OK
+company:lantern-freight              'Lantern Freight'              company:lantern-freight              OK
+investor:foundry-seed-2019           'Foundry Seed 2019'            investor:foundry-seed-2019           OK
+school:bellhaven-polytechnic         'Bellhaven Polytechnic'        school:bellhaven-polytechnic         OK
+topic:developer-tools-gtm            'Developer-tools go-to-market' topic:developer-tools-go-to-market   MISMATCH
+topic:remote-work                    'Remote work'                  topic:remote-work                    OK
+every hub_id is canonical                                      FAIL   16 hub entries, 6 distinct hubs, 2 mismatches
 ```
 
-The committed fixture uses the spec's literal `hub_id` and the spec's literal `label`,
-because a sibling-authored frozen test is far likelier to assert those two literals than
-to assert the canonicalisation comment. **The numbers are unaffected** - scoring keys on
-`hub_id`, and `label` is display-only. If the orchestrator would rather the invariant
-hold, the one-line fix is to change that hub's `label` to `"Developer-tools GTM"` in
-`runa-okonkwo.json` and `jem-arrowood.json`; do **not** change the `hub_id`, which the
-T-5 grading text names.
+That made the corpus something a correct pipeline could never produce: given that label,
+`{type}:{slug(label)}` is `topic:developer-tools-go-to-market`, so every T-5 or T-7
+criterion keyed on the old id was grading implementations against a hub the extractor
+cannot emit - the mirror image of gameability, a correct implementation graded red.
+
+**Fixed by changing the ID, not the LABEL** - the reverse of what an earlier revision of
+this file recommended. That recommendation is withdrawn, for two reasons:
+
+* **Its premise was false, and was measured to be false.** It said not to touch the id
+  because "the T-5 grading text names it". Before the fix, `grep -rn
+  'topic:developer-tools-gtm'` over the whole worktree (excluding `.git/` and `.venv/`)
+  found the string in exactly five files: the two dossiers, `test_t7_digest.py` (one line,
+  in `_four_matches`), this file, and `.swarm-loop/findings.jsonl` - an append-only audit
+  log that no test reads. The first three are the only executable sites, all belong to one
+  owner, and all were changed in one commit. The string appears **nowhere** in
+  `test_t5_matching.py`, which pins only `RARE_HUB_ID = "investor:foundry-seed-2019"` and
+  `RARE_HUB_LABEL = "Foundry Seed 2019"` and recomputes every other hub generically by
+  whatever id the corpus carries; and **nowhere** in `test_t8_web.py`, which names only the
+  investor hub's label and weight. (One `findings.jsonl` record goes further and cites a
+  specific line of `test_t5_matching.py` as pinning the topic id. No line of that file
+  contains the string at all - `grep -c 'developer-tools' test_t5_matching.py` is 0 - and
+  that false citation is why the wrong fix was recommended.)
+
+  What T-5 *does* require is that the id be **identical in both dossiers** - `_expected_raw`
+  intersects the two hub-id sets, so renaming in only one file would silently drop
+  `runa x jem` from 67 to 0. Both files were renamed in the same commit, and check 1
+  re-derives the 67 from the corpus as committed.
+* **The label is the evidence; the id is derived from it.** The phrase "developer-tools
+  go-to-market" appears verbatim in both source RawDocs (`50957dd279c64c59`,
+  `92b1d32390d8795f`) and in the evidence facts' `text` and `quote`. Abbreviating the label
+  to "Developer-tools GTM" to match a hand-written id would have restored internal
+  consistency by making the **label** the thing no extractor would emit from these
+  documents. The contract derives the id from the label, so the derived value is the one
+  to correct.
+
+**No graded number moved, and that is measured, not asserted.** Scoring reaches `hub_id`
+only through set intersection, and membership is unchanged at 2 carriers (runa, jem), so
+the weight stays `max(0, ln(5 / (1 + 2))) = 0.510826`, `runa x jem` stays **67**, and the
+weighted shortest path stays cost 1.323780 with the new id as its middle node. Check 1 was
+re-run against the edited corpus: across its 75 lines of output the only differences are
+the hub-id string on three lines.
+
+### 1b. Load-bearing corpus values that must never be "tidied"
+
+Two values in this corpus look like oversights and are not. Both are cited by frozen tests
+that would keep passing - for the wrong reason - if someone "corrected" them.
+
+* **`runa-okonkwo-f15.excluded` is `false`, and must stay `false`.** The fact is a political
+  contribution recorded in an FEC filing, so it reads like something the taste filter (R11)
+  should have marked excluded. It is deliberately left unexcluded because its
+  `source_kind` is `fec`, which is off the R12 display whitelist: it is blocked by the
+  **display gate**, not by the taste filter. `test_t4_taste.py` takes it as `bad_kind` and
+  asserts `bad_kind.excluded is False` **while** `is_displayable(bad_kind) is False`. That
+  pair is the only proof in the whole frozen suite that the source-kind gate is
+  independent of the taste filter rather than the taste filter wearing a second name.
+  Setting `excluded: true` would leave that test green while destroying what it measures.
+  (`runa-okonkwo-f14` plays the same role for the confidence floor: kept, not excluded,
+  blocked at 0.55 < 0.7. Check 6 asserts both, "for two DIFFERENT reasons".)
+* **`runa-okonkwo-f05` and `runa-okonkwo-f11` share the date 2026-02-11, and the tie cannot
+  be broken.** Both are extracted from RawDoc `92b1d32390d8795f`, and
+  `provenance.published_at` equals its RawDoc's `published_at` for all 35 facts in this
+  corpus (check 7, section D). Giving one of them a different date to disambiguate "the
+  newest displayable fact" would put the fixture in contradiction with its own source
+  document - a worse defect than the ambiguity it removes. The tie is therefore graded as a
+  tie: `test_t7_digest.py` requires Lately to contain **at least one of** the pair, not f05
+  specifically, because a correct builder that resolves the tie the other way (say, one
+  bullet per source document) has no way to know which the harness preferred. Note that
+  check 6's line "lately ordering is unambiguous" is scoped to the four `recent_activity`
+  facts; it is not a claim about the wider candidate set that TASKS T-7 acceptance 1
+  actually permits (`lately` sorted by `published_at` desc over `is_displayable` facts,
+  with no category restriction).
 
 ### 2. "confidence" in section 1b means `provenance.confidence`
 
@@ -471,7 +569,7 @@ investor:foundry-seed-2019       Foundry Seed 2019          investor  2   0.5108
                                    ln(5/(1+2)) = 0.510826 -> clamp max(0, .) = 0.510826
 school:bellhaven-polytechnic     Bellhaven Polytechnic      school    1   0.916291   0.8        theo-baptiste
                                    ln(5/(1+1)) = 0.916291 -> clamp max(0, .) = 0.916291
-topic:developer-tools-gtm        Developer-tools go-to-market topic     2   0.510826   1.0        jem-arrowood,runa-okonkwo
+topic:developer-tools-go-to-market Developer-tools go-to-market topic     2   0.510826   1.0        jem-arrowood,runa-okonkwo
                                    ln(5/(1+2)) = 0.510826 -> clamp max(0, .) = 0.510826
 topic:remote-work                Remote work                topic     5   0.000000   1.0        jem-arrowood,mira-hollowell,runa-okonkwo,sil-vantorre,theo-baptiste
                                    ln(5/(1+5)) = -0.182322 -> clamp max(0, .) = 0.000000
@@ -483,7 +581,7 @@ all pairwise scores
       city:austin                      idf=0.000000 recency=1.00 boost=0.5 contribution=0.000000
       topic:remote-work                idf=0.000000 recency=1.00 boost=1.0 contribution=0.000000
   jem-arrowood     x runa-okonkwo     raw=0.510826  score=67
-      topic:developer-tools-gtm        idf=0.510826 recency=1.00 boost=1.0 contribution=0.510826
+      topic:developer-tools-go-to-market idf=0.510826 recency=1.00 boost=1.0 contribution=0.510826
       city:austin                      idf=0.000000 recency=1.00 boost=0.5 contribution=0.000000
       topic:remote-work                idf=0.000000 recency=1.00 boost=1.0 contribution=0.000000
   jem-arrowood     x sil-vantorre     raw=0.000000  score=0
@@ -513,7 +611,7 @@ all pairwise scores
       topic:remote-work                idf=0.000000 recency=1.00 boost=1.0 contribution=0.000000
 
 shortest path runa-okonkwo -> sil-vantorre     cost=1.323780  ['person:runa-okonkwo', 'hub:investor:foundry-seed-2019', 'person:sil-vantorre']
-shortest path runa-okonkwo -> jem-arrowood     cost=1.323780  ['person:runa-okonkwo', 'hub:topic:developer-tools-gtm', 'person:jem-arrowood']
+shortest path runa-okonkwo -> jem-arrowood     cost=1.323780  ['person:runa-okonkwo', 'hub:topic:developer-tools-go-to-market', 'person:jem-arrowood']
 shortest path runa-okonkwo -> mira-hollowell   cost=2.000000  ['person:runa-okonkwo', 'hub:city:austin', 'person:mira-hollowell']
 shortest path runa-okonkwo -> theo-baptiste    cost=2.000000  ['person:runa-okonkwo', 'hub:city:austin', 'person:theo-baptiste']
 
@@ -1665,6 +1763,279 @@ CHECK 6 RESULT: 0 failures
 
 ---
 
+## Check 7 - Canonical identifiers, and the ties the corpus cannot break (added)
+
+Added when the hub id was corrected. It pins four things the other six checks did not:
+every `hub_id` is `{type}:{slug(label)}` (or a `wd:` QID); every `person_id` is
+`slug(person.name)`; every `provenance.doc_id` resolves to a file in `docs/` and agrees
+with that RawDoc's `published_at` and `source_kind`; and - as a consequence of that last
+one - the newest-displayable date in runa's dossier is a genuine tie between two facts
+cut from the same document, which is why `test_t7_digest.py` grades it as a tie.
+Section F restates the smoothed IDF for both scoring hubs, spelled out, because the
+shorthand `ln(5/3)` has already been misread once as "three people on the hub".
+
+`slug` is re-implemented inside the script rather than imported from `arrival.util`, so
+the check can contradict the product rather than agree with it by construction; it
+self-tests against DESIGN's three documented `slug` examples before it runs.
+
+### Script (`check7_canonical_ids.py`)
+
+```python
+#!/usr/bin/env python3
+"""CHECK 7 - canonical identifiers, and the ties the corpus cannot break.
+
+Added when hub_id `topic:developer-tools-gtm` was corrected to
+`topic:developer-tools-go-to-market`. Its job is to make that class of defect
+impossible to reintroduce silently:
+
+  A. every `hub_id` is exactly `{type}:{slug(label)}` (or a `wd:Q...` QID),
+     the canonicalisation DESIGN pins on `Hub.hub_id` and the frozen T-3 suite
+     grades the extractor on;
+  B. every `person_id` is exactly `slug(person.name)`;
+  C. every `provenance.doc_id` resolves to a file in `docs/`;
+  D. `provenance.published_at` equals its RawDoc's `published_at` for EVERY fact -
+     the invariant that makes same-document date ties structural rather than
+     accidental, and therefore not fixable by editing one fact's date;
+  E. the resulting newest-displayable tie in runa's dossier, enumerated;
+  F. the smoothed IDF of the two scoring hubs, spelled out.
+
+`slug` is re-implemented here from its documented behaviour rather than imported
+from `arrival.util`: this file must be able to contradict the product.
+"""
+
+import json
+import math
+import re
+import unicodedata
+from pathlib import Path
+
+ROOT = Path(
+    "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine"
+    "/.swarm-loop/acceptance/fixtures"
+)
+DOSSIERS = ROOT / "dossiers"
+UNRESOLVED = ROOT / "dossiers_unresolved"
+DOCS = ROOT / "docs"
+
+_APOSTROPHES = "'’ʼ"
+_NON_SLUG = re.compile(r"[^a-z0-9]+")
+
+
+def slug(s):
+    """Lowercase, strip accents and apostrophes, non-alphanumerics to '-', collapse, trim."""
+    decomposed = unicodedata.normalize("NFKD", s)
+    unaccented = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    depunctuated = "".join(ch for ch in unaccented if ch not in _APOSTROPHES)
+    return _NON_SLUG.sub("-", depunctuated.lower()).strip("-")
+
+
+# self-test of the local slug against DESIGN's own three doctest examples
+assert slug("Jane O'Neil-Ruiz") == "jane-oneil-ruiz"
+assert slug("  Foundry Seed 2019  ") == "foundry-seed-2019"
+assert slug("José Ángel Núñez") == "jose-angel-nunez"
+
+DISPLAYABLE_KINDS = frozenset({
+    "self_page", "search", "wikidata", "wikipedia", "github", "edgar", "uspto",
+    "propublica", "wayback", "hn", "openalex", "youtube", "podcast",
+})
+
+resolved = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(DOSSIERS.glob("*.json"))}
+unresolved = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(UNRESOLVED.glob("*.json"))}
+everyone = dict(resolved, **unresolved)
+docs = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in sorted(DOCS.glob("*.json"))}
+
+results = []
+
+
+def check(name, ok, detail=""):
+    results.append((name, bool(ok), detail))
+    print("  %-62s %s   %s" % (name, "PASS" if ok else "FAIL", detail))
+
+
+# ---------------------------------------------------------------- A. hub ids
+print("A. HUB ID CANONICALISATION - DESIGN Hub.hub_id = '{type}:{slug(label)}'")
+entries = 0
+distinct = {}
+bad = []
+for pid, d in sorted(everyone.items()):
+    for h in d["hubs"]:
+        entries += 1
+        distinct.setdefault(h["hub_id"], (h["label"], h["type"], set()))[2].add(pid)
+        if h["hub_id"].startswith("wd:"):
+            canon = h["hub_id"]  # Wikidata-resolved ids are keyed by QID, not by label
+        else:
+            canon = "%s:%s" % (h["type"], slug(h["label"]))
+        if h["hub_id"] != canon:
+            bad.append((pid, h["hub_id"], h["label"], canon))
+
+print("  %-36s %-30s %-36s" % ("hub_id", "label", "{type}:{slug(label)}"))
+for hid, (label, htype, carriers) in sorted(distinct.items()):
+    canon = hid if hid.startswith("wd:") else "%s:%s" % (htype, slug(label))
+    print("  %-36s %-30s %-36s %s" % (hid, repr(label), canon, "OK" if hid == canon else "MISMATCH"))
+check("every hub_id is canonical", not bad, "%d hub entries, %d distinct hubs, %d mismatches"
+      % (entries, len(distinct), len(bad)))
+label_by_id = {}
+collisions = []
+for pid, d in sorted(everyone.items()):
+    for h in d["hubs"]:
+        prev = label_by_id.setdefault(h["hub_id"], (pid, h["label"], h["type"]))
+        if (prev[1], prev[2]) != (h["label"], h["type"]):
+            collisions.append((h["hub_id"], prev, (pid, h["label"], h["type"])))
+check("one hub_id carries one (label, type) everywhere", not collisions, str(collisions or ""))
+
+# ---------------------------------------------------------------- B. person ids
+print()
+print("B. PERSON ID CANONICALISATION - person_id == slug(person.name)")
+bad_people = [(pid, d["person"]["name"], slug(d["person"]["name"]))
+              for pid, d in sorted(everyone.items())
+              if d["person"]["person_id"] != slug(d["person"]["name"])]
+for pid, d in sorted(everyone.items()):
+    print("  %-18s %-24s -> %s" % (d["person"]["person_id"], repr(d["person"]["name"]),
+                                   slug(d["person"]["name"])))
+check("every person_id == slug(name)", not bad_people,
+      "%d dossiers (%d resolved + %d unresolved)" % (len(everyone), len(resolved), len(unresolved)))
+check("dossier filename == person_id", all(pid == d["person"]["person_id"]
+                                           for pid, d in everyone.items()), "")
+
+# ---------------------------------------------------------------- C/D. doc links and dates
+print()
+print("C/D. PROVENANCE -> RAWDOC")
+missing = []
+date_mismatch = []
+kind_mismatch = []
+n_facts = 0
+for pid, d in sorted(everyone.items()):
+    for f in d["facts"]:
+        n_facts += 1
+        p = f["provenance"]
+        doc = docs.get(p["doc_id"])
+        if doc is None:
+            missing.append((f["fact_id"], p["doc_id"]))
+            continue
+        if p.get("published_at") != doc.get("published_at"):
+            date_mismatch.append((f["fact_id"], p.get("published_at"), doc.get("published_at")))
+        if p.get("source_kind") != doc.get("source_kind"):
+            kind_mismatch.append((f["fact_id"], p.get("source_kind"), doc.get("source_kind")))
+check("every provenance.doc_id resolves to docs/<doc_id>.json", not missing,
+      "%d facts checked against %d docs" % (n_facts, len(docs)))
+check("provenance.published_at == its RawDoc published_at", not date_mismatch,
+      str(date_mismatch or "all %d facts" % n_facts))
+check("provenance.source_kind == its RawDoc source_kind", not kind_mismatch,
+      str(kind_mismatch or "all %d facts" % n_facts))
+
+# ---------------------------------------------------------------- E. the tie
+print()
+print("E. NEWEST-DISPLAYABLE TIE IN runa-okonkwo (a consequence of D, not an accident)")
+
+
+def displayable(f):
+    p = f["provenance"]
+    return (not f["excluded"]) and p["confidence"] >= 0.7 and p["source_kind"] in DISPLAYABLE_KINDS
+
+
+runa = resolved["runa-okonkwo"]
+disp = [f for f in runa["facts"] if displayable(f)]
+newest = max(f["provenance"]["published_at"] for f in disp)
+tied = sorted(f["fact_id"] for f in disp if f["provenance"]["published_at"] == newest)
+for fid in tied:
+    f = next(x for x in runa["facts"] if x["fact_id"] == fid)
+    print("  %-18s %-16s %s  doc=%s" % (fid, f["category"], f["provenance"]["published_at"],
+                                        f["provenance"]["doc_id"]))
+docs_of_tied = {next(x for x in runa["facts"] if x["fact_id"] == fid)["provenance"]["doc_id"]
+                for fid in tied}
+check("runa has %d displayable facts" % len(disp), len(disp) >= 3,
+      ">= 3, so a 3-slot Lately is fillable under the widest reading")
+check("displayable recent_activity facts >= 3", 
+      len([f for f in disp if f["category"] == "recent_activity"]) >= 3,
+      "%d, so a 3-slot Lately is fillable under the NARROWEST reading too"
+      % len([f for f in disp if f["category"] == "recent_activity"]))
+check("newest displayable date is a TIE", len(tied) > 1, "%s on %s" % (tied, newest))
+check("the tied facts share ONE RawDoc", len(docs_of_tied) == 1,
+      "%s - so the tie cannot be broken without contradicting D" % sorted(docs_of_tied))
+
+# ---------------------------------------------------------------- F. smoothed idf
+print()
+print("F. SMOOTHED IDF OF THE SCORING HUBS - idf = max(0, ln(N / (1 + n)))")
+N = len(resolved)
+carriers = {}
+for pid, d in resolved.items():
+    for h in d["hubs"]:
+        carriers.setdefault(h["hub_id"], set()).add(pid)
+for hid in sorted(carriers):
+    n = len(carriers[hid])
+    print("  %-36s n=%d  max(0, ln(%d/(1+%d))) = %.6f" % (hid, n, N, n, max(0.0, math.log(N / (1 + n)))))
+scoring = ["investor:foundry-seed-2019", "topic:developer-tools-go-to-market"]
+check("N == 5", N == 5, str(sorted(resolved)))
+for hid in scoring:
+    n = len(carriers[hid])
+    idf = max(0.0, math.log(N / (1 + n)))
+    check("%s: n == 2 and idf == ln(5/3)" % hid, n == 2 and abs(idf - math.log(5 / 3)) < 1e-12,
+          "n=%d idf=%.10f  (ln(5/(1+2)), NOT ln(5/2) and NOT 'three carriers')" % (n, idf))
+
+failures = [r for r in results if not r[1]]
+print()
+print("CHECK 7 RESULT: %d/%d assertions passed" % (len(results) - len(failures), len(results)))
+raise SystemExit(1 if failures else 0)
+```
+
+### Verbatim output (exit code 0)
+
+```
+A. HUB ID CANONICALISATION - DESIGN Hub.hub_id = '{type}:{slug(label)}'
+  hub_id                               label                          {type}:{slug(label)}                
+  city:austin                          'Austin'                       city:austin                          OK
+  company:lantern-freight              'Lantern Freight'              company:lantern-freight              OK
+  investor:foundry-seed-2019           'Foundry Seed 2019'            investor:foundry-seed-2019           OK
+  school:bellhaven-polytechnic         'Bellhaven Polytechnic'        school:bellhaven-polytechnic         OK
+  topic:developer-tools-go-to-market   'Developer-tools go-to-market' topic:developer-tools-go-to-market   OK
+  topic:remote-work                    'Remote work'                  topic:remote-work                    OK
+  every hub_id is canonical                                      PASS   16 hub entries, 6 distinct hubs, 0 mismatches
+  one hub_id carries one (label, type) everywhere                PASS   
+
+B. PERSON ID CANONICALISATION - person_id == slug(person.name)
+  jem-arrowood       'Jem Arrowood'           -> jem-arrowood
+  mira-hollowell     'Mira Hollowell'         -> mira-hollowell
+  runa-okonkwo       'Runa Okonkwo'           -> runa-okonkwo
+  sil-vantorre       'Sil Vantorre'           -> sil-vantorre
+  theo-baptiste      'Theo Baptiste'          -> theo-baptiste
+  vex-tarrow         'Vex Tarrow'             -> vex-tarrow
+  every person_id == slug(name)                                  PASS   6 dossiers (5 resolved + 1 unresolved)
+  dossier filename == person_id                                  PASS   
+
+C/D. PROVENANCE -> RAWDOC
+  every provenance.doc_id resolves to docs/<doc_id>.json         PASS   35 facts checked against 23 docs
+  provenance.published_at == its RawDoc published_at             PASS   all 35 facts
+  provenance.source_kind == its RawDoc source_kind               PASS   all 35 facts
+
+E. NEWEST-DISPLAYABLE TIE IN runa-okonkwo (a consequence of D, not an accident)
+  runa-okonkwo-f05   recent_activity  2026-02-11  doc=92b1d32390d8795f
+  runa-okonkwo-f11   affiliation      2026-02-11  doc=92b1d32390d8795f
+  runa has 13 displayable facts                                  PASS   >= 3, so a 3-slot Lately is fillable under the widest reading
+  displayable recent_activity facts >= 3                         PASS   4, so a 3-slot Lately is fillable under the NARROWEST reading too
+  newest displayable date is a TIE                               PASS   ['runa-okonkwo-f05', 'runa-okonkwo-f11'] on 2026-02-11
+  the tied facts share ONE RawDoc                                PASS   ['92b1d32390d8795f'] - so the tie cannot be broken without contradicting D
+
+F. SMOOTHED IDF OF THE SCORING HUBS - idf = max(0, ln(N / (1 + n)))
+  city:austin                          n=5  max(0, ln(5/(1+5))) = 0.000000
+  company:lantern-freight              n=1  max(0, ln(5/(1+1))) = 0.916291
+  investor:foundry-seed-2019           n=2  max(0, ln(5/(1+2))) = 0.510826
+  school:bellhaven-polytechnic         n=1  max(0, ln(5/(1+1))) = 0.916291
+  topic:developer-tools-go-to-market   n=2  max(0, ln(5/(1+2))) = 0.510826
+  topic:remote-work                    n=5  max(0, ln(5/(1+5))) = 0.000000
+  N == 5                                                         PASS   ['jem-arrowood', 'mira-hollowell', 'runa-okonkwo', 'sil-vantorre', 'theo-baptiste']
+  investor:foundry-seed-2019: n == 2 and idf == ln(5/3)          PASS   n=2 idf=0.5108256238  (ln(5/(1+2)), NOT ln(5/2) and NOT 'three carriers')
+  topic:developer-tools-go-to-market: n == 2 and idf == ln(5/3)  PASS   n=2 idf=0.5108256238  (ln(5/(1+2)), NOT ln(5/2) and NOT 'three carriers')
+
+CHECK 7 RESULT: 14/14 assertions passed
+```
+
+Run against the corpus **before** the hub-id fix, the same script exits 1 on
+`every hub_id is canonical ... FAIL   16 hub entries, 6 distinct hubs, 2 mismatches`.
+That negative control is reproduced in *Disagreements* section 1: the check is known to
+fail on the defect it was written for, not merely to pass on the corpus as fixed.
+
+---
+
 ## Reproducing this
 
 The scripts hard-code the absolute fixture path, take no arguments, print their own
@@ -1677,6 +2048,10 @@ python3 check3_doc_ids.py
 python3 check4_distinctive_strings.py
 python3 check5_fictional.py
 python3 check6_contract_and_1b.py
+python3 check7_canonical_ids.py
 ```
 
-All six exited 0 against the files committed in this directory.
+All seven exited 0 against the files committed in this directory. Checks 1-6 were re-run
+after the hub-id correction described at the top of this file; checks 2-6 reproduced their
+committed output byte for byte, and check 1 differed only in the hub-id string on three
+lines, with every number identical.

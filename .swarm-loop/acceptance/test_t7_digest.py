@@ -54,6 +54,13 @@ PRESENT = ["sil-vantorre", "jem-arrowood", "mira-hollowell", "theo-baptiste"]
 #   f13  excluded         -> exclusion_reason "home_or_property"
 #   f14  confidence 0.55  -> below the R12 display floor, NOT excluded
 #   f15  source_kind fec  -> off the R12 display whitelist, NOT excluded
+#
+# f15's `excluded: false` is LOAD-BEARING CORPUS, not an oversight, and must not be "tidied"
+# to true by anyone editing these fixtures. test_t4_taste.py takes it as `bad_kind` and
+# asserts `bad_kind.excluded is False` while `is_displayable(bad_kind) is False`: it is the
+# only proof in the suite that the source-kind display gate (R12) is a SEPARATE gate from the
+# taste filter (R11), rather than the taste filter wearing a second name. Marking it excluded
+# would make that test pass for the wrong reason and lose the discrimination entirely.
 WITHHELD_FACT_IDS = {
     "runa-okonkwo-f12",
     "runa-okonkwo-f13",
@@ -87,10 +94,28 @@ OTHER_HOOK_PHRASE = "worst error messages"
 # recent_activity facts, most recent first: f05 2026-02-11, f06 2025-11-04,
 # f07 2025-08-19, f08 2025-05-27. Four candidates against a cap of three, so f08 is the
 # one the cap must cut under any defensible reading of "most recent professional activity".
-MOST_RECENT_ACTIVITY_FACT_ID = "runa-okonkwo-f05"
 OLDEST_ACTIVITY_FACT_ID = "runa-okonkwo-f08"
 
-IDF_RARE_HUB = 0.5108256237659907  # ln(5/3)
+# The freshest displayable material in the dossier is a TIE, and the tie CANNOT be broken in
+# the corpus: f05 (recent_activity) and f11 (affiliation) are both extracted from RawDoc
+# 92b1d32390d8795f, and a fact's `provenance.published_at` is its document's publication
+# date for all 35 facts here (measured in CORPUS-PROOF check 7, section D). Handing one of
+# them a different date would put the fixture in contradiction with its own source
+# document, which is a worse defect than the ambiguity it would remove.
+#
+# So the tie is GRADED as a tie. "Lately opens on the newest displayable material" is the
+# criterion; either member of the pair satisfies it. Pinning f05 alone would fail a correct
+# implementation that breaks the tie the other way -- e.g. one bullet per source document,
+# ties resolved by fact_id -- for a choice the corpus gives it no way to get right.
+NEWEST_DISPLAYABLE_DATE = dt.date(2026, 2, 11)
+TIED_NEWEST_FACT_IDS = {"runa-okonkwo-f05", "runa-okonkwo-f11"}
+
+# DESIGN Decision 3 smooths the denominator: idf = max(0, ln(N / (1 + n_people_on_hub))).
+# Both hubs used below are held by exactly TWO of the five people, so both weigh
+# max(0, ln(5 / (1 + 2))) = ln(5/3). The shorthand "ln(5/3)" is the REDUCED form of the
+# smoothed expression, not an unsmoothed ln(N/n) -- reading it as "three people on the
+# hub" is the mistake to avoid.
+IDF_RARE_HUB = 0.5108256237659907  # max(0, ln(5 / (1 + 2))) = ln(5/3)
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +190,7 @@ def _four_matches(frozen_fixtures):
     return runa, [
         _match(runa, sil, "investor:foundry-seed-2019", 100.0, 1.5,
                "Both came up through the Foundry Seed 2019 fund."),
-        _match(runa, jem, "topic:developer-tools-gtm", 67.0, 1.0,
+        _match(runa, jem, "topic:developer-tools-go-to-market", 67.0, 1.0,
                "Both have spent years on developer-tools go-to-market."),
         _match(runa, mira, None, 0.0, 0.0, "Both work in Austin, which everyone here shares."),
         _match(runa, theo, None, 0.0, 0.0, "Both work in Austin, which everyone here shares."),
@@ -272,6 +297,20 @@ def _published(fact):
     return fact.provenance.published_at
 
 
+def _displayable(fact):
+    """R12's display gate, spelled out here rather than imported from `taste`.
+
+    This module grades the DIGEST builder. A corpus self-check that asked T-4's predicate
+    whether the corpus is still what T-7 assumes would go quiet the moment T-4 broke, which
+    is the one moment it needs to speak.
+    """
+    return (
+        not fact.excluded
+        and fact.provenance.confidence >= 0.7
+        and fact.provenance.source_kind not in ("fec", "courtlistener")
+    )
+
+
 def _spoken_lines(digest):
     return [digest.who_line] + [m.why for m in digest.meet] + [digest.say_out_loud]
 
@@ -298,12 +337,32 @@ def test_meet_is_capped_at_three_when_four_people_are_present(frozen_fixtures):
 
 
 def test_lately_is_capped_at_three_and_ordered_most_recent_first(frozen_fixtures):
-    """R7: Lately holds at most three bullets, most recent professional activity first."""
+    """R7: Lately holds three bullets - the cap, filled - most recent activity first."""
     runa, matches = _four_matches(frozen_fixtures)
+
+    # Corpus self-check, run BEFORE the digest so a fixture change is reported as a fixture
+    # change. It keeps the tie tolerance below exactly as wide as the ambiguity and no wider.
+    newest = max(_published(f) for f in runa.facts if _displayable(f))
+    assert newest == NEWEST_DISPLAYABLE_DATE, (
+        f"frozen corpus changed: the newest displayable fact is now dated {newest}"
+    )
+    tied = {f.fact_id for f in runa.facts if _displayable(f) and _published(f) == newest}
+    assert tied == TIED_NEWEST_FACT_IDS, (
+        f"frozen corpus changed: the newest-displayable tie is now {sorted(tied)}"
+    )
 
     digest = _digest(runa, matches, _LLMStub())
 
     assert len(digest.lately) <= 3
+    # The cap is a FLOOR here as well as a ceiling. Under every defensible reading of the
+    # candidate set the corpus offers at least four eligible facts -- four displayable
+    # `recent_activity` facts on the narrowest reading, thirteen displayable facts on the
+    # widest -- so three slots are all fillable, and a digest that showed one bullet would
+    # otherwise have scored this criterion.
+    assert len(digest.lately) == 3, (
+        f"Lately has {len(digest.lately)} bullets; the corpus offers at least four eligible "
+        "facts under every reading, so all three slots are fillable"
+    )
     dates = [_published(f) for f in digest.lately]
     assert all(d is not None for d in dates), f"Lately must be datable to be ordered: {dates}"
     assert dates == sorted(dates, reverse=True), f"Lately is not most-recent-first: {dates}"
@@ -316,8 +375,12 @@ def test_lately_is_capped_at_three_and_ordered_most_recent_first(frozen_fixtures
         "the oldest recent-activity fact survived a cap that had three slots and four "
         "more-recent candidates"
     )
-    assert MOST_RECENT_ACTIVITY_FACT_ID in ids, (
-        "the most recent professional activity is missing from Lately"
+    # Order-insensitive about the tied pair, on purpose: see TIED_NEWEST_FACT_IDS. What is
+    # graded is that Lately opens on the freshest displayable material at all, not which of
+    # two facts sharing one document and one publication date the builder put first.
+    assert set(ids) & TIED_NEWEST_FACT_IDS, (
+        "Lately shows none of the newest displayable material "
+        f"({sorted(TIED_NEWEST_FACT_IDS)}, both dated {NEWEST_DISPLAYABLE_DATE}); got {ids}"
     )
 
 
