@@ -28,5 +28,8 @@
     "tickets.json"
   ],
   "ticket_graph": "tickets.json",
-  "scratch_root": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-scratch"
+  "scratch_root": "/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-scratch",
+  "last_retire_at": "2026-09-03T21:21:39",
+  "worktree_root_size_kb": 458572,
+  "worktree_root_size_at": "2026-09-03T21:21:39"
 }
