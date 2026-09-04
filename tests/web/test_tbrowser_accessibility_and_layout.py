@@ -100,13 +100,11 @@ def test_every_roster_control_names_the_member_it_acts_on(client):
     )
 
 
-test_every_roster_control_names_the_member_it_acts_on = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "OPEN DEFECT found by TESTBROWSER: index.html gives all 20 roster buttons the "
-        "accessible name 'Arrive' or 'Leave'. Delete this marker when they name the member."
-    ),
-)(test_every_roster_control_names_the_member_it_acts_on)
+# FIXED by WEBPOLISH (T-093). `index.html` now carries
+# `aria-label="Arrive {{ row.person.name }}"` / `aria-label="Leave ..."` on each button, so
+# the twenty controls have twenty distinct accessible names. The xfail(strict=True) marker
+# that stood here was deleted rather than the test: re-measured in Chrome's accessibility
+# tree, the roster reads "Arrive Brad Feld, button. Leave Brad Feld, button." and so on.
 
 
 # ===================================================================== DEFECT 2
@@ -140,13 +138,10 @@ def test_the_graph_text_alternative_pluralises_like_the_visible_caption(client):
     assert "1 shared hubs" not in summary, f"the SVG text alternative is ungrammatical: {summary!r}"
 
 
-test_the_graph_text_alternative_pluralises_like_the_visible_caption = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "OPEN DEFECT found by TESTBROWSER: graph_view._alt_text hardcodes 'shared hubs'. "
-        "Delete this marker when it pluralises."
-    ),
-)(test_the_graph_text_alternative_pluralises_like_the_visible_caption)
+# FIXED by WEBPOLISH (T-094). Every count `_alt_text` speaks now goes through
+# `graph_view._count(n, singular, plural)`, so the text alternative agrees with the visible
+# caption. Re-measured in a real browser: `aria-label` and `<title>` both read "An interest
+# graph of 2 people joined by 1 shared hub." against a caption of "1 shared hub".
 
 
 def test_the_visible_caption_pluralises_correctly_for_one_shared_hub(client):
@@ -202,14 +197,11 @@ def test_a_long_dossier_path_cannot_force_horizontal_scroll_on_a_phone(client):
     )
 
 
-test_a_long_dossier_path_cannot_force_horizontal_scroll_on_a_phone = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "OPEN DEFECT found by TESTBROWSER: base.html gives <code> no overflow-wrap, and "
-        "/ and /corpus print an absolute filesystem path in one. Delete this marker when "
-        "the rule is added."
-    ),
-)(test_a_long_dossier_path_cannot_force_horizontal_scroll_on_a_phone)
+# FIXED by WEBPOLISH (T-095). `base.html`'s `code` rule now carries
+# `overflow-wrap: anywhere`. Re-measured in Chrome with the same 166-character DOSSIER_DIR
+# that produced the numbers in the docstring above: `/` and `/corpus` both report
+# scrollWidth == clientWidth at 390px and at 320px, i.e. zero horizontal page overflow,
+# down from 225px and 295px.
 
 
 # ===================================================== what is already right, pinned
