@@ -40,6 +40,7 @@ __all__ = [
     "affiliations",
     "bare_domains_in",
     "hosts_in",
+    "names_a_job",
     "parse_date",
     "text_block",
     "urls_in",
@@ -91,32 +92,38 @@ _BARE_TLDS = frozenset(
 )
 
 #: Role nouns that describe a person's relationship to an organisation rather than naming
-#: one. Stripped before an affiliation is used as a search term, so "co-founder, Pelmyre
-#: Works" searches for the company and not for the job title.
+#: one. A candidate that is EXACTLY one of these is not an affiliation at all, so
+#: "co-founder, Pelmyre Works" contributes only the company.
 #:
-#: MATCHED PER TOKEN, NOT AS A WHOLE CANDIDATE (T-073). The check used to be
-#: `candidate.lower() in _ROLE_WORDS`, which recognises `"co-founder"` and does not
-#: recognise `"co-founder and partner"` — so a CONJOINED role phrase survived, sorted
-#: first (it is written first in the roster) and became `identity.best_affiliation`'s
-#: answer. Measured live on the ten-person roster: nine of ten people had a JOB TITLE
-#: where their employer should be, so `wikipedia` searched
-#: `"Josh Kopelman founder and partner"` and his own article was not in the first twenty
-#: results.
+#: This list is deliberately unchanged from before T-073. It is read by `affiliations`,
+#: whose output is also `identity.roster_terms` — the CORROBORATION vocabulary — and a
+#: word deleted from here stops being evidence as well as stopping being a query.
+#: Measured: adding "author" to this set removed it from Eric Ries's roster terms, and his
+#: Wikidata item is recognised by that word and by nothing else his details carry, so
+#: `wikidata` went from one document to zero for him.
 _ROLE_WORDS = frozenset(
     {
-        "advisor", "analyst", "architect", "artist", "associate", "author", "blogger",
-        "board", "board member", "ceo", "cfo", "chair", "chairman", "chairperson",
-        "chairwoman", "chief", "cio", "cmo", "co-founder", "cofounder", "consultant",
-        "coo", "cro", "cto", "director", "editor", "engineer", "entrepreneur", "evp",
-        "executive", "fellow", "founder", "general", "gp", "head", "investor",
-        "journalist", "lead", "manager", "managing", "md", "member", "officer",
-        "operator", "owner", "partner", "president", "principal", "professor",
-        "researcher", "scientist", "staff", "svp", "trustee", "vp", "writer",
+        "advisor", "analyst", "board", "board member", "ceo", "cfo", "chair", "chairman",
+        "chief", "co-founder", "cofounder", "coo", "cto", "director", "engineer",
+        "founder", "gp", "head", "investor", "lead", "manager", "member", "partner",
+        "president", "principal", "professor", "researcher", "scientist", "svp", "vp",
+    }
+)
+
+#: More role nouns, read ONLY by `names_a_job` — i.e. only where a query is being built,
+#: never where corroboration is being counted. See `_ROLE_WORDS` for why the two lists are
+#: not one list.
+_MORE_ROLE_WORDS = frozenset(
+    {
+        "architect", "artist", "associate", "author", "blogger", "chairperson",
+        "chairwoman", "cio", "cmo", "consultant", "cro", "editor", "entrepreneur", "evp",
+        "executive", "fellow", "general", "journalist", "managing", "md", "officer",
+        "operator", "owner", "staff", "trustee", "writer",
     }
 )
 
 #: Words that GLUE a role phrase together without naming anything. A candidate made only
-#: of these and `_ROLE_WORDS` names a job, not an organisation.
+#: of these and the two role lists names a job, not an organisation.
 _ROLE_CONNECTIVES = frozenset(
     {
         "a", "acting", "an", "and", "at", "briefly", "co", "current", "currently",
@@ -124,6 +131,8 @@ _ROLE_CONNECTIVES = frozenset(
         "interim", "junior", "of", "senior", "the", "with", "&",
     }
 )
+
+_ALL_ROLE_TOKENS = _ROLE_WORDS | _MORE_ROLE_WORDS | _ROLE_CONNECTIVES
 
 #: Leading words stripped off an otherwise good organisation phrase: `"formerly Palantir"`
 #: is a search for Palantir. Role words are NOT stripped this way — "General Electric"
@@ -200,17 +209,26 @@ def hosts_in(details: list[str]) -> list[str]:
     return hosts
 
 
-def _names_a_job(candidate: str) -> bool:
+def names_a_job(candidate: str) -> bool:
     """True when every word of `candidate` is a role word or the glue between two.
 
     `"co-founder"` yes, `"co-founder and partner"` yes, `"general partner"` yes,
     `"Foundry Group"` no, `"General Electric"` no — `electric` is not a role word, so the
     phrase survives even though `general` is.
+
+    WHERE THIS IS APPLIED, AND WHY NOT HERE.  `identity.best_affiliation` calls it and
+    `affiliations` deliberately does not, which is the same split the city already has:
+    a term is worthless as a QUERY and can be valuable as a CHECK.  Measured on the live
+    roster — filtering role phrases out of `affiliations` itself also removed them from
+    `identity.roster_terms`, and Eric Ries's Wikidata item is corroborated by the word
+    "author" and by nothing else in his details, so `wikidata` went from one document to
+    zero for him.  Queries are where a job title is noise; corroboration is where it is
+    evidence.
     """
     tokens = [token.lower() for token in _TOKENS.findall(candidate)]
     if not tokens:
         return False
-    return all(token in _ROLE_WORDS or token in _ROLE_CONNECTIVES for token in tokens)
+    return all(token in _ALL_ROLE_TOKENS for token in tokens)
 
 
 def _without_qualifier(candidate: str) -> str:
@@ -232,19 +250,16 @@ def affiliations(details: list[str]) -> list[str]:
     (T-2) decides afterwards which hits are actually this person.  Being wrong here costs
     one request; being too narrow costs the only lead.
 
-    Generous is not the same as indiscriminate, and two measured failures were the latter
-    (T-073, live roster of ten):
+    Generous is not the same as indiscriminate, and one measured failure was the latter
+    (T-073, live roster of ten): **a `;` joins two clauses, and one of them may carry the
+    website.** Skipping a whole detail because it mentions a URL threw away
+    `"formerly Palantir"` along with `"essays at nabeelqu.co"`. The clause carrying the
+    address is dropped; the company beside it is not.
 
-    * **A conjoined job title is not an organisation.** The role check compared the WHOLE
-      candidate against `_ROLE_WORDS`, so `"co-founder"` was dropped and
-      `"co-founder and partner"` was kept — and because the roster writes the title before
-      the company, the job title became the FIRST affiliation and therefore
-      `identity.best_affiliation`'s answer for nine of the ten people. `_names_a_job`
-      reads the candidate word by word instead.
-    * **A `;` joins two clauses, and one of them may carry the website.** Skipping a whole
-      detail because it mentions a URL threw away `"formerly Palantir"` along with
-      `"essays at nabeelqu.co"`. The clause carrying the address is dropped; the company
-      beside it is not.
+    A conjoined JOB TITLE (`"co-founder and partner"`) still comes back from here, and
+    that is deliberate — see `names_a_job`, which `identity.best_affiliation` applies so
+    that a title never becomes a query while `identity.roster_terms` can still corroborate
+    on one.
     """
     out: list[str] = []
     for detail in details:
@@ -256,7 +271,7 @@ def affiliations(details: list[str]) -> list[str]:
                 continue
             for fragment in _SPLIT_AFFILIATION.split(clause):
                 candidate = _without_qualifier(fragment.strip(" .;:-"))
-                if not candidate or _names_a_job(candidate):
+                if not candidate or candidate.lower() in _ROLE_WORDS:
                     continue
                 if len(candidate) < 3 or not any(ch.isalpha() for ch in candidate):
                     continue

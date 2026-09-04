@@ -27,8 +27,14 @@ from __future__ import annotations
 import pytest
 from t1_ambiguity import parts, search
 
-from arrival.connectors.base import affiliations, bare_domains_in, hosts_in, urls_in
-from arrival.connectors.identity import best_affiliation, on_own_host
+from arrival.connectors.base import (
+    affiliations,
+    bare_domains_in,
+    hosts_in,
+    names_a_job,
+    urls_in,
+)
+from arrival.connectors.identity import best_affiliation, on_own_host, roster_terms
 from arrival.contracts import PersonRef
 
 pytestmark = pytest.mark.ticket("T-1")
@@ -138,14 +144,55 @@ def test_an_address_detail_is_not_offered_as_an_employer():
 def test_a_semicolon_clause_carrying_a_url_does_not_take_the_company_with_it():
     # The real shape: `"formerly Palantir; essays at nabeelqu.co"`. Skipping the whole
     # detail because it mentions a site threw the previous employer away with it.
+    #
+    # JUSTIFICATION FOR THE ASSERTION CHANGE (this test was added earlier in this same
+    # branch and its expectation was wrong). It asserted `affiliations(...) ==
+    # ["Thornfield Loom"]`, i.e. that `affiliations` itself drops a conjoined job title.
+    # Measured on the live roster afterwards: `affiliations` is also
+    # `identity.roster_terms`, the CORROBORATION vocabulary, and dropping role words there
+    # dropped them from corroboration too -- `wikidata` went from one document to zero for
+    # Eric Ries, whose item is recognised by the word "author" and by nothing else his
+    # details carry. The requirement is that a job title never becomes a QUERY, which is
+    # `best_affiliation`; it was never that a job title stops being evidence. Both halves
+    # are asserted below, so the test is strictly stronger than the one it replaces.
     person = PersonRef(
         person_id="marisol-quennebeck",
         name="Marisol Quennebeck",
         details=["writer and researcher", "formerly Thornfield Loom; notes at example.org"],
     )
+    found = affiliations(person.details)
 
-    assert affiliations(person.details) == ["Thornfield Loom"]
-    assert best_affiliation(person) == "Thornfield Loom"
+    assert "Thornfield Loom" in found, (
+        "the clause carrying the address was dropped and took the company beside it"
+    )
+    assert not any("example.org" in term for term in found), "an address is not an employer"
+    assert best_affiliation(person) == "Thornfield Loom", (
+        "a job title must never be the term a connector puts in a query"
+    )
+
+
+def test_a_job_title_is_not_a_query_and_is_still_evidence():
+    person = PersonRef(
+        person_id="pell-marrowby",
+        name="Pell Marrowby",
+        details=["co-founder and partner, Pelmyre Works", "Austin, Texas"],
+    )
+
+    assert best_affiliation(person) == "Pelmyre Works", (
+        "a roster writes the title before the company, so a whole-candidate role check "
+        "kept 'co-founder and partner' and made it the first affiliation -- and therefore "
+        "the term four connectors put in their queries, for nine of ten live people"
+    )
+    assert "co-founder and partner" in roster_terms(person), (
+        "and it must still CORROBORATE: `roster_terms` is what `corroborates` counts, and "
+        "a term deleted from it stops being evidence as well as stopping being a query"
+    )
+    assert names_a_job("co-founder and partner")
+    assert names_a_job("general partner")
+    assert not names_a_job("General Electric"), (
+        "'general' is a role word and 'electric' is not, so the phrase names a company"
+    )
+    assert not names_a_job("Pelmyre Works")
 
 
 # --- the connectors that live off it -----------------------------------------------

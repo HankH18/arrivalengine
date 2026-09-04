@@ -38,7 +38,7 @@ from collections.abc import Callable, Iterable, Sequence
 from typing import TypeVar
 from urllib.parse import urlsplit
 
-from arrival.connectors.base import affiliations, urls_in
+from arrival.connectors.base import affiliations, names_a_job, urls_in
 from arrival.contracts import PersonRef
 from arrival.util import normalize_ws
 
@@ -196,12 +196,24 @@ def best_affiliation(person: PersonRef) -> str:
     Every detail being an address returns `""`, and the query is then the bare name. That
     is the honest query: appending a city to a name is the defect, not a weaker version
     of the fix.
+
+    A JOB TITLE is skipped here for exactly the same reason and in exactly the same place
+    (T-073).  `affiliations` compared a whole candidate against its role list, so
+    `"co-founder"` was dropped and `"co-founder and partner"` was not — and a roster
+    writes the title BEFORE the company, so the title was the first affiliation and
+    therefore this function's answer for NINE of the ten people on the live roster.
+    Measured: `wikipedia` searched `"Josh Kopelman founder and partner"` and his own
+    article was not in the first twenty results; with `"Josh Kopelman First Round Capital"`
+    it is second.  `names_a_job` reads the candidate word by word, and it is applied HERE
+    rather than in `affiliations` because `roster_terms` corroborates on those same terms
+    and a job title is real evidence there — Eric Ries's Wikidata item is recognised by
+    the word "author" and by nothing else his details carry.
     """
     for detail in person.details:
         if is_an_address(detail):
             continue
         for term in affiliations([detail]):
-            if normalize_ws(term) not in US_STATES:
+            if normalize_ws(term) not in US_STATES and not names_a_job(term):
                 return term
     return ""
 
