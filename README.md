@@ -153,8 +153,16 @@ the repository (Dashboard → New → Blueprint) and it reads the blueprint.
 | Build | `pip install uv && uv sync --frozen --no-dev` |
 | Start | `uv run --no-sync uvicorn arrival.web.app:app --host 0.0.0.0 --port $PORT --workers 1` |
 | Health check | `GET /building` |
-| Corpus | `DOSSIER_DIR=/opt/render/project/src/data/dossiers` |
+| Corpus | `data/dossiers/` — `DOSSIER_DIR` is left unset on purpose (see below) |
 | Secrets | `ANTHROPIC_API_KEY`, `CONTACT_EMAIL` — `sync: false`, set in the dashboard |
+
+`DOSSIER_DIR` is deliberately absent from the blueprint. `Settings.dossier_dir` defaults to
+`<repo>/data/dossiers` resolved from `arrival/config.py`'s own `__file__`, and `uv sync`
+installs the project editable, so the default is right wherever Render checks the repo out.
+A hardcoded absolute path would be right only until that path changed — and a `DOSSIER_DIR`
+pointing somewhere that does not exist does not fail the boot, it serves an **empty
+building**, which is the failure mode that looks exactly like a working demo. Set it only to
+point a running instance at a different corpus.
 
 `$PORT` is Render's, not ours: a service that binds a fixed port never passes the health
 check and the deploy hangs "in progress" forever. One worker is deliberate — presence and
