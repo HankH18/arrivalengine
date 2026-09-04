@@ -517,7 +517,7 @@ def test_wikidata_sourced_hub_is_keyed_by_its_qid(frozen_fixtures):
     search_doc = _frozen_doc(frozen_fixtures, _ROADMAP_DOC)
     assert _is_quoted_in(_WIKIDATA_SPAN, wikidata_doc.text)
     assert _is_quoted_in(_ROADMAP_SPAN, search_doc.text)
-    assert "Q7314529" in wikidata_doc.text, "fixture pre-condition: the QID is in the document"
+    assert "Q900000411" in wikidata_doc.text, "fixture pre-condition: the QID is in the document"
 
     facts, hubs = _run_extract(
         [wikidata_doc, search_doc],
@@ -540,7 +540,7 @@ def test_wikidata_sourced_hub_is_keyed_by_its_qid(frozen_fixtures):
         },
         {
             wikidata_doc.doc_id: [
-                {"label": "Belmarch Optics", "type": "company", "qid": "Q7314529"}
+                {"label": "Belmarch Optics", "type": "company", "qid": "Q900000411"}
             ],
             search_doc.doc_id: [{"label": "Quarrystone Labs", "type": "company"}],
         },
@@ -549,7 +549,7 @@ def test_wikidata_sourced_hub_is_keyed_by_its_qid(frozen_fixtures):
 
     by_label = {h.label: h for h in hubs}
     assert "Belmarch Optics" in by_label, f"wikidata hub missing, got {sorted(by_label)}"
-    assert by_label["Belmarch Optics"].hub_id == "wd:Q7314529"
+    assert by_label["Belmarch Optics"].hub_id == "wd:Q900000411"
     # The control half: a hub from a non-wikidata document falls back to the slug form, so
     # a run that emitted no hubs at all, or prefixed everything with `wd:`, cannot pass.
     assert "Quarrystone Labs" in by_label, f"non-wikidata hub missing, got {sorted(by_label)}"
