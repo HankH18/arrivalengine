@@ -113,9 +113,21 @@
 
   {#
     R7 / R9: every document the page leaned on, numbered, with an openable URL, the
-    retrieval date and the verbatim quote. The numbering is `Digest.sources`' OWN order
+    retrieval date and the verbatim quotes. The numbering is `Digest.sources`' OWN order
     (first use as T-7 assembled the page), not the order the sections appear in, so
     citation [n] always indexes sources[n-1]. See `render.py` for why.
+
+    T-040: one <li> PER DOCUMENT (the acceptance suite pins that `Digest.sources` is deduped
+    by doc_id, and `[n]` must keep indexing sources[n-1]) but the QUOTES inside it are a
+    list. `Provenance.quote` and `Provenance.confidence` are per FACT, and four of the shown
+    facts on `runa-okonkwo` come out of one document — so a single printed `source.quote`
+    put an unrelated excerpt under three of them. Each quote now sits beside its OWN
+    confidence and names the claim it supports, which is how a host reading a Meet row
+    (whose only evidence is this list, since the row renders no inline quote) finds the
+    sentence that backs it.
+
+    `source.confidence` is deliberately gone from the document line: confidence is a
+    property of a fact's extraction, never of the document.
   #}
   <section id="why-we-know-this">
     <h2>Why we know this</h2>
@@ -124,8 +136,33 @@
       {% for n, source in sources %}
       <li id="source-{{ n }}">
         <a href="{{ source.url }}">{{ source.url }}</a>
-        <br><span class="quote">{{ source.source_kind }} &middot; retrieved {{ source.retrieved_at | day }}{% if source.published_at %} &middot; published {{ source.published_at | day }}{% endif %} &middot; confidence {{ source.confidence }}</span>
-        <br><span class="quote">&ldquo;{{ source.quote }}&rdquo;</span>
+        <br><span class="quote">{{ source.source_kind }} &middot; retrieved {{ source.retrieved_at | day }}{% if source.published_at %} &middot; published {{ source.published_at | day }}{% endif %}</span>
+        {% set entries = source_evidence[n] if source_evidence and n in source_evidence else [] %}
+        {% if entries %}
+        <ul class="evidence">
+          {% for entry in entries %}
+          <li class="evidence-item" id="source-{{ n }}-evidence-{{ loop.index }}" data-backs="{{ entry.sections | join(' ') }}">
+            <span class="quote">&ldquo;{{ entry.quote }}&rdquo;</span>
+            <span class="attribution">&mdash; supports {{ entry.backs }} &middot; confidence {{ entry.confidence }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        {#
+          No claim on this page could be traced back to this document. That is unreachable
+          from `make_digest` — every entry here was put there BY a fact that passed R12 — so
+          it means this layer could not vouch for the excerpt, and `source.quote` is
+          deliberately NOT printed as a consolation.
+
+          This branch used to print it, and a sabotage run proved why it must not: appending
+          a taste-EXCLUDED fact's provenance to `sources` put "Okonkwo and their spouse Delia
+          Moreno-Vance keep a small workshop..." straight onto the host-facing page. R11
+          material is exactly what a `Provenance` alone cannot be screened for — `excluded`
+          lives on the Fact, not on the Provenance — so an unvouchable quote is not shown.
+          The URL, source kind and retrieval date stay, so the citation is still checkable.
+        #}
+        <br><span class="absent">No quote from this document could be traced to a claim on this page.</span>
+        {% endif %}
       </li>
       {% endfor %}
     </ol>
