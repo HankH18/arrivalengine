@@ -117,3 +117,20 @@ anything under the project's `tests/` is forbidden, because it looks helpful.
   field names a stub accepted had every one of those names silently executed as a command and
   stripped, leaving sentences like 'the stub knew only .' The commit succeeded and the loss
   was only visible on re-reading the stored message.
+
+- (cycle 0) **Before dispatching a wave, run one test-collection probe for basename collisions
+  across the tickets' test directories; a shared module basename is a hard collection error no
+  per-ticket gate can see.** — Measured twice on a real repo: two sibling test modules named
+  test_client.py, in a tests/ tree with no __init__.py under pytest's default prepend import
+  mode, give 'import file mismatch' and 'Interrupted: 1 error during collection', exit 2. The
+  design named a client.py for two different tickets, so each lane would have passed its own
+  gate and the merged suite would have gone red for a reason neither lane could see.
+
+- (cycle 0) **State a packet's factual premises as claims to be measured and require them back
+  under PREMISES-FALSIFIED; a prescribed fix is a starting point, never an instruction.** —
+  Across nine lanes in one wave, six falsified at least one premise of their brief and every
+  one was right: a prescribed fix that would have made its defect strictly worse, a count of
+  nine where the spec said ten, hub arithmetic that was simply wrong, and a fixture rename
+  that bought nothing measurable while breaking seven ticket lines the dependent tickets were
+  built against. Two lanes also refused a directive that would have clobbered a sibling's live
+  branch.
