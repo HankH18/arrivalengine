@@ -49,10 +49,13 @@ from arrival.taste import is_displayable
 
 __all__ = [
     "LATELY_CAP",
+    "LATELY_FALLBACK_CATEGORIES",
     "LATELY_PRIMARY_CATEGORIES",
     "MEET_CAP",
     "NON_OBVIOUS_KINDS",
+    "OPENER_OF_LAST_RESORT",
     "OPENER_PREFIXES",
+    "OPENER_TEMPLATE",
     "SAY_OUT_LOUD_TIMEOUT_SECONDS",
     "SPOKEN_WORD_CAP",
     "SURVEILLANCE_PHRASES",
@@ -324,14 +327,22 @@ def pick_lately(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> list[Fact]
     return _by_recency(chosen)
 
 
-def pick_opener_hook(dossier: Dossier) -> Fact | None:
+def pick_opener_hook(dossier: Dossier, *, exclude: Iterable[Fact] = ()) -> Fact | None:
     """The fact the fallback opener invites a question about (DESIGN Decision 12).
 
     The highest-confidence displayable ``hook`` fact; if the dossier has none, the most
     recent displayable fact of any category; if it has none of those either, ``None`` and
     the caller uses :data:`OPENER_OF_LAST_RESORT`.
+
+    ``exclude`` carries the facts the page already speaks aloud, and it earns its place:
+    four of the five people in the grading corpus carry no ``hook`` fact at all, and their
+    highest-confidence displayable fact IS the one in the Who line. Without this the
+    fallback opener asks the host to read the same sentence twice — measured on
+    ``mira-hollowell``, ``sil-vantorre`` and ``theo-baptiste``. Excluding what has already
+    been said is a narrowing of "the most recent displayable fact", not a departure from it.
     """
-    displayable = _displayable(dossier.facts)
+    spoken_for = {f.fact_id for f in exclude}
+    displayable = [f for f in _displayable(dossier.facts) if f.fact_id not in spoken_for]
     hooks = [f for f in displayable if f.category == "hook"]
     if hooks:
         return max(hooks, key=lambda f: (f.provenance.confidence, f.fact_id))
@@ -346,9 +357,23 @@ def _capped_meet(matches: Sequence[Match]) -> list[Match]:
     ``sorted(..., reverse=True)`` is stable, so peers on an equal score keep the order the
     matcher emitted them in rather than being reshuffled here. The cap selects whole rows;
     it never invents one to reach three.
+
+    One person occupies at most one row. R7 caps Meet at "three present people", not three
+    Match objects, and a host reading the same name twice has been handed a padded section
+    with extra steps. The highest-scoring row for a person wins, which is the first one the
+    sort reaches.
     """
-    ranked = sorted(matches, key=lambda m: m.score, reverse=True)[:MEET_CAP]
-    return [_speakable_match(m) for m in ranked]
+    ranked = sorted(matches, key=lambda m: m.score, reverse=True)
+    seen: set[str] = set()
+    kept: list[Match] = []
+    for match in ranked:
+        if match.other.person_id in seen:
+            continue
+        seen.add(match.other.person_id)
+        kept.append(_speakable_match(match))
+        if len(kept) == MEET_CAP:
+            break
+    return kept
 
 
 def _speakable_match(match: Match) -> Match:
@@ -494,7 +519,7 @@ async def make_digest(
     non_obvious = pick_non_obvious(dossier)
     lately = pick_lately(dossier, exclude=who_facts + ([non_obvious] if non_obvious else []))
 
-    hook = pick_opener_hook(dossier)
+    hook = pick_opener_hook(dossier, exclude=who_facts)
     say_out_loud = await _say_out_loud(dossier, hook, lately, llm)
 
     cited: list[Fact] = [*who_facts, *lately]

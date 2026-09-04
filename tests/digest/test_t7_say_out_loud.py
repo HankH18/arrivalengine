@@ -194,3 +194,35 @@ async def test_curious_is_accepted_as_an_invitation(alpha):
     digest = await make_digest(alpha, [], llm)
 
     assert digest.say_out_loud == line
+
+
+async def test_the_fallback_opener_never_reads_back_the_who_line(alpha):
+    """Taste, measured: without this the host reads one sentence twice.
+
+    Four of the five people in the frozen grading corpus carry no ``hook`` fact, and their
+    highest-confidence displayable fact is the one the Who line already speaks. The
+    documented fallback ("the most recent displayable fact if none") therefore has to skip
+    what has already been said, or the page opens by repeating itself.
+    """
+    dossier = with_facts(alpha, [f for f in alpha.facts if f.category != "hook"])
+    llm = LLMDouble()  # unscripted: the transport-failure path, so the fallback is used
+
+    digest = await make_digest(dossier, [], llm)
+
+    assert digest.say_out_loud.startswith("Ask about ")
+    spoken = digest.say_out_loud[len("Ask about "):]
+    assert spoken not in digest.who_line, (
+        f"the opener reads the Who line back: {digest.who_line!r} / {digest.say_out_loud!r}"
+    )
+
+
+def test_the_hook_choice_ignores_facts_already_spoken(alpha):
+    """``exclude`` narrows the candidate pool; it never empties it while facts remain."""
+    dossier = with_facts(alpha, [f for f in alpha.facts if f.category != "hook"])
+    unfiltered = pick_opener_hook(dossier)
+    assert unfiltered is not None
+
+    filtered = pick_opener_hook(dossier, exclude=[unfiltered])
+
+    assert filtered is not None
+    assert filtered.fact_id != unfiltered.fact_id

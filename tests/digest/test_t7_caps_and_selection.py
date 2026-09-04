@@ -252,3 +252,26 @@ def test_lately_orders_a_same_day_tie_deterministically():
 
     assert first == second
     assert first.index("alpha-recent-2") < first.index("alpha-recent")
+
+
+async def test_meet_holds_one_row_per_person(alpha, peers):
+    """R7 caps Meet at three present PEOPLE, not three Match objects.
+
+    A duplicate row for one person would be padding with extra steps: the host reads the
+    same name twice and a genuinely different peer loses the slot. The highest-scoring row
+    for a person is the one kept.
+    """
+    bravo = peers[0]
+    matches = [
+        make_match(alpha, bravo, score=40.0, why="Both work on machine learning in Austin."),
+        make_match(alpha, bravo, score=90.0, why="Both build evaluation harnesses."),
+        make_match(alpha, peers[1], score=30.0, why="Both are in Austin tonight."),
+    ]
+
+    digest = await make_digest(alpha, matches, _llm())
+
+    ids = [m.other.person_id for m in digest.meet]
+    assert len(ids) == len(set(ids)), f"Meet lists the same person twice: {ids}"
+    assert len(digest.meet) == 2, "a duplicate row displaced a genuinely different peer"
+    kept = next(m for m in digest.meet if m.other.person_id == bravo.person.person_id)
+    assert kept.score == 90.0, "the lower-scoring duplicate row was the one kept"
