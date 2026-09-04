@@ -41,6 +41,7 @@ from arrival.contracts import Digest, Dossier, LLMClient
 from arrival.digest import make_digest
 from arrival.graph import match as match_present
 from arrival.taste import EXCLUSION_POLICY
+from arrival.web.corpus_graph import corpus_view
 from arrival.web.graph_view import graph_view
 from arrival.web.presence import Presence
 from arrival.web.render import debug_view, digest_view, render
@@ -305,6 +306,24 @@ def _register_routes(app: FastAPI) -> None:
         store: DossierStore = app.state.store
         presence: Presence = app.state.presence
         return HTMLResponse(render("graph.html", **graph_view(store, presence.present())))
+
+    # ---------------------------------------------------------------- the whole corpus
+    @app.get("/corpus")
+    async def corpus_page() -> Response:
+        """The demo page: everything the engine knows, not just who is in the room.
+
+        `/graph` is R17 and is scoped to presence. This route takes no input at all and is
+        not on the arrival path — it is a pure read of the corpus the app booted with, so it
+        answers the same way whether the building is full or empty.
+
+        Host-facing, so R11/R12 apply exactly as they do to `/graph`: `/debug` is the only
+        page permitted to show withheld material, and everything fact-level here goes through
+        `corpus_graph.hub_evidence`, which applies `taste.is_displayable`. The withheld
+        material appears only as counts by category, which is a statement about the filter
+        rather than a leak through it.
+        """
+        store: DossierStore = app.state.store
+        return HTMLResponse(render("corpus.html", **corpus_view(store)))
 
     # ---------------------------------------------------------------- the demo driver
     @app.get("/")

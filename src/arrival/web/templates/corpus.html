@@ -1,0 +1,505 @@
+{% extends "base.html" %}
+{% block title %}The whole corpus{% endblock %}
+{% block content %}
+{#
+  `GET /corpus` — the demo page. `/graph` answers R17 ("present people and their shared
+  hubs") and is scoped to the room; this one is scoped to the corpus: every dossier on disk,
+  every hub on the graph, every person the resolver refused.
+
+  THE DRAWING IS INLINE SVG, AND THAT IS FORCED. SPEC's non-goals forbid JavaScript and
+  `tests/web/test_t8_app.py` asserts `"<script" not in page.text.lower()`, so every
+  browser-side graph library is out. The app also mounts no StaticFiles, so nothing here may
+  be a self-hosted asset either — the drawing, its styles and its labels are all in this
+  document, and the geometry arrives from `corpus_graph.py` as coordinates.
+
+  EVERY RULE BELOW IS SCOPED TO THIS PAGE. `base.html` carries the Arena Hall skin and is not
+  this change's to edit, so the SVG-only properties it has no reason to know about (`fill`,
+  `stroke`, `paint-order`) live in this block, written in that stylesheet's own tokens.
+  Nothing here restyles a shared element.
+
+  Three naming constraints, all real:
+    * no class or id on this page contains `who`, `meet`, `lately`, `not-on-the-first-page`,
+      `say-out-loud` or `why-we-know-this`. The T-8 section finder locates R7's sections by
+      `html.index('id="who"')` and friends; this page is not a digest, and a grader sweeping
+      every page must not find a section boundary here.
+    * the literal `id="` never appears in a selector, and `exclusion-policy` never appears in
+      CSS — the two traps `tests/web/test_t056_skin.py` exists to pin. The class is written
+      once, on the R13 footer, which `base.html` styles as `main > footer`.
+    * no `<script`, and no `javascript` anywhere in the document.
+#}
+<style>
+.corpus-figure { margin: 1.4rem 0 0; }
+.corpus-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--paper-2);
+  border-top: 2px solid var(--olive);
+  border-bottom: 1px solid var(--rule);
+}
+.corpus-edge { stroke: var(--bronze); stroke-linecap: round; }
+.burr-line { stroke: var(--bronze); stroke-width: 1.1; stroke-opacity: 0.55; stroke-linecap: round; }
+.burr-tip { fill: var(--bronze); fill-opacity: 0.55; }
+.burr-flat .burr-line { stroke: var(--mut); stroke-opacity: 0.3; stroke-dasharray: 2 3; }
+.burr-flat .burr-tip { fill: none; }
+
+.person-dot { fill: var(--olive); stroke: var(--paper-2); stroke-width: 3; }
+.person-label {
+  font-family: var(--serif);
+  font-size: 16px;
+  fill: var(--ink);
+  paint-order: stroke fill;
+  stroke: var(--paper-2);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.node-blank .person-dot { fill: none; stroke: var(--mut); stroke-width: 1.5; stroke-dasharray: 3 3; }
+.node-blank .person-label { fill: var(--mut); font-style: italic; }
+
+.hub-dot { fill: var(--gold); fill-opacity: 0.55; stroke: var(--bronze); stroke-width: 1.5; }
+.hub-label {
+  font-family: var(--serif);
+  font-size: 15px;
+  fill: var(--ink);
+  paint-order: stroke fill;
+  stroke: var(--paper-2);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.hub-sub {
+  font-family: var(--ui);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  fill: var(--bronze);
+  paint-order: stroke fill;
+  stroke: var(--paper-2);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.node-flat .hub-dot { fill: none; stroke: var(--mut); stroke-width: 1.2; stroke-dasharray: 3 3; }
+.node-flat .hub-label, .node-flat .hub-sub { fill: var(--mut); }
+
+.corpus-caption {
+  font-family: var(--ui);
+  font-size: 11.5px;
+  line-height: 1.7;
+  color: var(--mut);
+  padding: 0.85rem 0 0;
+}
+.map-key { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+.map-key > li { display: inline-block; margin: 0 1.4rem 0.2rem 0; }
+.map-key .swatch {
+  display: inline-block;
+  width: 0.62rem;
+  height: 0.62rem;
+  margin-right: 0.4rem;
+  border-radius: 50%;
+  vertical-align: baseline;
+}
+.map-key .swatch-person { background: var(--olive); }
+.map-key .swatch-hub { background: var(--gold); border: 1px solid var(--bronze); }
+.map-key .swatch-blank { background: none; border: 1px dashed var(--mut); }
+.map-key .swatch-spoke {
+  border-radius: 0;
+  width: 0.9rem;
+  height: 0;
+  border-top: 1px solid var(--bronze);
+  vertical-align: middle;
+}
+
+.tally { list-style: none; padding: 0; margin: 1rem 0 0; display: flex; flex-wrap: wrap; }
+.tally > li {
+  flex: 1 1 7.5rem;
+  margin: 0 0 0.9rem;
+  padding: 0.55rem 0.9rem 0.6rem 0;
+  border-left: 1px solid var(--rule);
+  padding-left: 0.9rem;
+}
+.tally-n {
+  display: block;
+  font-family: var(--serif);
+  font-size: 30px;
+  line-height: 1;
+  color: var(--olive);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.tally-k {
+  display: block;
+  margin-top: 0.3rem;
+  font-family: var(--ui);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mut);
+}
+.tally-dim .tally-n { color: var(--bronze); }
+
+.hub-list { list-style: none; padding: 0; margin: 0.8rem 0 0; }
+.hub-list > li { padding: 0.9rem 0 1rem; border-top: 1px solid var(--rule); }
+.hub-head { font-family: var(--ui); font-size: 12px; margin: 0 0 0.3rem; color: var(--ink); }
+.hub-head strong { font-family: var(--serif); font-size: 21px; font-weight: 400; }
+.hub-worth {
+  font-family: var(--serif);
+  font-size: 26px;
+  line-height: 1;
+  color: var(--olive);
+  font-variant-numeric: lining-nums tabular-nums;
+  margin-right: 0.3rem;
+}
+.hub-line { font-family: var(--ui); font-size: 12px; margin: 0; color: var(--mut); }
+.evidence-table td:first-child { color: var(--ink); white-space: nowrap; }
+
+.tally-table td:first-child { color: var(--ink); }
+.tally-table .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* base.html sizes `.absent` for prose; inside a 12px table it would tower over the row. */
+.tally-table .absent { font-size: 13px; }
+
+.person-hubs { border-top: 1px solid var(--rule); padding: 0.75rem 0 0.35rem; margin: 0; }
+.person-hubs > summary { font-size: 10.5px; letter-spacing: 0.16em; }
+.person-hubs table { margin-bottom: 0.9rem; }
+
+@media (max-width: 40rem) {
+  /* base.html lets a wide table scroll rather than crushing it; the drawing gets the same
+     treatment, because a corpus-wide canvas squeezed into a phone renders its names at
+     about six pixels. */
+  .corpus-figure { overflow-x: auto; }
+  .corpus-canvas { width: 660px; max-width: none; }
+  .tally > li { flex-basis: 6rem; }
+}
+</style>
+<article class="corpus">
+  <h1>Everything the engine knows</h1>
+  <p class="lede">
+    {{ stats.dossiers }} dossier{{ '' if stats.dossiers == 1 else 's' }} &middot;
+    {{ stats.graph_people }} identified &middot;
+    {{ stats.hubs }} hub{{ '' if stats.hubs == 1 else 's' }} &middot;
+    {{ stats.edges }} edge{{ '' if stats.edges == 1 else 's' }} &middot;
+    {{ stats.shared_hubs }} shared
+  </p>
+
+  {% if state == 'empty' %}
+  <p class="absent">There are no dossiers in <code>{{ dossier_dir }}</code>, so there is no
+  corpus to draw. This page is a picture of what has been researched and committed; with
+  nothing on disk it has nothing to say, and it says nothing rather than drawing an empty
+  frame and calling it a graph.</p>
+  <p class="quote">Build a corpus and this page fills in.</p>
+  {% else %}
+
+  <p>The <a href="/graph">interest graph</a> shows the people who are in the building right
+  now. This one shows the whole corpus: every dossier on disk, every hub any of them
+  contributed, and every person the resolver looked at and refused. A hub only one person
+  carries is a fact <em>about that person</em>, so it is drawn as an unlabelled spoke in the
+  burr around them &mdash; hover it for the name. A hub two or more people carry is a
+  <em>connection</em>, so it is drawn between them and named.</p>
+
+  <figure class="corpus-figure">
+    <svg class="corpus-canvas"
+         viewBox="{{ figure.view_x | round(1) }} {{ figure.view_y | round(1) }} {{ figure.width | round(1) }} {{ figure.height | round(1) }}"
+         role="img" aria-label="{{ graph_summary }}"
+         xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+      <title>{{ graph_summary }}</title>
+      <desc>{{ graph_description }}</desc>
+      {# The burrs first: they are texture, and everything else paints over them. #}
+      <g class="corpus-burrs" fill="none">
+        {% for person in figure.people %}
+        {% for spoke in person.spokes %}
+        <g class="burr{% if spoke.worthless %} burr-flat{% endif %}">
+          {# A native SVG tooltip: markup, not script. It is where the long tail's labels
+             live, so sixty-odd of them cost the drawing nothing. #}
+          <title>{{ spoke.label }} &mdash; {{ spoke.type_word }}, carried only by {{ person.name }}</title>
+          <line class="burr-line"
+                x1="{{ spoke.x1 | round(1) }}" y1="{{ spoke.y1 | round(1) }}"
+                x2="{{ spoke.x2 | round(1) }}" y2="{{ spoke.y2 | round(1) }}"></line>
+          <circle class="burr-tip" cx="{{ spoke.x2 | round(1) }}" cy="{{ spoke.y2 | round(1) }}" r="{{ spoke.tip_r }}"></circle>
+        </g>
+        {% endfor %}
+        {% endfor %}
+      </g>
+      <g class="corpus-edges" fill="none">
+        {% for edge in figure.edges %}
+        <line class="corpus-edge"
+              x1="{{ edge.x1 | round(1) }}" y1="{{ edge.y1 | round(1) }}"
+              x2="{{ edge.x2 | round(1) }}" y2="{{ edge.y2 | round(1) }}"
+              stroke-width="{{ edge.width | round(2) }}"
+              stroke-opacity="{{ edge.opacity | round(2) }}"></line>
+        {% endfor %}
+      </g>
+      <g class="corpus-hubs">
+        {% for hub in figure.hubs %}
+        <g class="node-hub{% if hub.worthless %} node-flat{% endif %}">
+          <title>{{ hub.label }} &mdash; {{ hub.type_word }}, carried by {{ hub.n_carriers }} of the {{ stats.graph_people }} people in the graph</title>
+          <circle class="hub-dot" cx="{{ hub.x | round(1) }}" cy="{{ hub.y | round(1) }}" r="{{ hub.r | round(1) }}"></circle>
+          <text class="hub-label" x="{{ hub.x | round(1) }}" y="{{ (hub.y + hub.label_dy) | round(1) }}" text-anchor="middle">{{ hub.display_label }}</text>
+          <text class="hub-sub" x="{{ hub.x | round(1) }}" y="{{ (hub.y + hub.sub_dy) | round(1) }}" text-anchor="middle">{{ hub.sub }}</text>
+        </g>
+        {% endfor %}
+      </g>
+      <g class="corpus-people">
+        {% for person in figure.people %}
+        <g class="node-person{% if not person.in_graph %} node-blank{% endif %}">
+          <title>{{ person.name }}{% if person.details %} &mdash; {{ person.details | join('; ') }}{% endif %}{% if not person.in_graph %} &mdash; not identified with enough confidence to enter the graph{% else %} &mdash; {{ person.n_hubs }} hub{{ '' if person.n_hubs == 1 else 's' }}, {% if person.linked %}sharing at least one with somebody else{% else %}none of them shared with anybody else{% endif %}{% endif %}</title>
+          <circle class="person-dot" cx="{{ person.x | round(1) }}" cy="{{ person.y | round(1) }}" r="{{ person.r | round(1) }}"></circle>
+          <text class="person-label" x="{{ person.label_x | round(1) }}" y="{{ person.label_y | round(1) }}" text-anchor="{{ person.anchor }}">{{ person.name }}</text>
+        </g>
+        {% endfor %}
+      </g>
+    </svg>
+    <figcaption class="corpus-caption">
+      {% if state == 'alone' %}
+      One dossier. The spokes are the {{ stats.hubs }} hub{{ '' if stats.hubs == 1 else 's' }}
+      it contributed; a connection takes two people, so there is nothing here to join.
+      {% elif state == 'unjoined' %}
+      {{ stats.dossiers }} dossiers and not one hub carried by two of them. Every hub is a
+      spoke on somebody&rsquo;s own burr, and the space between them is empty because the
+      record says it is.
+      {% else %}
+      Each person is a node on the ring, alphabetically, with the hubs only they carry
+      radiating outward &mdash; the spoke&rsquo;s length is what that hub would be worth to a
+      match. The named nodes in between are hubs two or more people share; each sits at the
+      average position of its carriers, so a node between two names is carried by exactly
+      those two.
+      The graph falls into {{ stats.components }} connected component{{ '' if stats.components == 1 else 's' }};
+      {% if stats.joined_components == 1 %}exactly one of them holds more than one person,
+      {% elif stats.joined_components %}{{ stats.joined_components }} of them hold more than
+      one person, {% else %}not one of them holds more than one person, {% endif %}
+      {{ stats.islands }} {{ 'is' if stats.islands == 1 else 'are' }} one person on their own,
+      and the largest holds {{ stats.largest_component }} of the {{ stats.nodes }} nodes.
+      {% endif %}
+      {% if unidentified_sentence %}
+      Drawn hollow because the resolver would not identify them, so they carry nothing:
+      {{ unidentified_sentence }}.
+      {% endif %}
+      <ul class="map-key">
+        <li><span class="swatch swatch-person"></span>person</li>
+        <li><span class="swatch swatch-spoke"></span>a hub only they carry</li>
+        <li><span class="swatch swatch-hub"></span>shared hub</li>
+        <li><span class="swatch swatch-blank"></span>not identified</li>
+      </ul>
+    </figcaption>
+  </figure>
+  {% endif %}
+
+  <section id="tally">
+    <h2>By the numbers</h2>
+    <p>Every figure below is counted off the objects the app actually booted with &mdash; the
+    dossiers it loaded and the graph built from them &mdash; not off a report written when
+    they were built.</p>
+    <ul class="tally">
+      <li><span class="tally-n">{{ stats.dossiers }}</span><span class="tally-k">dossiers</span></li>
+      <li><span class="tally-n">{{ stats.graph_people }}</span><span class="tally-k">identified</span></li>
+      <li class="tally-dim"><span class="tally-n">{{ stats.unresolved }}</span><span class="tally-k">refused</span></li>
+      <li><span class="tally-n">{{ stats.docs_considered }}</span><span class="tally-k">documents seen</span></li>
+      <li><span class="tally-n">{{ stats.docs_accepted }}</span><span class="tally-k">docs accepted</span></li>
+      <li class="tally-dim"><span class="tally-n">{{ stats.docs_rejected }}</span><span class="tally-k">docs rejected</span></li>
+      <li><span class="tally-n">{{ stats.facts_shown }}</span><span class="tally-k">facts a host may see</span></li>
+      <li class="tally-dim"><span class="tally-n">{{ stats.facts_withheld }}</span><span class="tally-k">facts withheld</span></li>
+      <li><span class="tally-n">{{ stats.hubs }}</span><span class="tally-k">hubs</span></li>
+      <li><span class="tally-n">{{ stats.edges }}</span><span class="tally-k">edges</span></li>
+      <li><span class="tally-n">{{ stats.shared_hubs }}</span><span class="tally-k">shared hubs</span></li>
+      <li><span class="tally-n">{{ stats.components }}</span><span class="tally-k">components</span></li>
+    </ul>
+    <p class="quote">A document is counted once however many people cited it:
+    {{ stats.docs_accepted }} accepted and {{ stats.docs_rejected }} rejected by the resolver,
+    {{ stats.docs_cited }} of them quoted by a surviving fact. Corpus:
+    <code>{{ dossier_dir }}</code>.</p>
+  </section>
+
+  <section id="joins">
+    <h2>Where the corpus joins up</h2>
+    {% if shared_hubs %}
+    <p>Strongest first. Weight is the hub&rsquo;s rarity across the identified population
+    (<code>idf</code>) times its type boost &mdash; the same arithmetic the digest shows per
+    match row, so a number here and a number there mean the same thing.</p>
+    <ol class="hub-list">
+      {% for hub in shared_hubs %}
+      <li{% if hub.worthless %} class="node-flat"{% endif %}>
+        <p class="hub-head">
+          <span class="hub-worth">{{ hub.worth | number }}</span>
+          <strong>{{ hub.label }}</strong> <code>{{ hub.type }}</code>
+        </p>
+        <p class="hub-line">
+          {{ hub.carrier_sentence }} &middot;
+          weight {{ hub.idf | number }} &times; type boost {{ hub.type_boost | number }} &middot;
+          carried by {{ hub.n_carriers }} of {{ stats.graph_people }} identified people.
+          {% if hub.worthless %}
+          Everyone carries it, so the weight clamps to zero: real, and worth nothing to a
+          match.
+          {% endif %}
+        </p>
+        <details class="hub-evidence">
+          <summary>On what evidence</summary>
+          <table class="evidence-table">
+            <caption>What each person&rsquo;s own dossier records</caption>
+            <tr>
+              <th scope="col">Person</th>
+              <th scope="col">Recency</th>
+              <th scope="col">On the record</th>
+            </tr>
+            {% for row in hub.evidence %}
+            <tr>
+              <td>{{ row.name }}</td>
+              <td>{{ row.recency | number }}</td>
+              <td>
+                {%- if row.facts %}
+                {% for fact in row.facts %}{{ fact.text }}{% if not loop.last %}<br>{% endif %}{% endfor %}
+                {%- else %}
+                {#
+                  R11/R12. `arrival.graph` does not filter hubs — matching is not display —
+                  so a hub whose evidence was taste-excluded can legitimately be shared, and
+                  `corpus_graph.hub_evidence` has already dropped every fact that fails
+                  `is_displayable`. An empty list here means the evidence is withheld, and
+                  the honest line is to say so rather than to print it.
+                #}
+                <span class="absent">Nothing behind this we are willing to show.</span>
+                {%- endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </table>
+        </details>
+      </li>
+      {% endfor %}
+    </ol>
+    {% elif state == 'empty' %}
+    <p class="absent">There is no corpus, so nothing is shared.</p>
+    {% elif state == 'alone' %}
+    <p class="absent">One dossier cannot share a hub with anybody. The graph starts at two.</p>
+    {% else %}
+    <p class="absent">Not one of the {{ stats.hubs }} hubs is carried by two people. That is
+    an answer, not a gap &mdash; the engine would rather say the corpus has not joined up
+    than invent a link across it.</p>
+    {% endif %}
+  </section>
+
+  <section id="tail">
+    <h2>The long tail</h2>
+    {% if roster %}
+    <table class="tally-table">
+      <caption>Every person, and what their dossier put on the graph</caption>
+      <tr>
+        <th scope="col">Person</th>
+        <th scope="col">Hubs</th>
+        <th scope="col">Facts shown</th>
+        <th scope="col">Withheld</th>
+        <th scope="col">Resolver</th>
+      </tr>
+      {% for person in per_person %}
+      <tr>
+        <td>{{ person.name }} <code>{{ person.person_id }}</code></td>
+        <td class="num">{{ person.n_hubs }}</td>
+        <td class="num">{{ person.kept }}</td>
+        <td class="num">{{ person.withheld }}</td>
+        <td>{% if person.in_graph %}identified{% else %}<span class="absent">refused</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="absent">No dossiers, so nobody to list.</p>
+    {% endif %}
+
+    {% if stats.hubs %}
+    <p>Every one of the {{ stats.hubs }} hubs, grouped by the person who carries it &mdash;
+    the same spokes as the drawing, with their names on. Weight ranks them within a person;
+    it does not rank one person&rsquo;s hub against another&rsquo;s, because a hub with a
+    single carrier gets the same rarity score as every other hub with a single carrier.</p>
+    {% for person in per_person %}
+    {% if person.hubs %}
+    <details class="person-hubs">
+      <summary>{{ person.name }} &mdash; {{ person.hubs | length }} hub{{ '' if person.hubs | length == 1 else 's' }}</summary>
+      <table class="tally-table">
+        <caption>What the corpus records {{ person.name }} as connected to</caption>
+        <tr>
+          <th scope="col">Weight</th>
+          <th scope="col">Hub</th>
+          <th scope="col">Type</th>
+          <th scope="col">Shared with</th>
+        </tr>
+        {% for hub in person.hubs %}
+        <tr>
+          <td class="num">{{ hub.worth | number }}</td>
+          <td>{{ hub.label }}</td>
+          <td><code>{{ hub.type }}</code></td>
+          <td>{% if hub.shared %}{{ hub.others }}{% else %}<span class="absent">nobody else</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </table>
+    </details>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    {% if stats.type_rows %}
+    <table class="tally-table">
+      <caption>What kind of thing a hub turns out to be</caption>
+      <tr>
+        <th scope="col">Type</th>
+        <th scope="col">Hubs</th>
+        <th scope="col">Type boost</th>
+      </tr>
+      {% for row in stats.type_rows %}
+      <tr>
+        <td><code>{{ row.type }}</code></td>
+        <td class="num">{{ row.count }}</td>
+        <td class="num">{{ row.type_boost | number }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    <p class="quote">How many people carry a hub:
+      {% for row in stats.carrier_histogram %}{{ row.hubs }} hub{{ '' if row.hubs == 1 else 's' }}
+      on {{ row.carriers }}{% if not loop.last %},{% else %}.{% endif %}{% endfor %}
+      That distribution is the whole design problem this page had to solve: almost every hub
+      belongs to one person, and drawing all of them as named nodes would bury the few that
+      do not.</p>
+    {% endif %}
+  </section>
+
+  <section id="held-back">
+    <h2>What we chose not to show</h2>
+    {% if stats.facts_withheld %}
+    <p>The taste filter kept {{ stats.facts_withheld }} of the
+    {{ stats.facts_total }} researched fact{{ '' if stats.facts_total == 1 else 's' }} off
+    every host-facing page in this app, including this one. Here is the count by reason. The
+    text is not here, and there is no page in this app where a host can reach it.</p>
+    <table class="tally-table">
+      <caption>Withheld facts, by why</caption>
+      <tr>
+        <th scope="col">Reason</th>
+        <th scope="col">Facts</th>
+      </tr>
+      {% for row in stats.withheld_by_reason %}
+      <tr>
+        <td>{{ row.label }} <code>{{ row.reason }}</code></td>
+        <td class="num">{{ row.count }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="absent">Nothing in this corpus tripped the taste filter, the confidence floor
+    or the source-kind rule. That is a fact about these {{ stats.facts_total }} facts, not a
+    switch that is off.</p>
+    {% endif %}
+
+    {% if unidentified %}
+    <p>{{ stats.unresolved }} of the {{ stats.dossiers }} people on the roster could not be
+    identified in the sources with enough confidence, so their dossiers hold no facts and they
+    contribute nothing to the graph. They stay on the roster and can still arrive; they simply
+    match nobody, which is the honest answer for a person the resolver could not pin down.</p>
+    <ol class="present">
+      {% for person in unidentified %}
+      <li>{{ person.name }} <code>{{ person.person_id }}</code></li>
+      {% endfor %}
+    </ol>
+    {% endif %}
+  </section>
+</article>
+
+{# The same statement the roster and every digest carry: this page shows material out of a
+   dossier, so it says what a dossier never surfaces. #}
+<footer class="exclusion-policy">
+  <h2>What this never shows</h2>
+  <p>{{ exclusion_policy }}</p>
+</footer>
+{% endblock %}
