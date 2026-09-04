@@ -509,10 +509,33 @@ def test_conflicting_evidence_verdict_is_what_keeps_a_namesake_doc_out(frozen_fi
     # (0.74/0.69): a resolver that pooled or averaged confidence would land on the decoy.
     assert resolution.status == "resolved"
 
-    # Sabotage companion: identical documents, identical evidence, identical confidences —
-    # only the `no` becomes `yes`. If those documents are now accepted, then the sole cause
-    # of their rejection above was the negative verdict, and nothing else about them.
-    flipped = [dict(v, match="yes") if v["match"] == "no" else dict(v) for v in case["scripted_verdicts"]]
+    # Sabotage companion: identical DOCUMENTS, identical confidences, identical source
+    # kinds — only the verdict changes, and it changes on the DISAMBIGUATOR dimension
+    # rather than on `match`. Each decoy verdict becomes a `yes` on `role`, carrying a
+    # different verbatim span from the very same document, chosen so that it asserts no
+    # employer and no work location at all. If those documents are now accepted, the sole
+    # cause of their rejection above was the negative evidence and nothing else about them.
+    #
+    # AMENDED 2026-09-03 on the goal owner's decision (ESC-005), from a companion that
+    # flipped `no` -> `yes` while KEEPING the contradicting evidence. That form required a
+    # document explicitly naming a different employer AND a different city to be ACCEPTED,
+    # purely because the model attached `yes` to it — which contradicts DESIGN's "negative
+    # evidence hard-rejects... a single contradiction must veto", a statement about the
+    # EVIDENCE rather than about which token the model emitted. It also could not tell
+    # "polarity caused the rejection" from "the contradiction caused it", because it moved
+    # the one dimension that carried both. Flipping the disambiguator keeps every bit of
+    # the sabotage value and drops that entanglement.
+    _NON_CONFLICTING = {
+        "a8c5850fdf7e9766": "Instance of: human. Occupation: marine archaeologist, author, university teacher.",
+        "e8c81fcabba7b0f3": "best known for The Cold Cargo, a 1996 history of container freight written for a general readership",
+        "66024d822958d78d": "Readers still write to us about the chapter on freight scheduling in The Cold Cargo",
+    }
+    flipped = [
+        dict(v, match="yes", disambiguator="role", evidence=_NON_CONFLICTING[v["doc_id"]])
+        if v["match"] == "no"
+        else dict(v)
+        for v in case["scripted_verdicts"]
+    ]
     accepted_when_not_vetoed = set(_run_resolve(case, verdicts=flipped).accepted_doc_ids)
     for doc_id in decoy_ids:
         assert doc_id in accepted_when_not_vetoed, (
