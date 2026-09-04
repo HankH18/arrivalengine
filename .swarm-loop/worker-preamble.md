@@ -6,6 +6,8 @@ branch that modifies anything there is vetoed by `check-branch` before a human r
 
 ## Changelog
 - **2026-09-03, epoch 0** — first version, written before the T-1..T-5 build wave.
+- **2026-09-04, cycle 5** — added standing ruling 0: check your test diff against
+  `git merge-base main HEAD`, never against `main`, which moves under a concurrent lane.
 
 ---
 
@@ -263,6 +265,21 @@ Never trust the installer's exit code.
 ## Standing rulings for this run
 
 These are settled. Do not re-litigate them; build against them.
+
+0. **Never check your own test diff against `main` — `main` moves under you.** Lanes run
+   concurrently and the orchestrator merges siblings while you work, so
+   `git diff main HEAD -- tests/` reports every OTHER lane's deletions as if they were
+   yours. One lane measured 1085 removed lines that way and had removed none. The sound
+   check, and the one to quote in your report, is against your own branch point:
+
+   ```
+   git diff $(git merge-base main HEAD) HEAD -- tests/
+   ```
+
+   Where a packet tells you to run the `main` form, run this one instead and say so under
+   `PREMISES-FALSIFIED`. The rule the check exists to enforce is unchanged: **you may add
+   assertions and you may strengthen them; you may not relax or delete one** without the
+   recorded `justify-test-edit` ritual.
 
 1. **`person_id == slug(person.name)` is the PRODUCT contract — and T-0's unit fixtures
    deliberately do not follow it.** All five dossiers in the frozen grading corpus satisfy
