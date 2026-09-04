@@ -230,3 +230,60 @@ async def test_a_hub_whose_every_fact_was_excluded_never_reaches_the_dossier():
         "the guard is too wide: a hub with surviving evidence was dropped too"
     )
     assert trace.hubs_dropped_unsupported == ["city:pecan-street"]
+
+
+async def test_a_surviving_hub_loses_its_excluded_evidence_ids():
+    """The narrower half of the same R11 leak, and the likelier one.
+
+    A hub with one kept and one excluded evidence fact survives — correctly, it has real
+    support — but `contracts.HubContribution` says its `evidence_fact_ids` "resolve in the
+    arriving dossier", and the dossier keeps excluded facts by contract. An id left in the
+    list is a live pointer from a displayed match reason to the withheld sentence.
+    """
+    from arrival.extract import CandidateFact, CandidateHub, ExtractionResult
+
+    docs = docs_for("self_page", 2, private_index=0)
+    private_doc = docs[0]
+    llm = LLMDouble()
+    script_verdicts(llm, docs)
+    llm.when(
+        "ExtractionResult",
+        private_doc.doc_id,
+        ExtractionResult(
+            facts=[
+                CandidateFact(
+                    doc_id=private_doc.doc_id, fact_id="kept",
+                    text=f"{PERSON.name} {EMPLOYER}.", quote=f"{PERSON.name} {EMPLOYER}",
+                    category="current_work", natural_category="current_work", confidence=0.9,
+                ),
+                CandidateFact(
+                    doc_id=private_doc.doc_id, fact_id="private",
+                    text=f"{PERSON.name} {PRIVATE}.", quote=f"{PERSON.name} {PRIVATE}",
+                    category="hook", natural_category="hook", confidence=0.9,
+                ),
+            ],
+            hubs=[
+                CandidateHub(
+                    label="Quarrystone Labs", type="company", doc_id=private_doc.doc_id,
+                    evidence_fact_ids=["kept", "private"],
+                )
+            ],
+        ),
+    )
+    llm.when("ExtractionResult", docs[1].doc_id, ExtractionResult(facts=[], hubs=[]))
+
+    dossier = await build_dossier(
+        PERSON, [ConnectorDouble(kind="self_page", docs=docs)], llm, Budget()
+    )
+
+    excluded = {fact.fact_id for fact in dossier.facts if fact.excluded}
+    kept = {fact.fact_id for fact in dossier.facts if not fact.excluded}
+    # Positive controls: the hub really did survive, and one of its facts really was cut.
+    assert excluded and kept
+    hub = next(h for h in dossier.hubs if h.label == "Quarrystone Labs")
+    assert hub.evidence_fact_ids, "the guard is too wide: it stripped the surviving fact too"
+
+    assert not (set(hub.evidence_fact_ids) & excluded), (
+        f"hub {hub.hub_id} still points at excluded facts: {hub.evidence_fact_ids}"
+    )
+    assert set(hub.evidence_fact_ids) <= kept

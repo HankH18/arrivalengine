@@ -41,6 +41,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import os
 import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
@@ -133,6 +134,7 @@ class _BudgetedClient:
         self._max_calls = max(0, int(max_calls))
         self.used = 0
         self.refused = 0
+        self.errors = 0
 
     @property
     def remaining(self) -> int:
@@ -156,13 +158,22 @@ class _BudgetedClient:
         # Counted BEFORE the await: the call has been made whether or not it succeeds, and
         # counting after would let a failing stage retry its way past the cap.
         self.used += 1
-        return await self._inner.structured(
-            system=system,
-            user=user,
-            schema=schema,
-            max_tokens=max_tokens,
-            cache_prefix=cache_prefix,
-        )
+        try:
+            return await self._inner.structured(
+                system=system,
+                user=user,
+                schema=schema,
+                max_tokens=max_tokens,
+                cache_prefix=cache_prefix,
+            )
+        except LLMError:
+            # Counted and RE-RAISED, never handled: each stage's own degradation is the
+            # right local answer. What no stage can see is that EVERY call failed, which
+            # is an unreachable model rather than a person with nothing written about
+            # them — and those two produce identical empty dossiers. `build_all` reads
+            # this counter to tell them apart.
+            self.errors += 1
+            raise
 
 
 class _TieredClient:
@@ -240,6 +251,7 @@ class BuildTrace:
     connector_errors: dict[str, str] = field(default_factory=dict)
     llm_calls: int = 0
     llm_refused: int = 0
+    llm_errors: int = 0
     hubs_dropped_unsupported: list[str] = field(default_factory=list)
     extraction: ExtractionStats = field(default_factory=ExtractionStats)
 
@@ -363,10 +375,16 @@ def _supported_hubs(hubs: list[Hub], facts: list[Fact], trace: BuildTrace) -> li
     `city:pecan-street` — the member's street, as a joinable graph node and a candidate
     match reason. That is the wrong side of the "seen vs. dossiered" line (SPEC R11).
 
-    Deliberately narrow. A hub keeps its place if ANY evidence fact survived, and one whose
-    evidence ids resolve to no fact at all is left alone rather than judged on silence —
-    `extract` cannot currently emit that shape, and inventing a rule for it here would be
-    guessing.
+    A surviving hub also has its EXCLUDED evidence ids stripped, and that half matters
+    more than the drop: it needs only ONE excluded fact rather than all of them.
+    `contracts.HubContribution` says a hub's "evidence_fact_ids resolve in the arriving
+    dossier", and the dossier keeps excluded facts by contract, so an id left in the list
+    is a live pointer from a displayed match reason back to the withheld sentence.
+
+    Deliberately narrow in the other direction: a hub keeps its place if ANY evidence fact
+    survived, and an id that resolves to no fact at all is left alone rather than judged on
+    silence — `extract` cannot currently emit that shape, and inventing a rule for it here
+    would be guessing.
     """
     excluded = {fact.fact_id for fact in facts if fact.excluded}
     known = {fact.fact_id for fact in facts}
@@ -381,6 +399,14 @@ def _supported_hubs(hubs: list[Hub], facts: list[Fact], trace: BuildTrace) -> li
                 hub.label,
             )
             continue
+        surviving = [fact_id for fact_id in hub.evidence_fact_ids if fact_id not in excluded]
+        if surviving != hub.evidence_fact_ids:
+            log.info(
+                "hub %s keeps its place but loses %d excluded evidence fact(s)",
+                hub.hub_id,
+                len(hub.evidence_fact_ids) - len(surviving),
+            )
+            hub = hub.model_copy(update={"evidence_fact_ids": surviving})
         kept.append(hub)
     return kept
 
@@ -441,6 +467,7 @@ async def build_dossier(
 
     trace.llm_calls = metered.used
     trace.llm_refused = metered.refused
+    trace.llm_errors = metered.errors
     return Dossier(
         person=person,
         resolution=resolution,
@@ -485,6 +512,12 @@ def _person_from(entry: Any, taken: set[str]) -> PersonRef | None:
     person_id = slug(declared) if declared else slug(name)
     if declared and person_id != declared:
         log.warning("roster person_id %r is not a slug; using %r", declared, person_id)
+    if declared and not person_id:
+        # A declared id of "###" or "n/a" slugs away to nothing. Dropping the person there
+        # would lose someone whose NAME keys perfectly well, and say so in a message that
+        # blames the name — so fall back rather than drop.
+        person_id = slug(name)
+        log.warning("roster person_id %r slugs to nothing; falling back to %r", declared, person_id)
     if not person_id:
         log.warning("skipping %r: the name slugs to nothing, so it cannot be keyed", name)
         return None
@@ -639,19 +672,79 @@ def _safe_segment(value: str) -> bool:
 
 
 def _write_json(path: Path, model: BaseModel) -> None:
+    """Write `model` as JSON, atomically.
+
+    Truncate-then-write leaves a HALF file behind on an interrupt, and a half-written
+    `docs/{doc_id}.json` never heals: nothing validates a committed `RawDoc`, and the
+    person it belongs to is skipped on every later run. Writing beside the target and
+    renaming makes the file either the old one or the new one, never neither.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(model.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    tmp = path.with_name(f".{path.name}.tmp")
+    try:
+        tmp.write_text(model.model_dump_json(indent=2) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
-def _existing_row(path: Path, person: PersonRef) -> dict[str, Any] | None:
-    """The report row for a person whose dossier is already on disk, or None if unusable."""
+def _existing_row(
+    path: Path, person: PersonRef, docs_dir: Path
+) -> dict[str, Any] | None:
+    """The report row for a person whose dossier is already on disk, or None to rebuild.
+
+    A dossier is only "already built" if the documents it cites are still beside it. T-9
+    validates every displayed quote against `docs/{doc_id}.json`, so a dossier whose
+    documents were deleted, gitignored, or written under a different working directory is
+    an artefact that looks complete and cites nothing. Rebuilding is cheaper than shipping
+    that, and skipping it would be permanent: nothing else in this loop ever looks again.
+    """
     try:
         dossier = Dossier.model_validate_json(path.read_text(encoding="utf-8"))
     except (OSError, ValidationError, ValueError) as exc:
         log.warning("existing dossier %s is unreadable (%s); rebuilding it", path, exc)
         return None
+    missing = [
+        doc_id
+        for doc_id in dossier.resolution.accepted_doc_ids
+        if not (docs_dir / f"{doc_id}.json").exists()
+    ]
+    if missing:
+        log.warning(
+            "%s cites %d document(s) missing from %s (%s…); rebuilding it",
+            path,
+            len(missing),
+            docs_dir,
+            missing[0],
+        )
+        return None
     log.info("skipping %s: %s already exists (use force=True to rebuild)", person.name, path)
     return report_row(dossier, None, skipped=True)
+
+
+def _failed_row(person: PersonRef, trace: BuildTrace, reason: str) -> dict[str, Any]:
+    """A report row for a person whose build did not produce a usable dossier.
+
+    Carries every contract key so the report stays one shape, plus an `error` the CLI
+    turns into a non-zero exit code. Nothing is written to disk for this person, which is
+    the point: an empty dossier committed here would be skipped by every later run and the
+    failure would become permanent.
+    """
+    return {
+        "person_id": str(person.person_id),
+        "status": "unresolved",
+        "confidence": 0.0,
+        "facts_kept": 0,
+        "facts_excluded": 0,
+        "hubs": 0,
+        "zero_result_sources": [k for k in trace.zero_result_sources if k in _SOURCE_KINDS],
+        "name": str(person.name),
+        "documents": len(trace.documents),
+        "llm_calls": int(trace.llm_calls),
+        "skipped": False,
+        "error": reason,
+    }
 
 
 async def build_all(
@@ -695,20 +788,45 @@ async def build_all(
     for person in people:
         path = out / f"{person.person_id}.json"
         if path.exists() and not force:
-            row = _existing_row(path, person)
+            row = _existing_row(path, person, docs_dir)
             if row is not None:
                 rows.append(row)
                 continue
 
         trace = BuildTrace()
-        dossier = await build_dossier(person, fan_out, client, limit, trace=trace)
-        _write_json(path, dossier)
-        for doc in trace.accepted_documents(dossier.resolution.accepted_doc_ids):
-            if not _safe_segment(doc.doc_id):
-                log.warning("refusing to commit %r: its doc_id is not a filename", doc.url)
+        try:
+            dossier = await build_dossier(person, fan_out, client, limit, trace=trace)
+
+            if trace.llm_calls and trace.llm_errors == trace.llm_calls:
+                # EVERY model call failed. That is an unreachable model — no key, a 401,
+                # no network — and not a person there is nothing to say about, but the two
+                # produce byte-identical empty dossiers. Committing one would make the
+                # outage permanent: the next run finds the file and skips the person.
+                log.error(
+                    "every one of %d model call(s) failed for %s; writing nothing",
+                    trace.llm_calls,
+                    person.name,
+                )
+                rows.append(
+                    _failed_row(person, trace, f"all {trace.llm_calls} model call(s) failed")
+                )
                 continue
-            _write_json(docs_dir / f"{doc.doc_id}.json", doc)
-        rows.append(report_row(dossier, trace))
+
+            # Documents FIRST: a dossier on disk is what makes a person "already built",
+            # so it must not exist until everything it cites does.
+            for doc in trace.accepted_documents(dossier.resolution.accepted_doc_ids):
+                if not _safe_segment(doc.doc_id):
+                    log.warning("refusing to commit %r: its doc_id is not a filename", doc.url)
+                    continue
+                _write_json(docs_dir / f"{doc.doc_id}.json", doc)
+            _write_json(path, dossier)
+            rows.append(report_row(dossier, trace))
+        except Exception as exc:
+            # DESIGN Decision 8 at the PERSON level. A disk error or a bug in one stage
+            # must cost that person, not the nine after them and not the rows already
+            # earned by the three before.
+            log.exception("build failed for %s", person.name)
+            rows.append(_failed_row(person, trace, f"{type(exc).__name__}: {exc}"))
 
     return BuildReport(people=rows, started_at=started, finished_at=_now())
 
@@ -780,4 +898,21 @@ def build_command(
         return 1
 
     print(format_report(report))
+
+    if opts.only and not report.people:
+        # A one-character typo in `--only` otherwise prints an empty table and exits 0,
+        # which a per-person CI wrapper reads as "built, nothing to do".
+        print(f"arrival: no roster person matched --only {opts.only!r}", file=sys.stderr)
+        return 2
+
+    failed = [row for row in report.people if row.get("error")]
+    if failed:
+        for row in failed:
+            print(f"arrival: {row['person_id']}: {row['error']}", file=sys.stderr)
+        print(
+            f"arrival: {len(failed)} of {len(report.people)} people were not built; "
+            "nothing was written for them",
+            file=sys.stderr,
+        )
+        return 1
     return 0

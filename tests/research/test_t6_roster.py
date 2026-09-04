@@ -146,3 +146,29 @@ def test_a_name_that_slugs_to_nothing_is_dropped_rather_than_keyed_as_empty(tmp_
     people = load_roster(path)
 
     assert [p.person_id for p in people] == ["marisol-trevino"]
+
+
+def test_a_declared_id_that_slugs_to_nothing_falls_back_to_the_name(tmp_path):
+    """`person_id: "###"` slugs to nothing. The NAME still keys perfectly well, and losing
+    a roster person to a junk id — with a warning that blames the name — is worse than
+    ignoring the id.
+
+    Note the boundary this pins: an id that slugs to SOMETHING is honoured, however odd.
+    `n/a` becomes `n-a`, because "the operator meant nothing by this" is not a judgement
+    a slug function can make, and guessing it would silently rename people.
+    """
+    path = tmp_path / "roster.yaml"
+    path.write_text(
+        "people:\n"
+        "  - name: Marisol Trevino\n"
+        "    person_id: '###'\n"
+        "  - name: Anselm Kettleby\n"
+        "    person_id: '\u2014'\n"
+        "  - name: Juniper Okonkwo\n"
+        "    person_id: 'n/a'\n",
+        encoding="utf-8",
+    )
+
+    people = load_roster(path)
+
+    assert [p.person_id for p in people] == ["marisol-trevino", "anselm-kettleby", "n-a"]
