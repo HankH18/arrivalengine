@@ -22,11 +22,11 @@ import json
 from pathlib import Path
 
 import pytest
-from doubles import LLMDouble
 
 from arrival.contracts import PersonRef, RawDoc
 from arrival.resolve import DocVerdict, resolve
 from arrival.util import normalize_ws
+from doubles import LLMDouble
 
 pytestmark = pytest.mark.ticket("T-2")
 
@@ -113,7 +113,9 @@ def test_the_decoy_documents_stay_out_and_the_target_documents_come_in():
     rejected = {verdict.doc_id for verdict in resolution.rejected}
     for doc_id in decoy_ids:
         assert doc_id not in accepted
-        assert doc_id in rejected, "a vetoed document must survive in Resolution.rejected for /debug"
+        assert doc_id in rejected, (
+            "a vetoed document must survive in Resolution.rejected for /debug"
+        )
     for doc_id in target_ids:
         assert doc_id in accepted
 

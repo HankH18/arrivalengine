@@ -9,7 +9,6 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
-from doubles import LLMDouble, assert_conforms
 
 from arrival.contracts import LLMClient, LLMError, PersonRef, RawDoc, Verdict
 from arrival.resolve import (
@@ -21,10 +20,11 @@ from arrival.resolve import (
     verdict_prompt,
 )
 from arrival.util import doc_id as make_doc_id
+from doubles import LLMDouble, assert_conforms
 
 pytestmark = pytest.mark.ticket("T-2")
 
-FETCHED = dt.datetime(2026, 2, 18, 9, 30, tzinfo=dt.timezone.utc)
+FETCHED = dt.datetime(2026, 2, 18, 9, 30, tzinfo=dt.UTC)
 
 PERSON = PersonRef(
     person_id="brannoc-uleyfield",
@@ -87,7 +87,13 @@ CITY_DOC = doc(
 
 async def test_two_yes_verdicts_on_different_disambiguators_resolve():
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.7, "head of survey at Tenterhook Geodesy", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.7,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
         (CITY_DOC, verdict(CITY_DOC, "yes", 0.6, "has worked out of Aberdeen since 2014", "city")),
     )
     resolution = await run([EMPLOYER_DOC, CITY_DOC], llm)
@@ -105,7 +111,13 @@ async def test_two_yes_verdicts_on_the_same_disambiguator_do_not_resolve():
         "Brannoc Uleyfield, head of survey at Tenterhook Geodesy, ran the 2024 crew.",
     )
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.9, "head of survey at Tenterhook Geodesy", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.9,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
         (other, verdict(other, "yes", 0.88, "head of survey at Tenterhook Geodesy", "employer")),
     )
     resolution = await run([EMPLOYER_DOC, other], llm)
@@ -116,7 +128,13 @@ async def test_two_yes_verdicts_on_the_same_disambiguator_do_not_resolve():
 
 async def test_one_yes_verdict_without_a_strong_key_does_not_resolve():
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.99, "head of survey at Tenterhook Geodesy", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.99,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
     )
     resolution = await run([EMPLOYER_DOC], llm)
     assert resolution.status == "unresolved", "R2: one attribute is not an identification"
@@ -125,8 +143,20 @@ async def test_one_yes_verdict_without_a_strong_key_does_not_resolve():
 
 async def test_an_unsure_verdict_is_never_promoted_by_its_confidence():
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.5, "head of survey at Tenterhook Geodesy", "employer")),
-        (CITY_DOC, verdict(CITY_DOC, "unsure", 0.99, "has worked out of Aberdeen since 2014", "city")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.5,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
+        (
+            CITY_DOC,
+            verdict(
+                CITY_DOC, "unsure", 0.99,
+                "has worked out of Aberdeen since 2014", "city",
+            ),
+        ),
     )
     resolution = await run([EMPLOYER_DOC, CITY_DOC], llm)
     assert resolution.status == "unresolved", (
@@ -137,7 +167,13 @@ async def test_an_unsure_verdict_is_never_promoted_by_its_confidence():
 async def test_every_document_is_put_to_the_model():
     docs = [EMPLOYER_DOC, CITY_DOC]
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.7, "head of survey at Tenterhook Geodesy", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.7,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
         (CITY_DOC, verdict(CITY_DOC, "no", 0.8, "has worked out of Aberdeen since 2014", "role")),
     )
     await run(docs, llm)
@@ -157,7 +193,13 @@ async def test_every_document_is_put_to_the_model():
 
 async def test_duplicate_documents_are_judged_once():
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.7, "head of survey at Tenterhook Geodesy", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.7,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
         (CITY_DOC, verdict(CITY_DOC, "yes", 0.6, "has worked out of Aberdeen since 2014", "city")),
     )
     resolution = await run([EMPLOYER_DOC, CITY_DOC, EMPLOYER_DOC], llm)
@@ -232,9 +274,21 @@ async def test_a_name_matching_document_is_rejected_on_conflicting_evidence():
         "years and died there in 2011.",
     )
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.6, "head of survey at Tenterhook Geodesy", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.6,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
         (CITY_DOC, verdict(CITY_DOC, "yes", 0.55, "has worked out of Aberdeen since 2014", "city")),
-        (decoy, verdict(decoy, "no", 0.97, "organist at the Hallowmere Chapel in Kirkwall", "employer")),
+        (
+            decoy,
+            verdict(
+                decoy, "no", 0.97,
+                "organist at the Hallowmere Chapel in Kirkwall", "employer",
+            ),
+        ),
     )
     resolution = await run([EMPLOYER_DOC, CITY_DOC, decoy], llm)
     assert resolution.status == "resolved"
@@ -257,8 +311,20 @@ def test_cites_document_normalises_whitespace_and_case():
 
 async def test_uncited_evidence_is_downgraded_to_unsure_and_the_rest_survive():
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "yes", 0.7, "head of survey at Tenterhook Geodesy", "employer")),
-        (CITY_DOC, verdict(CITY_DOC, "yes", 0.95, "Brannoc Uleyfield has run the Aberdeen office since 2011.", "city")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "yes", 0.7,
+                "head of survey at Tenterhook Geodesy", "employer",
+            ),
+        ),
+        (
+            CITY_DOC,
+            verdict(
+                CITY_DOC, "yes", 0.95,
+                "Brannoc Uleyfield has run the Aberdeen office since 2011.", "city",
+            ),
+        ),
     )
     resolution = await run([EMPLOYER_DOC, CITY_DOC], llm)
     assert resolution.status == "unresolved"
@@ -272,7 +338,13 @@ async def test_uncited_evidence_is_downgraded_to_unsure_and_the_rest_survive():
 async def test_an_uncited_no_cannot_veto():
     """A hallucinated contradiction is a hallucination first and a contradiction second."""
     llm = scripted(
-        (EMPLOYER_DOC, verdict(EMPLOYER_DOC, "no", 0.99, "He was dismissed from Tenterhook in 2019.", "employer")),
+        (
+            EMPLOYER_DOC,
+            verdict(
+                EMPLOYER_DOC, "no", 0.99,
+                "He was dismissed from Tenterhook in 2019.", "employer",
+            ),
+        ),
     )
     resolution = await run([EMPLOYER_DOC], llm)
     assert [v.match for v in resolution.rejected] == ["unsure"]
@@ -383,7 +455,10 @@ async def test_a_strong_key_resolves_on_one_yes_verdict_alone():
     llm = scripted(
         (
             WIKIDATA_MATCH,
-            verdict(WIKIDATA_MATCH, "yes", 0.93, "Employer: Tenterhook Geodesy. Work location: Aberdeen.", "employer"),
+            verdict(
+                WIKIDATA_MATCH, "yes", 0.93,
+                "Employer: Tenterhook Geodesy. Work location: Aberdeen.", "employer",
+            ),
         ),
         (hedged, verdict(hedged, "unsure", 0.4, "whose employer was not on the slide", "role")),
     )
@@ -400,7 +475,10 @@ async def test_a_strong_key_is_never_taken_from_a_document_that_was_not_accepted
     llm = scripted(
         (
             WIKIDATA_MATCH,
-            verdict(WIKIDATA_MATCH, "no", 0.96, "Employer: Tenterhook Geodesy. Work location: Aberdeen.", "role"),
+            verdict(
+                WIKIDATA_MATCH, "no", 0.96,
+                "Employer: Tenterhook Geodesy. Work location: Aberdeen.", "role",
+            ),
         ),
     )
     resolution = await run([WIKIDATA_MATCH], llm)

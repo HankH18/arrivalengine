@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 
 import pytest
-from doubles import LLMDouble, assert_conforms
 from pydantic import BaseModel
 
 from arrival.config import get_settings
@@ -22,6 +21,7 @@ from arrival.llm.client import (
     accepts_temperature,
     strict_json_schema,
 )
+from doubles import LLMDouble, assert_conforms
 
 pytestmark = pytest.mark.ticket("T-2")
 

@@ -266,7 +266,9 @@ def _parse(response: Any, schema: type[BaseModel]) -> BaseModel:
         raise ValueError(f"the {schema.__name__} response carried no text block")
     payload = json.loads(_unfence(text))
     if not isinstance(payload, dict):
-        raise ValueError(f"expected a JSON object for {schema.__name__}, got {type(payload).__name__}")
+        raise ValueError(
+            f"expected a JSON object for {schema.__name__}, got {type(payload).__name__}"
+        )
     return schema.model_validate(payload)
 
 
