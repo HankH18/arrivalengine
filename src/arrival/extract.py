@@ -1252,15 +1252,16 @@ def _collect_hubs(
             tally.dropped_stop_hubs += 1
             continue
         if candidate.field:
-            if len(label.split()) < MIN_FIELD_HUB_WORDS:
-                # A one-word field is the shape of every DESIGN Decision 3 stop hub, whether
-                # or not this particular word is on the list. See MIN_FIELD_HUB_WORDS.
-                tally.dropped_stop_hubs += 1
-                log.info("dropping the one-word field %r as too vague to join anyone", label)
-                continue
             term = _field_label(label)
-            if term is None:
+            if term is None or len(term.split()) < MIN_FIELD_HUB_WORDS:
+                # The word floor is applied to the NORMALISED term, not to the model's
+                # label, because that is where it can still be wrong: a label the
+                # vocabulary refuses is already gone, and the one thing the vocabulary
+                # cannot check about itself is whether somebody widened it with a bare
+                # word. See MIN_FIELD_HUB_WORDS.
                 tally.dropped_stop_hubs += 1
+                log.info("refusing the field %r: no vocabulary term of two or more words",
+                         label)
                 continue
             # Normalised BEFORE anything downstream sees it: the vocabulary term is the join
             # key, so the attestation below, the group key and the emitted label are all the

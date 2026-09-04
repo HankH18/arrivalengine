@@ -40,21 +40,30 @@ NORELL = PersonRef(
     details=["writer and researcher"],
 )
 
+#: Names FOUR fields, so the per-person abstraction cap has something to bite on. A corpus
+#: that states only two makes the cap untestable: everything else is refused for want of a
+#: document long before it is refused for being the third field, and the test measures the
+#: wrong guard while passing.
 HARLOW_TEXT = (
     "Ada Harlow is a partner at Quillmark Capital, a seed-stage venture capital firm "
     "based in Porthaven.\n\n"
-    "She has backed developer tools companies since 2014 and sits on four boards."
+    "She has backed developer tools companies since 2014 and sits on four boards.\n\n"
+    "Her writing on open source funding and on enterprise software pricing is widely read."
 )
 HARLOW_SPAN = "Ada Harlow is a partner at Quillmark Capital, a seed-stage venture capital firm"
 HARLOW_CITY_SPAN = "She has backed developer tools companies since 2014 and sits on four boards."
 
+#: Spells the place with its administrative tail, the way the live corpus produced
+#: "San Francisco, California, United States" beside another member's "San Francisco". A
+#: document carrying ONLY the short form cannot tell a short-form-first rule from a
+#: long-form-first one, because the long form fails for want of a document either way.
 BRIDGES_TEXT = (
     "Ines Bridges founded Larkfield Group and has worked in venture capital for twenty "
     "years.\n\n"
-    "Larkfield keeps its only office in Porthaven and writes cheques out of it."
+    "Larkfield keeps its only office in Porthaven, East Riding and writes cheques out of it."
 )
 BRIDGES_SPAN = "Ines Bridges founded Larkfield Group and has worked in venture capital"
-BRIDGES_CITY_SPAN = "Larkfield keeps its only office in Porthaven and writes cheques out of it."
+BRIDGES_CITY_SPAN = "Larkfield keeps its only office in Porthaven, East Riding"
 
 #: A document naming a city that is NOT the member's, in the shape that produced the live
 #: corpus's false positives: the place belongs to an institution the sentence mentions.
@@ -79,8 +88,22 @@ def _doc(url: str, title: str, text: str, kind: str = "search") -> RawDoc:
     )
 
 
+#: A document about the same member that names NO place at all. The half of the city rule
+#: the roster cannot supply: without it, "the roster says so" and "a document says so"
+#: cannot be told apart, because every other document here happens to carry the place.
+HARLOW_QUIET_TEXT = (
+    "Ada Harlow spoke at a closed-door session on fund construction last spring.\n\n"
+    "She declined to say which of her companies is raising."
+)
+HARLOW_QUIET_SPAN = "Ada Harlow spoke at a closed-door session on fund construction last spring."
+
+
 def harlow_doc() -> RawDoc:
     return _doc("https://example.test/harlow", "Ada Harlow", HARLOW_TEXT)
+
+
+def harlow_quiet_doc() -> RawDoc:
+    return _doc("https://example.test/harlow-quiet", "Ada Harlow, session", HARLOW_QUIET_TEXT)
 
 
 def bridges_doc() -> RawDoc:

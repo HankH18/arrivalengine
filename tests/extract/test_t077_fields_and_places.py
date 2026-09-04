@@ -138,7 +138,8 @@ async def test_a_one_word_field_is_refused_however_the_model_types_it():
     """Every DESIGN Decision 3 stop hub is a bare single word, and that is not a coincidence.
 
     A field sayable in one word is the shape the decision banned, whether or not this
-    particular word is on its list.
+    particular word is on its list. Here the word is IN the document, so nothing but the
+    refusal can be what keeps it out.
     """
     doc = corpus.harlow_doc()
     _facts, hubs = await _run(
@@ -152,6 +153,35 @@ async def test_a_one_word_field_is_refused_however_the_model_types_it():
         ),
     )
     assert not hubs, f"a one-word field must never be a node: {_ids(hubs)}"
+
+
+async def test_a_one_word_term_added_to_the_vocabulary_is_still_refused(monkeypatch):
+    """The one thing the vocabulary cannot check about itself: whether it was widened badly.
+
+    Every label DESIGN Decision 3 banned is a bare single word, and the answer to vagueness
+    here is a NAMED level of abstraction rather than no abstraction — so a maintainer who
+    later adds "fintech" beside "financial technology" must not thereby hand every member of
+    a finance-heavy club a free connection. The floor is applied AFTER normalisation, which
+    is the only place this is still catchable.
+    """
+    for banned in sorted(DESIGN_STOP_HUBS):
+        assert len(banned.split()) == 1, "DESIGN Decision 3's list is single words throughout"
+
+    doc = corpus.harlow_doc()
+    monkeypatch.setattr(
+        "arrival.extract.FIELD_HUB_VOCABULARY", frozenset({"capital", "venture capital"})
+    )
+    _facts, hubs = await _run(
+        corpus.HARLOW,
+        [doc],
+        ExtractionResult(
+            facts=[_fact(doc, "Ada Harlow is a partner at Quillmark Capital.",
+                         corpus.HARLOW_SPAN, "a")],
+            hubs=[CandidateHub(label="Capital", type="topic",
+                               evidence_fact_ids=["a"], field=True)],
+        ),
+    )
+    assert not hubs, f"a one-word vocabulary term became a joinable node: {_ids(hubs)}"
 
 
 async def test_no_field_hub_can_carry_a_design_decision_3_stop_label():
@@ -182,10 +212,12 @@ async def test_a_person_carries_at_most_two_fields_however_many_are_proposed():
     overlapping paraphrases of one career, each of which joins its owner to somebody.
     """
     doc = corpus.harlow_doc()
+    # Every one of these is named by the document, so nothing but the cap can remove any of
+    # them. A proposal the corpus does not state is refused for want of evidence long before
+    # the cap is reached, and a test built on those measures the wrong guard while passing.
     proposed = [
         "seed-stage venture capital",
         "developer tools",
-        "private equity",
         "enterprise software",
         "open source",
     ]
@@ -193,8 +225,9 @@ async def test_a_person_carries_at_most_two_fields_however_many_are_proposed():
         corpus.HARLOW,
         [doc],
         ExtractionResult(
-            facts=[_fact(doc, "Ada Harlow is a partner at Quillmark Capital.",
-                         corpus.HARLOW_SPAN, "a")],
+            facts=[_fact(doc, "Her writing on open source funding is widely read.",
+                         "Her writing on open source funding and on enterprise software "
+                         "pricing is widely read.", "a")],
             hubs=[
                 CandidateHub(label=label, type="topic", evidence_fact_ids=["a"], field=True)
                 for label in proposed
@@ -202,17 +235,19 @@ async def test_a_person_carries_at_most_two_fields_however_many_are_proposed():
         ),
     )
     assert len(hubs) <= 2, f"a person's abstraction budget was exceeded: {_ids(hubs)}"
+    assert hubs, "the cap must select, never empty the list"
 
 
 async def test_the_field_cap_does_not_depend_on_the_order_the_model_listed_them():
     """Whatever survives the cap, it may not be chosen by the model's output ordering."""
     doc = corpus.harlow_doc()
-    proposed = ["developer tools", "private equity", "enterprise software", "open source"]
+    proposed = ["developer tools", "venture capital", "enterprise software", "open source"]
 
     def result(order):
         return ExtractionResult(
-            facts=[_fact(doc, "Ada Harlow is a partner at Quillmark Capital.",
-                         corpus.HARLOW_SPAN, "a")],
+            facts=[_fact(doc, "Her writing on open source funding is widely read.",
+                         "Her writing on open source funding and on enterprise software "
+                         "pricing is widely read.", "a")],
             hubs=[
                 CandidateHub(label=label, type="topic", evidence_fact_ids=["a"], field=True)
                 for label in order
@@ -293,6 +328,38 @@ async def test_two_members_of_one_city_reach_one_node_though_the_roster_spells_i
     assert shared, (
         "two members of one city must share a node whatever the roster's spelling: "
         f"{sorted(_ids(harlow_hubs))} vs {sorted(_ids(bridges_hubs))}"
+    )
+    # The long form IS in Ines's document, so preferring it would be a perfectly evidenced
+    # answer that joins nobody -- which is how the live corpus produced
+    # "San Francisco, California, United States" beside another member's "San Francisco".
+    assert "Porthaven, East Riding" in corpus.BRIDGES_TEXT
+    assert [hub.label for hub in bridges_hubs if hub.type == "city"] == ["Porthaven"], (
+        "a documented long form beat the joinable short one"
+    )
+
+
+async def test_the_roster_alone_is_not_enough_to_place_a_member():
+    """The other half of the rule, and the one the roster cannot supply for itself.
+
+    The club knowing where a member is based is not evidence a HOST can point at: the hub
+    is printed with a numbered source under the match reason, and a hub whose place appears
+    in no document has nothing to number. So the roster states and a document corroborates,
+    and neither alone emits anything.
+    """
+    doc = corpus.harlow_quiet_doc()
+    assert "Porthaven" not in corpus.HARLOW_QUIET_TEXT
+    _facts, hubs = await _run(
+        corpus.HARLOW,
+        [doc],
+        ExtractionResult(
+            facts=[_fact(doc, "Ada Harlow spoke on fund construction last spring.",
+                         corpus.HARLOW_QUIET_SPAN, "a")],
+            hubs=[],
+            based_in="Porthaven",
+        ),
+    )
+    assert not [hub for hub in hubs if hub.type == "city"], (
+        f"a city no document names became a node on the roster's word alone: {_ids(hubs)}"
     )
 
 
