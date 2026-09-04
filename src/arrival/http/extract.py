@@ -17,7 +17,20 @@ import json
 import re
 from html.parser import HTMLParser
 
-__all__ = ["MAX_TEXT_CHARS", "clip", "html_title", "html_to_text", "json_to_text", "looks_like"]
+__all__ = [
+    "MAX_CONTROL_RATIO",
+    "MAX_TEXT_CHARS",
+    "MAX_UNDECODABLE_RATIO",
+    "SNIFF_CHARS",
+    "clip",
+    "html_title",
+    "html_to_text",
+    "is_binary_type",
+    "json_to_text",
+    "looks_binary",
+    "looks_like",
+    "sniff_content_type",
+]
 
 #: DESIGN §Interfaces: "extracted plain text, <= 20k chars, never empty".
 MAX_TEXT_CHARS = 20_000
@@ -186,6 +199,138 @@ def json_to_text(body: str) -> str:
 def looks_like(content_type: str, kind: str) -> bool:
     """True when `content_type` names `kind` ("json", "html", "xml", ...)."""
     return kind in content_type.split(";")[0].strip().lower()
+
+
+# --- is this body a text document at all? (T-026) -----------------------------------
+#
+# `client.py`'s docstring promises that "a body that is not text" is `None`. It was not:
+# `httpx` decodes any body with `errors="replace"`, so a PNG came back as a string full of
+# U+FFFD and became a `RawDoc` a host could be asked to read out loud. Two independent
+# checks, because the two failure directions are not symmetric.
+
+#: Media types whose payload is never a text document. Matched on the media type only, so
+#: `application/pdf; version=1.4` is caught and `application/vnd.github+json` is not --
+#: the `+json` / `+xml` structured-syntax suffixes are checked FIRST, because a rule that
+#: matched `application/vnd.` would delete every GitHub response the connector makes.
+_BINARY_TYPE_PREFIXES = (
+    "image/",
+    "audio/",
+    "video/",
+    "font/",
+    "model/",
+    "application/vnd.ms-",
+    "application/vnd.openxmlformats-",
+    "application/vnd.oasis.opendocument.",
+    "application/x-font",
+)
+_BINARY_TYPES = frozenset(
+    {
+        "application/pdf",
+        "application/zip",
+        "application/gzip",
+        "application/x-gzip",
+        "application/x-bzip2",
+        "application/x-xz",
+        "application/x-7z-compressed",
+        "application/x-rar-compressed",
+        "application/x-tar",
+        "application/octet-stream",
+        "application/msword",
+        "application/vnd.rar",
+        "application/epub+zip",
+        "application/wasm",
+        "application/x-protobuf",
+        "application/protobuf",
+        "application/x-shockwave-flash",
+        "application/java-archive",
+        "application/postscript",
+    }
+)
+
+#: Structured-syntax suffixes: whatever the vendor tree says, these are text.
+_TEXTUAL_SUFFIXES = ("+json", "+xml", "+yaml", "+text")
+
+#: How much of a body to inspect. A document that is text for its first few kilobytes and
+#: binary afterwards is not a shape any of these sources produce, and reading a 20MB body
+#: character by character to find that out is a cost with no payer.
+SNIFF_CHARS = 4096
+
+#: Fraction of the sample that may be U+FFFD before the body is called binary. Measured:
+#: bytes that are not text decode to 40-60% replacement characters, while a latin-1 page
+#: read as UTF-8 (a lossy read of a REAL text document, which must survive) sits at a few
+#: percent. Ten percent separates them with room on both sides.
+MAX_UNDECODABLE_RATIO = 0.10
+
+#: Fraction of the sample that may be C0/C1 control characters. Real prose has none
+#: outside the whitespace set; binary is ~11% by construction.
+MAX_CONTROL_RATIO = 0.02
+
+_TEXT_WHITESPACE = frozenset("\t\n\r\f\v")
+
+
+def is_binary_type(content_type: str) -> bool:
+    """True when this media type names a payload that is not a text document."""
+    media = content_type.split(";")[0].strip().lower()
+    if not media:
+        return False
+    if media.endswith(_TEXTUAL_SUFFIXES):
+        return False
+    if media.startswith("text/"):
+        return False
+    return media in _BINARY_TYPES or media.startswith(_BINARY_TYPE_PREFIXES)
+
+
+def looks_binary(body: str) -> bool:
+    """True when this decoded body is evidently not text, whatever its label claimed.
+
+    A label is a CLAIM by the origin, and the case a label-only check misses is the common
+    one: a CDN answering `text/html` for everything it does not recognise. So the decoded
+    characters get the last word. An empty body is not binary -- it is empty, which is a
+    different rejection with a different reason attached to it.
+    """
+    if not body:
+        return False
+    sample = body[:SNIFF_CHARS]
+    if "\x00" in sample:
+        # Decisive on its own: NUL is legal UTF-8 and appears in essentially every binary
+        # container, and in no document anyone means to publish.
+        return True
+    undecodable = sample.count("�")
+    if undecodable > len(sample) * MAX_UNDECODABLE_RATIO:
+        return True
+    control = sum(
+        1
+        for character in sample
+        if (character < " " and character not in _TEXT_WHITESPACE) or character == "\x7f"
+    )
+    return control > len(sample) * MAX_CONTROL_RATIO
+
+
+def sniff_content_type(body: str, declared: str) -> str:
+    """`declared` when the response labelled itself; otherwise a type read off the body.
+
+    RESOLVED ONCE, AT FETCH TIME, and stored -- not re-derived on every read. The cache
+    keeps the response's content type, so a body sniffed on the way in and re-sniffed on
+    the way out could be extracted two different ways in the same build; that is the bug
+    a "just sniff it lazily" version has.
+
+    The old default was `text/html`, which ran unlabelled JSON through the HTML extractor.
+    Measured: `{"expr": "a<b and c>d"}` came back as `{"expr": "ad"}` -- nine characters
+    deleted from inside a string VALUE, and the document no longer parsed as itself.
+    """
+    if declared.split(";")[0].strip():
+        return declared
+    head = body.lstrip()[:1]
+    if head in ("{", "["):
+        try:
+            json.loads(body)
+        except (ValueError, TypeError):
+            pass
+        else:
+            return "application/json"
+    if head == "<":
+        return "text/html"
+    return "text/plain"
 
 
 def clip(text: str, limit: int = MAX_TEXT_CHARS) -> str:
