@@ -6,6 +6,9 @@ branch that modifies anything there is vetoed by `check-branch` before a human r
 
 ## Changelog
 - **2026-09-03, epoch 0** — first version, written before the T-1..T-5 build wave.
+- **2026-09-04, cycle 5** — added standing ruling 0b: severity follows the half you did
+  NOT check; read the display path before claiming a display leak; a remedy deserves the
+  same scepticism as a diagnosis.
 - **2026-09-04, cycle 5** — added standing ruling 0a: each lane gets its OWN scratch
   directory under `arrivalengine-scratch/<lane>/`; the shared session scratchpad was
   measured corrupting concurrent lanes' sabotage rigs.
@@ -305,6 +308,22 @@ Never trust the installer's exit code.
 ## Standing rulings for this run
 
 These are settled. Do not re-litigate them; build against them.
+
+0b. **SEVERITY FOLLOWS THE HALF YOU DID NOT CHECK, NOT THE HALF YOU DID.** When you file
+   a finding with an unchecked question still in it, that question sets the severity — not
+   the part you proved. Measured this run: an observer proved a fact was stored and not
+   excluded, filed it HIGH, and had *"whether this hub can actually be SELECTED as a match
+   reason"* sitting in its own not-checked list at the time. The unchecked half was the one
+   that decided the answer: the fix was display-time, the gate refused the fact per
+   request, and nothing reached a page. **"Stored and not excluded" is not "reachable."**
+
+   Two rules fall out of it, and both are cheap:
+   - **Read the DISPLAY path before claiming a display leak.** Stored state is not output.
+     A gate that runs per request leaves the stored corpus untouched by design.
+   - **A remedy deserves the same scepticism as a diagnosis.** The same observer proposed a
+     fix — hand-editing the corpus JSON — that `TASKS.md` T-9.1 forbids outright. Verifying
+     a defect carefully and then proposing the first repair that comes to mind is a real
+     failure mode; check the rules the fix would touch before you name it.
 
 0a. **YOUR SCRATCH DIRECTORY IS YOURS ALONE, AND IT IS NOT THE SESSION SCRATCHPAD.**
    Use `/Users/hankholcomb/Documents/code_parent_folders/gauntlet_repos/arrivalengine-scratch/<your-lane-name>/`
