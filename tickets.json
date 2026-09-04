@@ -826,6 +826,21 @@
       "defect": "A response with no Content-Type defaults to text/html, and the HTML extractor then strips angle brackets from inside JSON string VALUES, corrupting the payload. A binary body becomes a mojibake RawDoc rather than None \u2014 contradicting the module's own docstring, which promises that a body which is not text yields None every time.",
       "finding_id": "957cd218057af37dc6d7684dcc9b420c259ff81948a0dfb144f699112b72a9d8",
       "reproduction": "Read client.py:158 and :175, then the docstring at the top of the module."
+    },
+    {
+      "id": "T-027",
+      "title": "Two of criteria_t5's properties are unobservable to the FROZEN metric, and the frozen corpus cannot be amended to fix it without moving a target three frozen modules pin. Close the gap in the non-frozen layer instead, where nothing is frozen and no goalpost moves. (1) RECENCY: every hub in all five frozen dossiers has recency 1.0, so min(ra,rb) and max(ra,rb) are the same function on every input the metric sees \u2014 inverting the rule leaves criteria_t5 at 8/8. Exactly one test in the repo catches it today. (2) TYPE BOOSTS: only investor and topic are load-bearing; board, cause, city, company, event, person, school and technology are all unobservable, because city:austin and topic:remote-work are held by all five (idf clamps to 0, multiplying the boost away) and company/school hubs are unshared. A wrong boost for any of the eight is invisible. Add unit coverage in tests/graph/ that pins the min-vs-max rule with UNEQUAL recencies and pins each of the ten type boosts against a constructed graph. This is a test-only ticket: src/arrival/graph.py is believed correct \u2014 the rung-2 verifier recomputed all of it independently against both corpora with zero mismatches \u2014 so a change to graph.py here is a signal something is wrong, not the goal.",
+      "verify": "false  # NO GATE YET \u2014 write one that fails on this finding first",
+      "scope": [
+        "tests/graph/test_t5_scoring.py"
+      ],
+      "depends_on": [],
+      "source": "finding",
+      "severity": "MEDIUM",
+      "location": "tests/graph/test_t5_scoring.py",
+      "defect": "Two of criteria_t5's properties are unobservable to the FROZEN metric, and the frozen corpus cannot be amended to fix it without moving a target three frozen modules pin. Close the gap in the non-frozen layer instead, where nothing is frozen and no goalpost moves. (1) RECENCY: every hub in all five frozen dossiers has recency 1.0, so min(ra,rb) and max(ra,rb) are the same function on every input the metric sees \u2014 inverting the rule leaves criteria_t5 at 8/8. Exactly one test in the repo catches it today. (2) TYPE BOOSTS: only investor and topic are load-bearing; board, cause, city, company, event, person, school and technology are all unobservable, because city:austin and topic:remote-work are held by all five (idf clamps to 0, multiplying the boost away) and company/school hubs are unshared. A wrong boost for any of the eight is invisible. Add unit coverage in tests/graph/ that pins the min-vs-max rule with UNEQUAL recencies and pins each of the ten type boosts against a constructed graph. This is a test-only ticket: src/arrival/graph.py is believed correct \u2014 the rung-2 verifier recomputed all of it independently against both corpora with zero mismatches \u2014 so a change to graph.py here is a signal something is wrong, not the goal.",
+      "finding_id": "49b15ea75ecb399a5378c4a7599d3af468e39f6f23894ac2513ad87596878e41",
+      "reproduction": "Recency: change _contributions' recency = min(...) to max(...) in an isolated copy with caches purged; frozen t5 stays 8/8. Type boosts: python3 -c to enumerate carriers per hub across .swarm-loop/acceptance/fixtures/dossiers/*.json \u2014 austin 5, remote-work 5 (both clamp to idf 0), foundry-seed 2, developer-tools 2, lantern-freight 1, bellhaven 1. Only investor and topic ever multiply a nonzero idf."
     }
   ],
   "cut_list": [
